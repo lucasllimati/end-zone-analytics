@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.cache/
+data-raw/
+test-results/
+playwright-report/
+*.log
+.env
+# Dados gerados pelo pipeline (recrie com `npm run data:full`)
+data/

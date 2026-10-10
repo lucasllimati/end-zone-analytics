@@ -1,0 +1,61 @@
+{
+  "name": "end-zone-analytics",
+  "private": true,
+  "version": "1.0.0",
+  "description": "End Zone Analytics — plataforma de dados, história, estatísticas e educação sobre a NFL.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c blue,green \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:web": "vite",
+    "dev:api": "tsx watch server/index.ts",
+    "build": "tsc -b && vite build",
+    "build:static": "npm run build && node scripts/copy-data.mjs",
+    "start": "cross-env NODE_ENV=production tsx server/index.ts",
+    "preview": "npm run build && npm start",
+    "data:full": "tsx server/etl/cli.ts full",
+    "data:partial": "tsx server/etl/cli.ts partial",
+    "data:check": "tsx server/etl/cli.ts check",
+    "data:quality": "tsx server/etl/cli.ts quality",
+    "typecheck": "tsc -b --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "spell": "cspell --no-progress \"src/**/*.{ts,tsx}\" \"server/**/*.ts\" \"docs/**/*.md\" \"*.md\" \"data-curated/**/*.json\"",
+    "qa": "npm run typecheck && npm run test && npm run spell"
+  },
+  "dependencies": {
+    "@fastify/compress": "^8.0.1",
+    "@fastify/helmet": "^13.0.1",
+    "@fastify/rate-limit": "^10.2.1",
+    "@fastify/static": "^10.1.6",
+    "cross-env": "^7.0.3",
+    "csv-parse": "^7.0.3",
+    "fastify": "^5.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.18.4",
+    "tsx": "^4.19.2",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.1",
+    "@cspell/dict-pt-br": "^2.3.3",
+    "@playwright/test": "^1.49.1",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.0",
+    "cspell": "^8.17.1",
+    "jsdom": "^25.0.1",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "vitest": "^5.0.3"
+  }
+}

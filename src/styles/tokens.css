@@ -1,0 +1,136 @@
+/*
+ * Design tokens — End Zone Analytics
+ * Escuro é o padrão. O claro é selecionado (não invertido automaticamente).
+ * Cores de séries de gráfico vêm da paleta validada (CVD) — ver docs/DESIGN_SYSTEM.md.
+ */
+:root {
+  color-scheme: dark;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace;
+
+  --bg: #0b0c0e;
+  --surface-1: #131417;
+  --surface-2: #1a1c20;
+  --surface-3: #24272c;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --text: #f3f3f1;
+  --text-2: #bdbcb5;
+  --muted: #8f8e88;
+  --accent: #e0ad4b;
+  --accent-strong: #f0c066;
+  --accent-ink: #1b1406;
+  --accent-soft: rgba(224, 173, 75, 0.12);
+  --focus: #7cb4ff;
+
+  --good: #0ca30c;
+  --good-text: #3ccf5a;
+  --warning: #fab219;
+  --critical: #e05252;
+  --critical-text: #ff8a8a;
+
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #008300;
+  --series-7: #9085e9;
+  --series-8: #e66767;
+  --seq-100: #cde2fb;
+  --seq-400: #3987e5;
+  --seq-700: #0d366b;
+  --grid: #26272a;
+  --axis: #3a3b3e;
+
+  --turf: #1c5232;
+  --turf-2: #184a2c;
+  --turf-line: rgba(255, 255, 255, 0.55);
+  --endzone: #143d25;
+
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 16px;
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 8px 24px rgba(0, 0, 0, 0.35);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --header-h: 60px;
+  --maxw: 1240px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    color-scheme: light;
+    --bg: #f6f6f3;
+    --surface-1: #ffffff;
+    --surface-2: #f1f0ec;
+    --surface-3: #e7e6e0;
+    --border: rgba(11, 11, 11, 0.09);
+    --border-strong: rgba(11, 11, 11, 0.18);
+    --text: #111110;
+    --text-2: #4b4a46;
+    --muted: #6b6a65;
+    --accent: #8f6410;
+    --accent-strong: #6f4c08;
+    --accent-ink: #ffffff;
+    --accent-soft: rgba(143, 100, 16, 0.1);
+    --focus: #1f6fd6;
+    --good-text: #006300;
+    --critical-text: #b42323;
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --series-3: #1baf7a;
+    --series-4: #eda100;
+    --series-5: #e87ba4;
+    --series-6: #008300;
+    --series-7: #4a3aa7;
+    --series-8: #e34948;
+    --grid: #e8e7e1;
+    --axis: #c3c2b7;
+    --turf: #2f7d4a;
+    --turf-2: #2a7243;
+    --turf-line: rgba(255, 255, 255, 0.75);
+    --endzone: #24633b;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+  }
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f6f6f3;
+  --surface-1: #ffffff;
+  --surface-2: #f1f0ec;
+  --surface-3: #e7e6e0;
+  --border: rgba(11, 11, 11, 0.09);
+  --border-strong: rgba(11, 11, 11, 0.18);
+  --text: #111110;
+  --text-2: #4b4a46;
+  --muted: #6b6a65;
+  --accent: #8f6410;
+  --accent-strong: #6f4c08;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(143, 100, 16, 0.1);
+  --focus: #1f6fd6;
+  --good-text: #006300;
+  --critical-text: #b42323;
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #4a3aa7;
+  --series-8: #e34948;
+  --grid: #e8e7e1;
+  --axis: #c3c2b7;
+  --turf: #2f7d4a;
+  --turf-2: #2a7243;
+  --turf-line: rgba(255, 255, 255, 0.75);
+  --endzone: #24633b;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+}

@@ -1,0 +1,36 @@
+{
+  "source": "NFL Record & Fact Book (curadoria manual). Recordes de 1999 em diante também são recalculados a partir do nflverse e conferidos nos testes de dados.",
+  "asOf": "Final da temporada 2025",
+  "records": [
+    { "id": "career-pass-yds", "category": "career", "label": "Jardas de passe (carreira)", "holder": "Tom Brady", "value": 89214, "unit": "jardas", "detail": "2000–2022 · Patriots, Buccaneers", "source": "NFL Record & Fact Book" },
+    { "id": "career-pass-td", "category": "career", "label": "TDs de passe (carreira)", "holder": "Tom Brady", "value": 649, "unit": "TDs", "detail": "2000–2022 · Patriots, Buccaneers", "source": "NFL Record & Fact Book" },
+    { "id": "career-rush-yds", "category": "career", "label": "Jardas corridas (carreira)", "holder": "Emmitt Smith", "value": 18355, "unit": "jardas", "detail": "1990–2004 · Cowboys, Cardinals", "source": "NFL Record & Fact Book" },
+    { "id": "career-rush-td", "category": "career", "label": "TDs corridos (carreira)", "holder": "Emmitt Smith", "value": 164, "unit": "TDs", "detail": "1990–2004 · Cowboys, Cardinals", "source": "NFL Record & Fact Book" },
+    { "id": "career-rec", "category": "career", "label": "Recepções (carreira)", "holder": "Jerry Rice", "value": 1549, "unit": "recepções", "detail": "1985–2004 · 49ers, Raiders, Seahawks", "source": "NFL Record & Fact Book" },
+    { "id": "career-rec-yds", "category": "career", "label": "Jardas recebidas (carreira)", "holder": "Jerry Rice", "value": 22895, "unit": "jardas", "detail": "1985–2004 · 49ers, Raiders, Seahawks", "source": "NFL Record & Fact Book" },
+    { "id": "career-rec-td", "category": "career", "label": "TDs recebidos (carreira)", "holder": "Jerry Rice", "value": 197, "unit": "TDs", "detail": "1985–2004 · 49ers, Raiders, Seahawks", "source": "NFL Record & Fact Book" },
+    { "id": "career-total-td", "category": "career", "label": "Touchdowns totais (carreira)", "holder": "Jerry Rice", "value": 208, "unit": "TDs", "detail": "1985–2004", "source": "NFL Record & Fact Book" },
+    { "id": "career-sacks", "category": "career", "label": "Sacks (carreira, oficial desde 1982)", "holder": "Bruce Smith", "value": 200, "unit": "sacks", "detail": "1985–2003 · Bills, Washington", "source": "NFL Record & Fact Book" },
+    { "id": "career-int", "category": "career", "label": "Interceptações (carreira)", "holder": "Paul Krause", "value": 81, "unit": "INTs", "detail": "1964–1979 · Washington, Vikings", "source": "NFL Record & Fact Book" },
+    { "id": "career-fg", "category": "career", "label": "Field goals convertidos (carreira)", "holder": "Adam Vinatieri", "value": 599, "unit": "FGs", "detail": "1996–2019 · Patriots, Colts", "source": "NFL Record & Fact Book" },
+    { "id": "career-points", "category": "career", "label": "Pontos (carreira)", "holder": "Adam Vinatieri", "value": 2673, "unit": "pontos", "detail": "1996–2019 · Patriots, Colts", "source": "NFL Record & Fact Book" },
+    { "id": "career-games", "category": "career", "label": "Jogos disputados (carreira)", "holder": "Morten Andersen", "value": 382, "unit": "jogos", "detail": "1982–2007 · kicker", "source": "NFL Record & Fact Book" },
+
+    { "id": "season-pass-yds", "category": "season", "label": "Jardas de passe (temporada)", "holder": "Peyton Manning", "value": 5477, "unit": "jardas", "detail": "2013 · Denver Broncos", "source": "NFL Record & Fact Book", "season": 2013, "verify": "passYds" },
+    { "id": "season-pass-td", "category": "season", "label": "TDs de passe (temporada)", "holder": "Peyton Manning", "value": 55, "unit": "TDs", "detail": "2013 · Denver Broncos", "source": "NFL Record & Fact Book", "season": 2013, "verify": "passTd" },
+    { "id": "season-rush-yds", "category": "season", "label": "Jardas corridas (temporada)", "holder": "Eric Dickerson", "value": 2105, "unit": "jardas", "detail": "1984 · Los Angeles Rams", "source": "NFL Record & Fact Book" },
+    { "id": "season-rush-td", "category": "season", "label": "TDs corridos (temporada)", "holder": "LaDainian Tomlinson", "value": 28, "unit": "TDs", "detail": "2006 · San Diego Chargers", "source": "NFL Record & Fact Book", "season": 2006, "verify": "rushTd" },
+    { "id": "season-rec", "category": "season", "label": "Recepções (temporada)", "holder": "Michael Thomas", "value": 149, "unit": "recepções", "detail": "2019 · New Orleans Saints", "source": "NFL Record & Fact Book", "season": 2019, "verify": "rec" },
+    { "id": "season-rec-yds", "category": "season", "label": "Jardas recebidas (temporada)", "holder": "Calvin Johnson", "value": 1964, "unit": "jardas", "detail": "2012 · Detroit Lions", "source": "NFL Record & Fact Book", "season": 2012, "verify": "recYds" },
+    { "id": "season-rec-td", "category": "season", "label": "TDs recebidos (temporada)", "holder": "Randy Moss", "value": 23, "unit": "TDs", "detail": "2007 · New England Patriots", "source": "NFL Record & Fact Book", "season": 2007, "verify": "recTd" },
+    { "id": "season-sacks", "category": "season", "label": "Sacks (temporada)", "holder": "Myles Garrett", "value": 23, "unit": "sacks", "detail": "2025 · Cleveland Browns", "source": "NFL Record & Fact Book", "season": 2025, "verify": "sacks" },
+    { "id": "season-int", "category": "season", "label": "Interceptações (temporada)", "holder": "Dick \"Night Train\" Lane", "value": 14, "unit": "INTs", "detail": "1952 · Los Angeles Rams (12 jogos)", "source": "NFL Record & Fact Book" },
+
+    { "id": "team-perfect", "category": "team", "label": "Única temporada perfeita (com playoffs)", "holder": "Miami Dolphins", "value": 17, "unit": "vitórias, 0 derrotas", "detail": "1972 · campeão do Super Bowl VII", "source": "NFL Record & Fact Book" },
+    { "id": "team-points-season", "category": "team", "label": "Pontos em uma temporada", "holder": "Denver Broncos", "value": 606, "unit": "pontos", "detail": "2013", "source": "NFL Record & Fact Book", "season": 2013, "verify": "teamPoints" },
+    { "id": "team-sb-titles", "category": "team", "label": "Mais Super Bowls vencidos", "holder": "New England Patriots e Pittsburgh Steelers", "value": 6, "unit": "títulos", "detail": "Calculado na página do Super Bowl", "source": "Derivado da lista oficial de Super Bowls" },
+
+    { "id": "game-most-points", "category": "game", "label": "Mais pontos combinados em um jogo", "holder": "Washington 72 × 41 New York Giants", "value": 113, "unit": "pontos", "detail": "27/11/1966", "source": "NFL Record & Fact Book" },
+    { "id": "game-margin", "category": "game", "label": "Maior vitória (incluindo playoffs)", "holder": "Chicago Bears 73 × 0 Washington", "value": 73, "unit": "pontos de diferença", "detail": "Final da NFL de 1940", "source": "NFL Record & Fact Book" }
+  ]
+}
