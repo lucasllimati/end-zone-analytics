@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gridiron Atlas | The Complete NFL Data, History & Analytics Platform</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        nflbg: '#090d16',
+                        nflsurface: '#111827',
+                        nflcard: '#1f2937',
+                        nflprimary: '#38bdf8',
+                        nflaccent: '#f59e0b',
+                        nflsuccess: '#10b981',
+                        nfldanger: '#ef4444'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Alpine.js for interactivity -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="bg-nflbg text-slate-100 min-h-screen flex flex-col selection:bg-sky-500 selection:text-white" x-data="gridironApp()">
+
+    <!-- TOP ANNOUNCEMENT / HEADER BAR -->
+    <header class="bg-nflsurface border-b border-slate-800 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- Brand Logo -->
+            <div class="flex items-center space-x-3 cursor-pointer" @click="activeTab = 'home'">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20 text-white font-black text-xl">
+                    🏈
+                </div>
+                <div>
+                    <span class="text-xl font-extrabold tracking-tight text-white">GRIDIRON <span class="text-sky-400">ATLAS</span></span>
+                    <span class="block text-[10px] text-slate-400 uppercase tracking-widest font-semibold">NFL Knowledge & Analytics</span>
+                </div>
+            </div>
+
+            <!-- Global Search & Time Travel -->
+            <div class="hidden md:flex items-center space-x-4">
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">🔍</span>
+                    <input type="text" placeholder="Buscar jogador, time, recorde, regra..." class="bg-nflcard border border-slate-700 text-sm rounded-lg pl-10 pr-4 py-1.5 focus:outline-none focus:border-sky-400 w-64 text-slate-200 placeholder-slate-500">
+                </div>
+                <div class="flex items-center space-x-2 bg-nflcard border border-slate-700 px-3 py-1.5 rounded-lg text-sm">
+                    <span class="text-slate-400">Temporada:</span>
+                    <select x-model="selectedSeason" class="bg-transparent text-sky-400 font-bold focus:outline-none cursor-pointer">
+                        <option value="2026">2026 (Atual)</option>
+                        <option value="2025">2025</option>
+                        <option value="2024">2024</option>
+                        <option value="2007">2007 (Patriots 16-0)</option>
+                        <option value="1985">1985 (Bears Defense)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Mode Switcher (Beginner vs Expert) & Actions -->
+            <div class="flex items-center space-x-3">
+                <button @click="expertMode = !expertMode" :class="expertMode ? 'bg-indigo-600 text-white' : 'bg-sky-500/20 text-sky-400 border border-sky-500/30'" class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1 shadow-sm">
+                    <span x-text="expertMode ? '⚡ Modo Expert' : '🌱 Modo Iniciante'"></span>
+                </button>
+                <button @click="darkMode = !darkMode" class="p-2 rounded-lg bg-nflcard border border-slate-700 text-slate-300 hover:text-white transition">
+                    🌙
+                </button>
+            </div>
+        </div>
+
+        <!-- NAVIGATION TABS -->
+        <nav class="bg-nflsurface/80 backdrop-blur border-t border-slate-800 overflow-x-auto">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-1 md:space-x-6 py-2.5 text-sm font-medium">
+                <button @click="activeTab = 'home'" :class="activeTab === 'home' ? 'text-sky-400 border-b-2 border-sky-400 pb-1' : 'text-slate-400 hover:text-slate-200'" class="whitespace-nowrap transition">NFL Now & Home</button>
+                <button @click="activeTab = 'teams'" :class="activeTab === 'teams' ? 'text-sky-400 border-b-2 border-sky-400 pb-1' : 'text-slate-400 hover:text-slate-200'" class="whitespace-nowrap transition">Times & Analytics</button>
+                <button @click="activeTab = 'players'" :class="activeTab === 'players' ? 'text-sky-400 border-b-2 border-sky-400 pb-1' : 'text-slate-400 hover:text-slate-200'" class="whitespace-nowrap transition">Jogadores & Carreiras</button>
+                <button @click="activeTab = 'compare'" :class="activeTab === 'compare' ? 'text-sky-400 border-b-2 border-sky-400 pb-1' : 'text-slate-400 hover:text-slate-200'" class="whitespace-nowrap transition">Comparador H2H</button>
+                <button @click="activeTab = 'rules'" :class="activeTab === 'rules' ? 'text-sky-400 border-b-2 border-sky-400 pb-1' : 'text-slate-400 hover:text-slate-200'" class="whitespace-nowrap transition">Regras & Posições</button>
+                <button @click="activeTab = 'playbook'" :class="activeTab === 'playbook' ? 'text-sky-400 border-b-2 border-sky-400 pb-1' : 'text-slate-400 hover:text-slate-200'" class="whitespace-nowrap transition">Playbook & Esquemas</button>
+                <button @click="activeTab = 'superbowl'" :class="activeTab === 'superbowl' ? 'text-sky-400 border-b-2 border-sky-400 pb-1' : 'text-slate-400 hover:text-slate-200'" class="whitespace-nowrap transition">Super Bowl & Recordes</button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- MAIN CONTENT CONTAINER -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- ================= TAB 1: HOME / NFL NOW ================= -->
+        <div x-show="activeTab === 'home'" x-cloak class="space-y-8">
+            <!-- Hero Banner -->
+            <div class="relative rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-slate-800 p-8 overflow-hidden shadow-2xl">
+                <div class="absolute right-0 top-0 translate-x-12 -translate-y-12 w-96 h-96 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="relative z-10 max-w-2xl">
+                    <span class="inline-block px-3 py-1 rounded-full bg-sky-500/20 text-sky-400 text-xs font-bold uppercase tracking-wider mb-4 border border-sky-500/30">Temporada Regular 2026 • Semana 8</span>
+                    <h1 class="text-3xl md:text-5xl font-black text-white tracking-tight mb-4">A Enciclopédia & Analytics da NFL</h1>
+                    <p class="text-slate-300 text-sm md:text-base mb-6 leading-relaxed">
+                        Explore dados profundos, histórico jogo a jogo, estatísticas avançadas (EPA, Success Rate), e aprenda o futebol americano do básico ao avançado em português.
+                    </p>
+                    <div class="flex flex-wrap gap-4">
+                        <button @click="activeTab = 'compare'" class="px-5 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-sm transition shadow-lg shadow-sky-500/20">Comparar Jogadores</button>
+                        <button @click="activeTab = 'rules'" class="px-5 py-2.5 rounded-xl bg-nflcard hover:bg-slate-800 border border-slate-700 text-white font-bold text-sm transition">Aprender Regras & Posições</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Beginner / Expert Info Banner -->
+            <div class="bg-sky-500/10 border border-sky-500/30 rounded-xl p-4 flex items-start space-x-3 text-sm">
+                <span class="text-sky-400 text-lg">💡</span>
+                <div>
+                    <strong class="text-white block mb-0.5" x-text="expertMode ? 'Modo Expert Ativo: Métricas Avançadas Disponíveis' : 'Modo Iniciante Ativo: Explicações Simples em Cada Seção'"></strong>
+                    <span class="text-slate-300 text-xs" x-text="expertMode ? 'Visualizando EPA, WPA, Air Yards e Success Rate por jogada.' : 'Passe o mouse ou clique nos ícones de informação (i) para entender as regras e siglas do esporte.'"></span>
+                </div>
+            </div>
+
+            <!-- Featured Match / Live Score Grid -->
+            <div>
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold text-white flex items-center space-x-2">
+                        <span>🔥 Destaque da Semana</span>
+                    </h2>
+                    <span class="text-xs text-sky-400 font-semibold cursor-pointer hover:underline">Ver calendário completo →</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Game Card 1 -->
+                    <div class="bg-nflsurface border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition shadow-lg">
+                        <div class="flex justify-between items-center text-xs text-slate-400 mb-3 font-mono">
+                            <span>Quarto Q4 • 02:14</span>
+                            <span class="text-red-400 font-bold animate-pulse">AO VIVO</span>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-8 h-8 rounded-full bg-red-900/40 border border-red-500 flex items-center justify-center font-bold text-xs text-red-300">KC</div>
+                                    <span class="font-bold text-white">Chiefs</span>
+                                </div>
+                                <span class="font-mono text-xl font-extrabold text-white">27</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-8 h-8 rounded-full bg-blue-900/40 border border-blue-500 flex items-center justify-center font-bold text-xs text-blue-300">BUF</div>
+                                    <span class="font-bold text-white">Bills</span>
+                                </div>
+                                <span class="font-mono text-xl font-extrabold text-white">24</span>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center text-xs text-slate-400">
+                            <span>Arrowhead Stadium</span>
+                            <span class="text-sky-400 cursor-pointer font-bold" @click="activeTab = 'compare'">Ver Game Center →</span>
+                        </div>
+                    </div>
+
+                    <!-- Game Card 2 -->
+                    <div class="bg-nflsurface border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition shadow-lg">
+                        <div class="flex justify-between items-center text-xs text-slate-400 mb-3 font-mono">
+                            <span>Domingo • 17:25 BRT</span>
+                            <span class="text-slate-400">Próximo</span>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-8 h-8 rounded-full bg-emerald-900/40 border border-emerald-500 flex items-center justify-center font-bold text-xs text-emerald-300">GB</div>
+                                    <span class="font-bold text-white">Packers</span>
+                                </div>
+                                <span class="font-mono text-lg font-bold text-slate-500">-</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-8 h-8 rounded-full bg-amber-900/40 border border-amber-500 flex items-center justify-center font-bold text-xs text-amber-300">CHI</div>
+                                    <span class="font-bold text-white">Bears</span>
+                                </div>
+                                <span class="font-mono text-lg font-bold text-slate-500">-</span>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center text-xs text-slate-400">
+                            <span>Lambeau Field</span>
+                            <span class="text-sky-400 cursor-pointer font-bold">Rivalidade Histórica</span>
+                        </div>
+                    </div>
+
+                    <!-- League Leaders Quick Widget -->
+                    <div class="bg-nflsurface border border-slate-800 rounded-xl p-5 shadow-lg flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-sm font-bold text-white uppercase tracking-wider mb-3">Líderes em Jardas de Passe</h3>
+                            <div class="space-y-2 text-xs">
+                                <div class="flex justify-between items-center py-1 border-b border-slate-800/60">
+                                    <span class="text-slate-300">1. Patrick Mahomes (KC)</span>
+                                    <span class="font-mono font-bold text-sky-400">2,450 yds</span>
+                                </div>
+                                <div class="flex justify-between items-center py-1 border-b border-slate-800/60">
+                                    <span class="text-slate-300">2. Josh Allen (BUF)</span>
+                                    <span class="font-mono font-bold text-sky-400">2,380 yds</span>
+                                </div>
+                                <div class="flex justify-between items-center py-1">
+                                    <span class="text-slate-300">3. Joe Burrow (CIN)</span>
+                                    <span class="font-mono font-bold text-sky-400">2,310 yds</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4 text-right">
+                            <button @click="activeTab = 'players'" class="text-xs text-sky-400 font-bold hover:underline">Ver estatísticas completas →</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 2: TEAMS & ANALYTICS ================= -->
+        <div x-show="activeTab === 'teams'" x-cloak class="space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-black text-white">Franquias da NFL & Analytics</h2>
+                    <p class="text-slate-400 text-sm">Explore perfis de times, eficiência ofensiva, defensiva e histórico.</p>
+                </div>
+                <div class="flex space-x-2">
+                    <select class="bg-nflcard border border-slate-700 text-xs rounded-lg px-3 py-2 text-slate-200">
+                        <option>Todas as Conferências</option>
+                        <option>AFC (American Football Conference)</option>
+                        <option>NFC (National Football Conference)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Teams Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                <!-- Team Card 1 -->
+                <div class="bg-nflsurface border border-slate-800 rounded-xl p-5 hover:border-sky-500/50 transition cursor-pointer group shadow-md">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-12 h-12 rounded-xl bg-red-950/50 border border-red-500/30 flex items-center justify-center font-black text-red-400 text-lg">KC</div>
+                        <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono font-bold">6-1 (1º AFC)</span>
+                    </div>
+                    <h3 class="font-bold text-white text-base group-hover:text-sky-400 transition">Kansas City Chiefs</h3>
+                    <p class="text-xs text-slate-400 mb-4">AFC West • Arrowhead Stadium</p>
+                    <div class="space-y-1.5 text-xs border-t border-slate-800 pt-3">
+                        <div class="flex justify-between"><span class="text-slate-400">Offense EPA:</span><span class="font-mono font-bold text-sky-400">+0.14 (Top 3)</span></div>
+                        <div class="flex justify-between"><span class="text-slate-400">Super Bowls:</span><span class="font-mono font-bold text-amber-400">4 Títulos</span></div>
+                    </div>
+                </div>
+
+                <!-- Team Card 2 -->
+                <div class="bg-nflsurface border border-slate-800 rounded-xl p-5 hover:border-sky-500/50 transition cursor-pointer group shadow-md">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-12 h-12 rounded-xl bg-blue-950/50 border border-blue-500/30 flex items-center justify-center font-black text-blue-400 text-lg">BUF</div>
+                        <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono font-bold">5-2 (2º AFC)</span>
+                    </div>
+                    <h3 class="font-bold text-white text-base group-hover:text-sky-400 transition">Buffalo Bills</h3>
+                    <p class="text-xs text-slate-400 mb-4">AFC East • Highmark Stadium</p>
+                    <div class="space-y-1.5 text-xs border-t border-slate-800 pt-3">
+                        <div class="flex justify-between"><span class="text-slate-400">Offense EPA:</span><span class="font-mono font-bold text-sky-400">+0.12 (Top 5)</span></div>
+                        <div class="flex justify-between"><span class="text-slate-400">Super Bowls:</span><span class="font-mono font-bold text-slate-400">0 Títulos</span></div>
+                    </div>
+                </div>
+
+                <!-- Team Card 3 -->
+                <div class="bg-nflsurface border border-slate-800 rounded-xl p-5 hover:border-sky-500/50 transition cursor-pointer group shadow-md">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-12 h-12 rounded-xl bg-emerald-950/50 border border-emerald-500/30 flex items-center justify-center font-black text-emerald-400 text-lg">GB</div>
+                        <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono font-bold">5-2 (1º NFC)</span>
+                    </div>
+                    <h3 class="font-bold text-white text-base group-hover:text-sky-400 transition">Green Bay Packers</h3>
+                    <p class="text-xs text-slate-400 mb-4">NFC North • Lambeau Field</p>
+                    <div class="space-y-1.5 text-xs border-t border-slate-800 pt-3">
+                        <div class="flex justify-between"><span class="text-slate-400">Offense EPA:</span><span class="font-mono font-bold text-sky-400">+0.09 (Top 8)</span></div>
+                        <div class="flex justify-between"><span class="text-slate-400">Super Bowls:</span><span class="font-mono font-bold text-amber-400">4 Títulos</span></div>
+                    </div>
+                </div>
+
+                <!-- Team Card 4 -->
+                <div class="bg-nflsurface border border-slate-800 rounded-xl p-5 hover:border-sky-500/50 transition cursor-pointer group shadow-md">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="w-12 h-12 rounded-xl bg-purple-950/50 border border-purple-500/30 flex items-center justify-center font-black text-purple-400 text-lg">BAL</div>
+                        <span class="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 font-mono font-bold">4-3 (3º AFC)</span>
+                    </div>
+                    <h3 class="font-bold text-white text-base group-hover:text-sky-400 transition">Baltimore Ravens</h3>
+                    <p class="text-xs text-slate-400 mb-4">AFC North • M&T Bank Stadium</p>
+                    <div class="space-y-1.5 text-xs border-t border-slate-800 pt-3">
+                        <div class="flex justify-between"><span class="text-slate-400">Rushing EPA:</span><span class="font-mono font-bold text-sky-400">+0.22 (1º NFL)</span></div>
+                        <div class="flex justify-between"><span class="text-slate-400">Super Bowls:</span><span class="font-mono font-bold text-amber-400">2 Títulos</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 3: PLAYERS & CAREERS ================= -->
+        <div x-show="activeTab === 'players'" x-cloak class="space-y-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-black text-white">Diretório de Jogadores & Analytics</h2>
+                    <p class="text-slate-400 text-sm">Pesquise estatísticas de carreira, percentis por era e histórico.</p>
+                </div>
+                <div class="flex space-x-2">
+                    <input type="text" placeholder="Nome do jogador (ex: Tom Brady)" class="bg-nflcard border border-slate-700 text-xs rounded-lg px-4 py-2 text-slate-200 w-60">
+                </div>
+            </div>
+
+            <!-- Player Spotlight Card -->
+            <div class="bg-nflsurface border border-slate-800 rounded-2xl p-6 shadow-xl">
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-slate-800">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-2xl font-black text-white">
+                            QB
+                        </div>
+                        <div>
+                            <span class="text-xs font-bold text-sky-400 uppercase tracking-widest">Quarterback • Kansas City Chiefs (#15)</span>
+                            <h3 class="text-2xl font-black text-white">Patrick Mahomes</h3>
+                            <p class="text-xs text-slate-400">Texas Tech • 1º Round, 10ª Escolha (2017)</p>
+                        </div>
+                    </div>
+                    <div class="flex space-x-4 text-center">
+                        <div class="bg-nflcard border border-slate-700 px-4 py-2 rounded-xl">
+                            <span class="block text-[10px] text-slate-400 uppercase">Super Bowls</span>
+                            <span class="text-xl font-mono font-black text-amber-400">3x</span>
+                        </div>
+                        <div class="bg-nflcard border border-slate-700 px-4 py-2 rounded-xl">
+                            <span class="block text-[10px] text-slate-400 uppercase">MVPs</span>
+                            <span class="text-xl font-mono font-black text-sky-400">2x</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Career Analytics Grid -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6">
+                    <div class="bg-nflcard/50 border border-slate-800 p-4 rounded-xl">
+                        <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+                            <span>Passing Yards</span>
+                            <span class="cursor-pointer text-sky-400" title="Total de jardas conquistadas por passes na carreira">ℹ️</span>
+                        </div>
+                        <span class="text-2xl font-mono font-black text-white">31,420</span>
+                        <span class="block text-[10px] text-emerald-400 mt-1">98º Percentil Histórico</span>
+                    </div>
+                    <div class="bg-nflcard/50 border border-slate-800 p-4 rounded-xl">
+                        <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+                            <span>Passing TDs</span>
+                            <span class="cursor-pointer text-sky-400" title="Touchdowns lançados na carreira">ℹ️</span>
+                        </div>
+                        <span class="text-2xl font-mono font-black text-white">238</span>
+                        <span class="block text-[10px] text-emerald-400 mt-1">Alta Eficiência</span>
+                    </div>
+                    <div class="bg-nflcard/50 border border-slate-800 p-4 rounded-xl">
+                        <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+                            <span>Passer Rating</span>
+                            <span class="cursor-pointer text-sky-400" title="Fórmula de eficiência baseada em passes, TDs e interceptações">ℹ️</span>
+                        </div>
+                        <span class="text-2xl font-mono font-black text-sky-400">103.5</span>
+                        <span class="block text-[10px] text-emerald-400 mt-1">Top 3 All-Time</span>
+                    </div>
+                    <div class="bg-nflcard/50 border border-slate-800 p-4 rounded-xl">
+                        <div class="flex items-center justify-between text-xs text-slate-400 mb-1">
+                            <span>EPA por Jogada</span>
+                            <span class="cursor-pointer text-sky-400" title="Expected Points Added: Quanto o QB eleva a expectativa de pontos">ℹ️</span>
+                        </div>
+                        <span class="text-2xl font-mono font-black text-emerald-400">+0.24</span>
+                        <span class="block text-[10px] text-slate-400 mt-1">Elite Standard</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 4: COMPARISON ENGINE ================= -->
+        <div x-show="activeTab === 'compare'" x-cloak class="space-y-6">
+            <div>
+                <h2 class="text-2xl font-black text-white">Comparador Head-to-Head & Era</h2>
+                <p class="text-slate-400 text-sm">Compare jogadores, times ou temporadas históricas lado a lado com ajustes de era.</p>
+            </div>
+
+            <!-- Comparison Selectors -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Player A -->
+                <div class="bg-nflsurface border border-slate-800 rounded-xl p-5">
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Atleta 1</label>
+                    <select class="w-full bg-nflcard border border-slate-700 text-sm rounded-lg px-3 py-2 text-white mb-4">
+                        <option>Tom Brady (QB - Patriots / Buccaneers)</option>
+                        <option selected>Patrick Mahomes (QB - Chiefs)</option>
+                        <option>Peyton Manning (QB - Colts / Broncos)</option>
+                    </select>
+                    <div class="space-y-3 text-sm">
+                        <div class="flex justify-between py-2 border-b border-slate-800"><span class="text-slate-400">Super Bowls:</span><span class="font-mono font-bold text-white">3</span></div>
+                        <div class="flex justify-between py-2 border-b border-slate-800"><span class="text-slate-400">Passer Rating:</span><span class="font-mono font-bold text-sky-400">103.5</span></div>
+                        <div class="flex justify-between py-2"><span class="text-slate-400">Playoff Record:</span><span class="font-mono font-bold text-white">15-3</span></div>
+                    </div>
+                </div>
+
+                <!-- Player B -->
+                <div class="bg-nflsurface border border-slate-800 rounded-xl p-5">
+                    <label class="block text-xs font-bold text-slate-400 uppercase mb-2">Atleta 2</label>
+                    <select class="w-full bg-nflcard border border-slate-700 text-sm rounded-lg px-3 py-2 text-white mb-4">
+                        <option selected>Tom Brady (QB - Patriots / Buccaneers)</option>
+                        <option>Patrick Mahomes (QB - Chiefs)</option>
+                        <option>Peyton Manning (QB - Colts / Broncos)</option>
+                    </select>
+                    <div class="space-y-3 text-sm">
+                        <div class="flex justify-between py-2 border-b border-slate-800"><span class="text-slate-400">Super Bowls:</span><span class="font-mono font-bold text-amber-400">7</span></div>
+                        <div class="flex justify-between py-2 border-b border-slate-800"><span class="text-slate-400">Passer Rating:</span><span class="font-mono font-bold text-sky-400">97.2</span></div>
+                        <div class="flex justify-between py-2"><span class="text-slate-400">Playoff Record:</span><span class="font-mono font-bold text-white">35-13</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 5: RULES & POSITIONS ================= -->
+        <div x-show="activeTab === 'rules'" x-cloak class="space-y-8">
+            <div>
+                <h2 class="text-2xl font-black text-white">Centro Educacional: Regras, Posições & Faltas</h2>
+                <p class="text-slate-400 text-sm">Do básico ao avançado: compreenda o futebol americano sem complicação.</p>
+            </div>
+
+            <!-- Rules Tabs -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Card 1: Scoring -->
+                <div class="bg-nflsurface border border-slate-800 rounded-xl p-5">
+                    <span class="text-sky-400 font-bold text-xs uppercase tracking-wider block mb-2">Pontuação</span>
+                    <h3 class="text-lg font-bold text-white mb-3">Como se pontua na NFL?</h3>
+                    <ul class="space-y-2 text-xs text-slate-300">
+                        <li class="flex justify-between py-1 border-b border-slate-800"><span>Touchdown (TD):</span><strong class="text-white">6 pontos</strong></li>
+                        <li class="flex justify-between py-1 border-b border-slate-800"><span>Ponto Extra (XP):</span><strong class="text-white">1 ponto</strong></li>
+                        <li class="flex justify-between py-1 border-b border-slate-800"><span>Conversão de 2 Pts:</span><strong class="text-white">2 pontos</strong></li>
+                        <li class="flex justify-between py-1 border-b border-slate-800"><span>Field Goal (FG):</span><strong class="text-white">3 pontos</strong></li>
+                        <li class="flex justify-between py-1"><span>Safety:</span><strong class="text-white">2 pontos</strong></li>
+                    </ul>
+                </div>
+
+                <!-- Card 2: Down & Distance -->
+                <div class="bg-nflsurface border border-slate-800 rounded-xl p-5">
+                    <span class="text-sky-400 font-bold text-xs uppercase tracking-wider block mb-2">Dinâmica do Jogo</span>
+                    <h3 class="text-lg font-bold text-white mb-3">O que significa 1st & 10?</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed mb-4">
+                        O ataque tem <strong class="text-white">4 tentativas (descidas / downs)</strong> para avançar pelo menos <strong class="text-white">10 jardas</strong>. Se conseguir, ganha uma nova série de 4 tentativas (1st & 10).
+                    </p>
+                    <div class="bg-nflcard p-3 rounded-lg text-xs font-mono text-sky-400">
+                        Ex: 3rd & 4 = 3ª tentativa, restando 4 jardas para o First Down.
+                    </div>
+                </div>
+
+                <!-- Card 3: Penalties -->
+                <div class="bg-nflsurface border border-slate-800 rounded-xl p-5">
+                    <span class="text-red-400 font-bold text-xs uppercase tracking-wider block mb-2">Faltas Principais</span>
+                    <h3 class="text-lg font-bold text-white mb-3">Penalidades Comuns</h3>
+                    <div class="space-y-2 text-xs text-slate-300">
+                        <div class="py-1 border-b border-slate-800"><strong class="text-white">Holding:</strong> Segurar o adversário ilegalmente (10 jardas).</div>
+                        <div class="py-1 border-b border-slate-800"><strong class="text-white">False Start:</strong> Jogador ofensivo se mover antes do snap (5 jardas).</div>
+                        <div class="py-1"><strong class="text-white">Pass Interference:</strong> Contato ilegal com o recebedor na rota (penalidade no local da falta).</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 6: PLAYBOOK & SCHEMES ================= -->
+        <div x-show="activeTab === 'playbook'" x-cloak class="space-y-6">
+            <div>
+                <h2 class="text-2xl font-black text-white">Playbook Interativo & Esquemas</h2>
+                <p class="text-slate-400 text-sm">Entenda formações ofensivas, rotas de passe e esquemas defensivos (Cover 3, Blitz).</p>
+            </div>
+
+            <!-- Field Visualizer -->
+            <div class="bg-nflsurface border border-slate-800 rounded-2xl p-6 shadow-xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-white text-base">Esquema Ofensivo: West Coast Offense (Shotgun)</h3>
+                    <span class="text-xs px-3 py-1 rounded bg-sky-500/20 text-sky-400 font-mono">Visualização Tática</span>
+                </div>
+                
+                <!-- Football Field SVG Container -->
+                <div class="w-full h-64 bg-emerald-950/60 rounded-xl border border-emerald-500/30 relative flex items-center justify-center overflow-hidden">
+                    <div class="absolute inset-0 flex flex-col justify-between py-4 opacity-30">
+                        <div class="w-full h-0.5 bg-white"></div>
+                        <div class="w-full h-0.5 bg-white border-t border-dashed"></div>
+                        <div class="w-full h-0.5 bg-white"></div>
+                        <div class="w-full h-0.5 bg-white border-t border-dashed"></div>
+                        <div class="w-full h-0.5 bg-white"></div>
+                    </div>
+                    <!-- Play Diagram Elements -->
+                    <div class="relative z-10 text-center space-y-4">
+                        <div class="text-xs text-emerald-300 font-mono">🟢 QB (Quarterback) faz o Snap e lê a cobertura da defesa (Cover 3)</div>
+                        <div class="flex justify-center space-x-8 text-xs font-bold text-white">
+                            <span class="px-2 py-1 bg-black/40 rounded border border-white/20">WR (Rota Go ↗)</span>
+                            <span class="px-2 py-1 bg-black/40 rounded border border-white/20">TE (Rota Seam ↑)</span>
+                            <span class="px-2 py-1 bg-black/40 rounded border border-white/20">WR (Rota Slant ↘)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 7: SUPER BOWL & RECORDS ================= -->
+        <div x-show="activeTab === 'superbowl'" x-cloak class="space-y-6">
+            <div>
+                <h2 class="text-2xl font-black text-white">Super Bowl & Recordes Históricos</h2>
+                <p class="text-slate-400 text-sm">A história dos grandes campeões e recordes all-time da NFL.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Super Bowl LX (Latest) -->
+                <div class="bg-nflsurface border border-slate-800 rounded-xl p-5 shadow-lg">
+                    <span class="text-amber-400 font-bold text-xs uppercase tracking-wider block mb-2">🏆 Edição Histórica</span>
+                    <h3 class="text-xl font-bold text-white mb-2">Super Bowl LIX</h3>
+                    <p class="text-xs text-slate-400 mb-4">Caesars Superdome, New Orleans • MVP: Patrick Mahomes</p>
+                    <div class="flex justify-between items-center bg-nflcard p-4 rounded-xl text-sm font-bold">
+                        <span class="text-white">Kansas City Chiefs <span class="text-sky-400 font-mono">31</span></span>
+                        <span class="text-slate-500">vs</span>
+                        <span class="text-white"><span class="text-sky-400 font-mono">24</span> San Francisco 49ers</span>
+                    </div>
+                </div>
+
+                <!-- All-Time Records -->
+                <div class="bg-nflsurface border border-slate-800 rounded-xl p-5 shadow-lg">
+                    <span class="text-sky-400 font-bold text-xs uppercase tracking-wider block mb-2">📊 Recordes All-Time</span>
+                    <h3 class="text-xl font-bold text-white mb-3">Maiores Passadores da História</h3>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex justify-between py-1 border-b border-slate-800">
+                            <span class="text-slate-300">1. Tom Brady</span>
+                            <span class="font-mono font-bold text-sky-400">89,214 yds</span>
+                        </div>
+                        <div class="flex justify-between py-1 border-b border-slate-800">
+                            <span class="text-slate-300">2. Drew Brees</span>
+                            <span class="font-mono font-bold text-sky-400">80,358 yds</span>
+                        </div>
+                        <div class="flex justify-between py-1">
+                            <span class="text-slate-300">3. Peyton Manning</span>
+                            <span class="font-mono font-bold text-sky-400">71,940 yds</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-nflsurface border-t border-slate-800 py-8 mt-12 text-center text-xs text-slate-400">
+        <div class="max-w-7xl mx-auto px-4 space-y-2">
+            <p>🏈 <strong class="text-white">Gridiron Atlas</strong> — The Complete NFL Data, History & Analytics Platform.</p>
+            <p class="text-[10px]">Desenvolvido com foco em estatísticas esportivas, experiência do usuário e acessibilidade educacional.</p>
+        </div>
+    </footer>
+
+    <!-- Alpine State Script -->
+    <script>
+        function gridironApp() {
+            return {
+                activeTab: 'home',
+                expertMode: false,
+                darkMode: true,
+                selectedSeason: '2026'
+            }
+        }
+    </script>
+</body>
+</html>
