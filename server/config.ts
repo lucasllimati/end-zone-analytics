@@ -8,6 +8,8 @@ export const DATA_DIR = path.join(ROOT, 'data');
 export const RAW_DIR = path.join(ROOT, 'data-raw');
 export const CURATED_DIR = path.join(ROOT, 'data-curated');
 export const DIST_DIR = path.join(ROOT, 'dist');
+/** Registros operacionais privados (execuções, alertas, auditoria). Nunca servido publicamente. */
+export const OPS_DIR = process.env.OPS_DIR ?? path.join(ROOT, 'ops');
 
 export const config = {
   port: Number(process.env.API_PORT ?? 8787),

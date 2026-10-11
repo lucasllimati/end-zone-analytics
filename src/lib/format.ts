@@ -100,3 +100,35 @@ export function roman(n: number): string {
   }
   return out;
 }
+
+/**
+ * Instante do kickoff. O nflverse publica data (YYYY-MM-DD) e horário no fuso do Leste dos EUA
+ * (America/New_York, com horário de verão); aqui convertemos para um instante absoluto.
+ */
+export function kickoffInstant(date: string | null | undefined, timeET: string | null | undefined): Date | null {
+  const d = date?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const t = timeET?.match(/^(\d{1,2}):(\d{2})/);
+  if (!d || !t) return null;
+  const wall = Date.UTC(+d[1], +d[2] - 1, +d[3], +t[1], +t[2]);
+  // Deslocamento do fuso de Nova York naquele instante (EDT = -4h, EST = -5h).
+  const offsetAt = (ms: number) => {
+    const p = Object.fromEntries(
+      new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+        .formatToParts(new Date(ms))
+        .map((x) => [x.type, x.value]),
+    );
+    return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute) - ms;
+  };
+  let utc = wall - offsetAt(wall);
+  utc = wall - offsetAt(utc);
+  return new Date(utc);
+}
+
+/** Horário local do kickoff com o fuso (ex.: "14:00 BRT"); null se a fonte não informou o horário. */
+export function kickoffLocal(date: string | null | undefined, timeET: string | null | undefined, timeZone?: string): string | null {
+  const at = kickoffInstant(date, timeET);
+  if (!at) return null;
+  const parts = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short', timeZone }).formatToParts(at);
+  const get = (k: string) => parts.find((p) => p.type === k)?.value ?? '';
+  return `${get('hour')}:${get('minute')} ${get('timeZoneName')}`.trim();
+}

@@ -77,7 +77,8 @@ export interface PlayerSeasonLine {
   rushTd: number;
   rushEpa: number | null;
   rec: number;
-  tgt: number;
+  /** Alvos. null quando a fonte é inconsistente (ex.: recepções > alvos em 2003–2008). */
+  tgt: number | null;
   recYds: number;
   recTd: number;
   yac: number;

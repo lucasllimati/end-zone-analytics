@@ -30,6 +30,9 @@ const Glossary = lazy(() => import('./pages/Glossary'));
 const Explorer = lazy(() => import('./pages/Explorer'));
 const DataCenter = lazy(() => import('./pages/DataCenter'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+/** A área administrativa não entra no build estático público (VITE_PUBLIC_STATIC=1): o Vite remove o chunk. */
+const ADMIN_ENABLED = import.meta.env.VITE_PUBLIC_STATIC !== '1';
+const Admin = ADMIN_ENABLED ? lazy(() => import('./pages/Admin')) : null;
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null as Error | null };
@@ -87,6 +90,7 @@ export function App() {
         <Route path="glossary" element={page(<Glossary />)} />
         <Route path="explorer" element={page(<Explorer />)} />
         <Route path="data" element={page(<DataCenter />)} />
+        {Admin && <Route path="admin" element={page(<Admin />)} />}
         <Route path="*" element={page(<NotFound />)} />
       </Route>
     </Routes>

@@ -286,7 +286,7 @@ export function buildQbModel(
 /* ------------------------------- Similaridade ------------------------------ */
 
 type Feat = (c: PlayerSeasonLine) => number | null;
-const pg = (k: keyof PlayerSeasonLine): Feat => (c) => (c.games ? (c[k] as number) / c.games : null);
+const pg = (k: keyof PlayerSeasonLine): Feat => (c) => (c.games && c[k] !== null ? (c[k] as number) / c.games : null);
 const ratio = (a: keyof PlayerSeasonLine, b: keyof PlayerSeasonLine): Feat => (c) => ((c[b] as number) ? (c[a] as number) / (c[b] as number) : null);
 
 const FEATURES: Record<string, Feat[]> = {

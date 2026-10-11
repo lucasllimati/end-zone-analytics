@@ -2,20 +2,21 @@
  * Fábrica da aplicação Fastify (API + arquivos estáticos). Exportada separadamente de index.ts
  * para permitir testes com `app.inject()` sem abrir porta.
  */
-import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import Fastify, { type FastifyError, type FastifyInstance, type FastifyRequest } from 'fastify';
+import Fastify, { type FastifyError, type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import helmet from '@fastify/helmet';
 import compress from '@fastify/compress';
 import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
 import { z } from 'zod';
-import { DATA_DIR, DIST_DIR, config } from './config';
+import { DATA_DIR, DIST_DIR, OPS_DIR, config } from './config';
 import { DataStore } from './services/dataStore';
 import { TtlCache } from './services/ttlCache';
 import { gameDetail, scoreboard } from './services/espn';
 import { currentJob, getJob, listJobs, startSync, type Runner } from './services/jobs';
+import { AdminAuth } from './services/auth';
+import { OpsLog, recommendedAction } from './services/ops';
 import { fetchJson } from './etl/fetcher';
 import { openapi } from './openapi';
 import { SOURCES } from '../src/lib/sources';
@@ -31,6 +32,10 @@ export interface AppOptions {
   serveStatic?: boolean;
   syncRunner?: Runner;
   adminToken?: string;
+  /** Diretório do log operacional privado (padrão: ops/). */
+  opsDir?: string;
+  /** Libera o admin sem token para requisições de localhost (padrão: somente fora de produção). */
+  allowLocalAdmin?: boolean;
 }
 
 const seasonQ = z.coerce.number().int().min(1920).max(2100);
@@ -43,7 +48,8 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
   });
   const store = new DataStore(opts.dataDir ?? DATA_DIR);
   const checkCache = new TtlCache<UpdateCheckResult>();
-  const adminToken = opts.adminToken ?? config.adminToken;
+  const auth = new AdminAuth(opts.adminToken ?? config.adminToken, opts.allowLocalAdmin ?? !config.isProd, config.isProd);
+  const ops = new OpsLog(opts.opsDir ?? OPS_DIR);
 
   await app.register(helmet, {
     contentSecurityPolicy: {
@@ -214,23 +220,58 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
   });
 
   /* --------------------------------- Admin --------------------------------- */
-  const isLocal = (req: FastifyRequest) => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress ?? '');
-  const authorized = (req: FastifyRequest) => {
-    if (isLocal(req) && !req.headers['x-forwarded-for']) return true;
-    if (!adminToken) return false;
-    const given = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
-    const a = Buffer.from(given);
-    const b = Buffer.from(adminToken);
-    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  // Todas as rotas /api/admin/* (exceto sessão/login/logout) exigem autenticação no servidor — ver services/auth.ts.
+  const ip = (req: FastifyRequest) => req.ip;
+  const guard = async (req: FastifyRequest, reply: FastifyReply) => {
+    if (!auth.method(req)) return reply.code(401).send({ error: 'unauthorized', message: 'Acesso restrito à administração.' });
   };
 
-  app.get('/api/admin/check', async (req, reply) => {
+  app.get('/api/admin/session', async (req) => ({
+    authenticated: Boolean(auth.method(req)),
+    method: auth.method(req),
+    tokenConfigured: auth.tokenConfigured,
+  }));
+
+  app.post('/api/admin/login', { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (req, reply) => {
+    const body = z.object({ token: z.string().min(1).max(512) }).safeParse(req.body ?? {});
+    if (!body.success) return reply.code(400).send({ error: 'bad_request' });
+    if (!auth.tokenConfigured) return reply.code(503).send({ error: 'not_configured', message: 'Defina ADMIN_TOKEN no servidor para habilitar o login.' });
+    if (!auth.login(body.data.token, reply)) {
+      void ops.event({ severity: 'warning', component: 'auth', message: 'Tentativa de login administrativo recusada', detail: `IP ${ip(req)}` }).catch(() => {});
+      return reply.code(401).send({ error: 'unauthorized', message: 'Token inválido.' });
+    }
+    void ops.event({ severity: 'info', component: 'auth', message: 'Login administrativo', detail: `IP ${ip(req)}` }).catch(() => {});
+    return { authenticated: true };
+  });
+
+  app.post('/api/admin/logout', async (req, reply) => {
+    auth.logout(req, reply);
+    return { authenticated: false };
+  });
+
+  app.get('/api/admin/check', { preHandler: guard }, async (req, reply) => {
     const m = await store.manifest();
     if (!m) return reply.code(503).send({ error: 'no_data' });
     const force = (req.query as { force?: string }).force === '1';
     if (force) checkCache.clear();
     try {
-      return await checkCache.get(`check:${m.generatedAt}`, 10 * 60_000, () => checkForUpdates(m, fetchJson));
+      return await checkCache.get(`check:${m.generatedAt}`, 10 * 60_000, async () => {
+        const res = await checkForUpdates(m, fetchJson);
+        const failed = res.items.filter((i) => i.error);
+        if (failed.length) {
+          const detail = failed.map((i) => `${i.label}: ${i.error}`).join('\n');
+          void ops
+            .event({
+              severity: 'warning',
+              component: 'sources',
+              message: `Verificação de dados novos: ${failed.length} de ${res.items.length} fonte(s) indisponível(is)`,
+              detail,
+              action: recommendedAction(detail),
+            })
+            .catch(() => {});
+        }
+        return res;
+      });
     } catch (e) {
       req_log(app, e);
       return reply.code(502).send({ error: 'upstream_unavailable' });
@@ -238,7 +279,8 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
   });
 
   app.post('/api/admin/sync', { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (req, reply) => {
-    if (!authorized(req)) return reply.code(401).send({ error: 'unauthorized', message: 'Sincronização exige acesso local ou ADMIN_TOKEN.' });
+    if (!auth.method(req)) return reply.code(401).send({ error: 'unauthorized', message: 'Sincronização exige login administrativo ou ADMIN_TOKEN.' });
+    if (!auth.canMutate(req)) return reply.code(403).send({ error: 'forbidden', message: 'Cabeçalho de proteção ausente.' });
     const body = z
       .object({
         mode: z.enum(['full', 'partial']).default('partial'),
@@ -247,14 +289,76 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
       })
       .safeParse(req.body ?? {});
     if (!body.success) return reply.code(400).send({ error: 'bad_request', issues: body.error.issues });
-    const { job, alreadyRunning } = startSync(body.data, () => {
-      store.invalidate();
-      checkCache.clear();
-    }, opts.syncRunner);
+    const { job, alreadyRunning } = startSync(
+      body.data,
+      () => {
+        store.invalidate();
+        checkCache.clear();
+      },
+      opts.syncRunner,
+      ops,
+    );
+    if (!alreadyRunning)
+      void ops
+        .event({ severity: 'info', component: 'auth', jobId: job.id, message: `Carga ${body.data.mode === 'full' ? 'completa' : 'parcial'} solicitada (${auth.method(req)})`, detail: `IP ${ip(req)}` })
+        .catch(() => {});
     return reply.code(alreadyRunning ? 409 : 202).send({ job, alreadyRunning });
   });
-  app.get('/api/admin/jobs', async () => listJobs().map(({ log, ...j }) => ({ ...j, logLines: log.length })));
-  app.get('/api/admin/jobs/:id', async (req, reply) => getJob((req.params as { id: string }).id) ?? reply.code(404).send(notFound('Job')));
+
+  app.get('/api/admin/jobs', { preHandler: guard }, async () => listJobs().map(({ log, ...j }) => ({ ...j, logLines: log.length })));
+  app.get('/api/admin/jobs/:id', { preHandler: guard }, async (req, reply) => getJob((req.params as { id: string }).id) ?? reply.code(404).send(notFound('Job')));
+
+  app.get('/api/admin/overview', { preHandler: guard }, async () => {
+    const m = await store.manifest();
+    const runs = await ops.runs();
+    const dataDir = opts.dataDir ?? DATA_DIR;
+    const expected = ['manifest.json', 'quality.json', 'teams.json', 'games/all.json', 'players/index.json', 'superbowls.json', 'team-seasons.json', 'draft.json'];
+    if (m) for (let s = m.coverage.firstSeason; s <= m.coverage.lastSeason; s++) expected.push(`games/${s}.json`, `stats/players-${s}.json`);
+    const missing = expected.filter((f) => !fs.existsSync(path.join(dataDir, f)));
+    return {
+      api: { status: 'ok', uptime: Math.round(process.uptime()), node: process.version, env: config.isProd ? 'production' : 'development' },
+      githubTokenConfigured: Boolean(config.githubToken),
+      data: m
+        ? {
+            generatedAt: m.generatedAt,
+            ingestionVersion: m.ingestionVersion,
+            lastMode: m.lastMode,
+            coverage: m.coverage,
+            quality: m.quality,
+            datasets: Object.values(m.datasets).map(({ key, label, rows, retrievedAt, remoteVersion, sha256 }) => ({ key, label, rows, retrievedAt, remoteVersion, sha256 })),
+          }
+        : null,
+      files: { expected: expected.length, missing },
+      running: currentJob(),
+      lastSuccess: runs.find((r) => r.status === 'done') ?? null,
+      lastAttempt: runs[0] ?? null,
+      runs: runs.slice(0, 30),
+    };
+  });
+
+  app.get('/api/admin/events', { preHandler: guard }, async (req, reply) => {
+    const q = z
+      .object({
+        severity: z.enum(['info', 'warning', 'error', 'critical']).optional(),
+        component: z.enum(['pipeline', 'sources', 'quality', 'auth', 'api']).optional(),
+        jobId: z.string().uuid().optional(),
+        days: z.coerce.number().int().min(1).max(365).optional(),
+      })
+      .safeParse(req.query);
+    if (!q.success) return reply.code(400).send({ error: 'bad_request', issues: q.error.issues });
+    // Um erro de carga ou de fonte é considerado resolvido quando há uma carga bem-sucedida posterior.
+    const lastOk = (await ops.runs()).find((r) => r.status === 'done')?.finishedAt ?? '';
+    const since = q.data.days ? Date.now() - q.data.days * 86_400_000 : 0;
+    return (await ops.events())
+      .filter(
+        (e) =>
+          (!q.data.severity || e.severity === q.data.severity) &&
+          (!q.data.component || e.component === q.data.component) &&
+          (!q.data.jobId || e.jobId === q.data.jobId) &&
+          Date.parse(e.at) >= since,
+      )
+      .map((e) => ({ ...e, resolved: e.severity !== 'info' && ['pipeline', 'sources'].includes(e.component) ? e.at < lastOk : null }));
+  });
 
   /* -------------------------------- Estáticos ------------------------------- */
   if (opts.serveStatic ?? config.isProd) {

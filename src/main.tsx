@@ -4,9 +4,12 @@ import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
 import { AppProvider } from './context/AppContext';
 import { TeamsProvider } from './data/TeamsContext';
+import '@fontsource/barlow-condensed/latin-700.css';
+import '@fontsource/barlow-condensed/latin-800.css';
 import './styles/tokens.css';
 import './styles/base.css';
 import './styles/components.css';
+import './styles/pages.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

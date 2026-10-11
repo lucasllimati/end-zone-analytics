@@ -1,10 +1,16 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useUpdates } from '../data/useUpdates';
+import { useAdminSession } from '../data/admin';
 import { CloseIcon, RefreshIcon } from './Icons';
 
-/** Aviso discreto quando há dados novos nas fontes, com atualização em um clique (carga parcial). */
+/** Aviso de dados novos — exibido somente para administradores autenticados (o público nunca vê operações). */
 export function UpdateBanner() {
+  const { session } = useAdminSession();
+  return session?.authenticated ? <AdminUpdateBanner /> : null;
+}
+
+function AdminUpdateBanner() {
   const { result, sync, job, syncError } = useUpdates(true);
   const [dismissed, setDismissed] = useState(false);
   if (dismissed) return null;
@@ -44,8 +50,8 @@ export function UpdateBanner() {
         >
           {running ? 'Atualizando…' : 'Atualizar agora'}
         </button>
-        <Link to="/data" className="small">
-          Detalhes
+        <Link to="/admin" className="small">
+          Administração
         </Link>
         {syncError && <span className="small bad">{syncError}</span>}
         <span className="spacer" />

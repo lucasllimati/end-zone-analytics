@@ -30,11 +30,15 @@ h4 {
   font-weight: 650;
 }
 h1 {
-  font-size: clamp(1.7rem, 2.4vw + 1rem, 2.6rem);
-  letter-spacing: -0.03em;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(2rem, 2.6vw + 1.2rem, 3.1rem);
+  line-height: 1.02;
+  letter-spacing: -0.005em;
 }
 h2 {
-  font-size: 1.3rem;
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
 }
 h3 {
   font-size: 1.05rem;
@@ -49,6 +53,13 @@ a {
 }
 a:hover {
   text-decoration-color: currentColor;
+}
+main a:not([class]) {
+  color: var(--accent-strong);
+  text-decoration-color: color-mix(in srgb, var(--accent-strong) 40%, transparent);
+}
+:root[data-theme='light'] main a:not([class]) {
+  color: var(--accent);
 }
 img {
   max-width: 100%;
@@ -84,7 +95,7 @@ textarea {
   left: 12px;
   top: -60px;
   z-index: 100;
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--accent-ink);
   padding: 8px 14px;
   border-radius: var(--radius-sm);

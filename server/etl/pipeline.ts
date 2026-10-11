@@ -21,7 +21,7 @@ import { currentWeek } from '../../src/lib/games';
 import type {
   CuratedRecord, DatasetMeta, Manifest, PlayerCareer, PlayerIndexEntry, PlayerSeasonLine, TeamSeasonLine,
 } from '../../src/lib/types';
-import { getAsset, type RawFile } from './fetcher';
+import { getAsset, resetVersionCache, type RawFile } from './fetcher';
 import { replaceFile } from './files';
 import { parseCsv, qbStarts, toBios, toDraft, toGames, toPlayerLines, toTeamLines, toTeams } from './transform';
 import {
@@ -39,6 +39,8 @@ export interface PipelineOptions {
 export interface PipelineResult {
   manifest: Manifest;
   downloaded: string[];
+  /** Avisos não bloqueantes (ex.: cache local usado após falha de download). */
+  warnings: string[];
   durationMs: number;
 }
 
@@ -63,7 +65,13 @@ export async function readManifest(): Promise<Manifest | null> {
 
 export async function runPipeline(opts: PipelineOptions): Promise<PipelineResult> {
   const t0 = Date.now();
-  const log = opts.log ?? (() => {});
+  const warnings: string[] = [];
+  const log = (m: string) => {
+    if (m.trimStart().startsWith('!')) warnings.push(m.trim().replace(/^!\s*/, ''));
+    opts.log?.(m);
+  };
+  // Consulta as versões remotas de novo a cada execução (o servidor fica de pé entre cargas).
+  resetVersionCache();
   const prev = await readManifest();
   const downloaded: string[] = [];
   const forced = (key: string, season?: number) => {
@@ -119,7 +127,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineResult
   log('• Curadoria (Super Bowls, recordes)');
   const sbCurated = JSON.parse(await fs.readFile(path.join(CURATED_DIR, 'superbowls.json'), 'utf8')) as { source: string; games: CuratedSb[] };
   const recCurated = JSON.parse(await fs.readFile(path.join(CURATED_DIR, 'records.json'), 'utf8')) as {
-    source: string; asOf: string; records: (Omit<CuratedRecord, 'asOf'> & { season?: number; verify?: string })[];
+    source: string; asOf: string; records: (Omit<CuratedRecord, 'asOf'> & { season?: number; verify?: string; knownDivergences?: { player: string; season: number; source: number; official: number; note: string }[] })[];
   };
   const curatedRecords = recCurated.records.map((r) => ({ ...r, asOf: recCurated.asOf }));
 
@@ -263,7 +271,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineResult
   await writeJson('history/changes.json', changeLog.slice(0, 50));
   await writeJson('manifest.json', manifest);
   log(`✔ Concluído em ${((Date.now() - t0) / 1000).toFixed(1)}s · ${downloaded.length} arquivo(s) baixado(s) · qualidade: ${manifest.quality.pass} ok, ${manifest.quality.warn} alerta(s), ${manifest.quality.fail} falha(s)`);
-  return { manifest, downloaded, durationMs: Date.now() - t0 };
+  return { manifest, downloaded, warnings, durationMs: Date.now() - t0 };
 }
 
 async function readChanges(): Promise<unknown[]> {

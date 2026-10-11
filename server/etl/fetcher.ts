@@ -7,26 +7,84 @@ import { remoteAssetVersions } from '../../src/lib/updates';
 
 const UA = 'end-zone-analytics/1.0 (+https://github.com/)';
 
+/** Erro de fonte com contexto acionável (ex.: limite da API do GitHub e horário de liberação). */
+export class SourceError extends Error {
+  constructor(message: string, public status: number, public resetAt: string | null = null) {
+    super(message);
+  }
+}
+
+/** Mensagem legível para respostas 403/429 da API do GitHub (limite de requisições). */
+export function rateLimitMessage(status: number, headers: Headers, url: string): SourceError {
+  const remaining = headers.get('x-ratelimit-remaining');
+  const reset = Number(headers.get('x-ratelimit-reset'));
+  const resetAt = Number.isFinite(reset) && reset > 0 ? new Date(reset * 1000).toISOString() : null;
+  if ((status === 403 || status === 429) && (remaining === '0' || status === 429)) {
+    const when = resetAt ? ` Libera às ${new Date(resetAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}.` : '';
+    const hint = config.githubToken ? '' : ' Configure GITHUB_TOKEN para 5.000 consultas/hora.';
+    return new SourceError(`Limite de consultas da API do GitHub atingido (HTTP ${status}).${when}${hint}`, status, resetAt);
+  }
+  return new SourceError(`HTTP ${status} em ${url}`, status, resetAt);
+}
+
+/* Requisições condicionais (ETag): respostas 304 não consomem o limite da API do GitHub. */
+const ETAG_FILE = () => path.join(RAW_DIR, '.github-etags.json');
+let etags: Record<string, { etag: string; body: unknown }> | null = null;
+async function etagStore() {
+  if (!etags) {
+    try {
+      etags = JSON.parse(await fs.readFile(ETAG_FILE(), 'utf8'));
+    } catch {
+      etags = {};
+    }
+  }
+  return etags!;
+}
+async function saveEtags() {
+  await fs.mkdir(RAW_DIR, { recursive: true });
+  await fs.writeFile(ETAG_FILE(), JSON.stringify(etags ?? {}));
+}
+
 export async function fetchJson(url: string): Promise<unknown> {
   const headers: Record<string, string> = { 'User-Agent': UA, Accept: 'application/vnd.github+json' };
-  if (config.githubToken && url.includes('api.github.com')) headers.Authorization = `Bearer ${config.githubToken}`;
+  const isGithubApi = url.includes('api.github.com');
+  if (config.githubToken && isGithubApi) headers.Authorization = `Bearer ${config.githubToken}`;
+  const store = isGithubApi ? await etagStore() : null;
+  const cached = store?.[url];
+  if (cached) headers['If-None-Match'] = cached.etag;
   const res = await fetch(url, { headers, signal: AbortSignal.timeout(30_000) });
-  if (!res.ok) throw new Error(`HTTP ${res.status} em ${url}`);
-  return res.json();
+  if (res.status === 304 && cached) return cached.body;
+  if (!res.ok) throw rateLimitMessage(res.status, res.headers, url);
+  const body = await res.json();
+  const etag = res.headers.get('etag');
+  if (store && etag) {
+    store[url] = { etag, body };
+    await saveEtags().catch(() => {});
+  }
+  return body;
 }
 
 const versionCache = new Map<string, Record<string, string>>();
+const versionErrors = new Map<string, string>();
 
-/** Versões remotas por asset (cacheado durante uma execução do pipeline). */
+/** Versões remotas por asset (cacheado durante uma execução do pipeline). Falhas ficam registradas em `versionErrors`. */
 export async function releaseVersions(tag: string): Promise<Record<string, string>> {
   if (!versionCache.has(tag)) {
     try {
       versionCache.set(tag, await remoteAssetVersions(tag, fetchJson));
-    } catch {
+      versionErrors.delete(tag);
+    } catch (e) {
       versionCache.set(tag, {});
+      versionErrors.set(tag, e instanceof Error ? e.message : String(e));
     }
   }
   return versionCache.get(tag)!;
+}
+
+/** Limpa o cache de versões (cada execução do pipeline consulta de novo). */
+export function resetVersionCache() {
+  versionCache.clear();
+  versionErrors.clear();
 }
 
 export interface RawFile {
@@ -40,6 +98,8 @@ export interface RawFile {
  * Obtém um asset do nflverse com cache em data-raw/.
  * Baixa somente se `force` ou se a versão remota difere da registrada localmente.
  * Retorna null se o asset não existir remotamente (ex.: playoffs de uma temporada em andamento).
+ * Sem a lista de versões remotas, uma carga incremental não consegue saber o que mudou: nesse caso
+ * falha com erro explícito em vez de reportar sucesso sem atualizar nada.
  */
 export async function getAsset(tag: string, name: string, force: boolean, log: (m: string) => void): Promise<RawFile | null> {
   await fs.mkdir(RAW_DIR, { recursive: true });
@@ -59,6 +119,12 @@ export async function getAsset(tag: string, name: string, force: boolean, log: (
   } catch {
     /* sem cache */
   }
+
+  if (!hasRemoteList && haveLocal && !force) {
+    const why = versionErrors.get(tag) ?? 'lista de versões indisponível';
+    throw new SourceError(`Não foi possível verificar se "${name}" mudou: ${why}`, 503);
+  }
+  if (!hasRemoteList) log(`  ! versões remotas indisponíveis para ${tag} (${versionErrors.get(tag) ?? 'motivo desconhecido'}); baixando sem versão`);
 
   const needs = force || !haveLocal || (remoteVersion !== null && remoteVersion !== localVersion);
   if (!needs) return { name, text: await fs.readFile(file, 'utf8'), version: localVersion, downloaded: false };

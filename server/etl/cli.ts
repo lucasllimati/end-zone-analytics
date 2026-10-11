@@ -7,9 +7,11 @@
  *   npm run data:check                                  # verifica se há dados novos (não baixa nada)
  *   npm run data:quality                                # mostra o relatório de qualidade atual
  */
+import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { DATA_DIR } from '../config';
+import { DATA_DIR, OPS_DIR } from '../config';
+import { OpsLog, recommendedAction, type OpsRun } from '../services/ops';
 import { SOURCES } from '../../src/lib/sources';
 import { checkForUpdates } from '../../src/lib/updates';
 import type { QualityCheck } from '../../src/lib/types';
@@ -35,7 +37,26 @@ async function main() {
       process.exit(2);
     }
     const seasons = list(arg('seasons'))?.map(Number);
-    await runPipeline({ mode: cmd, datasets, seasons, log: (m) => console.log(m) });
+    // Registra a execução no log operacional (visível na área administrativa), com sucesso ou falha.
+    const ops = new OpsLog(OPS_DIR);
+    const run: OpsRun = {
+      id: crypto.randomUUID(), mode: cmd, trigger: 'cli', datasets: datasets ?? [], seasons: seasons ?? [], status: 'running',
+      startedAt: new Date().toISOString(), finishedAt: null, durationMs: null, downloaded: 0, warnings: [], error: null, ingestionVersion: null,
+    };
+    try {
+      const r = await runPipeline({ mode: cmd, datasets, seasons, log: (m) => console.log(m) });
+      Object.assign(run, { status: 'done', downloaded: r.downloaded.length, warnings: r.warnings, ingestionVersion: r.manifest.ingestionVersion });
+      await ops.event({ severity: r.warnings.length ? 'warning' : 'info', component: 'pipeline', jobId: run.id, message: `Carga via terminal concluída: ${r.downloaded.length} arquivo(s) novo(s)`, detail: r.warnings.join('\n') || null });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      Object.assign(run, { status: 'error', error: msg });
+      await ops.event({ severity: 'error', component: 'pipeline', jobId: run.id, message: 'Carga via terminal falhou; o manifest publicado não foi atualizado', detail: msg, action: recommendedAction(msg) });
+      throw e;
+    } finally {
+      run.finishedAt = new Date().toISOString();
+      run.durationMs = Date.parse(run.finishedAt) - Date.parse(run.startedAt);
+      await ops.saveRun(run);
+    }
     return;
   }
   if (cmd === 'check') {

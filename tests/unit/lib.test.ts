@@ -200,3 +200,16 @@ describe('busca global', () => {
     expect(score({ title: 'Cobertura', hay: '' }, 'COBERTURA')).toBeGreaterThan(0);
   });
 });
+
+describe('kickoff (fuso do Leste dos EUA → local)', () => {
+  it('converte considerando horário de verão americano', async () => {
+    const { kickoffInstant, kickoffLocal } = await import('../../src/lib/format');
+    // Outubro: EDT (UTC-4). 13:00 ET = 17:00 UTC.
+    expect(kickoffInstant('2026-10-11', '13:00')?.toISOString()).toBe('2026-10-11T17:00:00.000Z');
+    // Dezembro: EST (UTC-5). 20:20 ET = 01:20 UTC do dia seguinte.
+    expect(kickoffInstant('2025-12-07', '20:20')?.toISOString()).toBe('2025-12-08T01:20:00.000Z');
+    expect(kickoffLocal('2026-10-11', '13:00', 'America/Sao_Paulo')).toMatch(/^14:00 /);
+    expect(kickoffInstant('2026-10-11', null)).toBeNull();
+    expect(kickoffLocal(null, '13:00')).toBeNull();
+  });
+});

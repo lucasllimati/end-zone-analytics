@@ -1,0 +1,344 @@
+# End Zone Analytics — Especificação funcional
+
+Documento de referência de **todas as páginas, funcionalidades e dados** da plataforma.
+Reflete o estado atual do código (v1.1 — redesign azul-marinho, área administrativa protegida). Itens marcados como **[Planejado]** ainda não existem.
+
+> Documentos técnicos complementares: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATA_MODEL.md](docs/DATA_MODEL.md), [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md), [docs/API.md](docs/API.md), [docs/SECURITY.md](docs/SECURITY.md), [docs/ROADMAP.md](docs/ROADMAP.md).
+
+---
+
+## 1. Visão geral
+
+| Item | Definição |
+|---|---|
+| Produto | Site sobre a NFL: dados, estatísticas, comparações, história, Super Bowl, analytics e educação |
+| Público | Iniciantes (linguagem simples) e especialistas (EPA, CPOE, modelos) |
+| Idioma | Português do Brasil (termos técnicos da NFL mantidos em inglês quando consagrados) |
+| Princípios | Minimalista e profissional · **nunca inventar dados** · ausência = “Não disponível” (nunca 0) · fonte e data visíveis · ⓘ explicação em todo número relevante |
+| Cobertura detalhada | Temporadas **1999 → atual** (nflverse); Draft desde 1980; Super Bowls I–LX e recordes oficiais por curadoria |
+
+### Arquitetura resumida
+
+```mermaid
+flowchart LR
+  NV[nflverse<br/>GitHub Releases CSV] -->|ETL: npm run data:*| RAW[data-raw/<br/>cache CSV]
+  CUR[data-curated/<br/>Super Bowls, recordes] --> ETL
+  RAW --> ETL[Pipeline ETL<br/>transformação + analytics + qualidade]
+  ETL --> DATA[data/<br/>JSON publicados + manifest]
+  DATA --> API[API Fastify :8787]
+  ESPN[API pública ESPN] -->|ao vivo, cache 30–60 s| API
+  API --> WEB[React SPA :5173]
+  DATA -->|build:static| WEB
+```
+
+- **Frontend:** React 18 + TypeScript + Vite + React Router (cada página carregada sob demanda).
+- **Backend:** Fastify 5 (helmet, compressão, rate limit, validação zod), somente leitura + rotas de administração.
+- **Dados:** o CSV é lido **apenas na carga (ETL)**; em tempo de execução o site serve JSON pré-processado. Não há banco de dados.
+
+---
+
+## 2. Elementos globais (todas as páginas)
+
+| Elemento | Comportamento |
+|---|---|
+| Cabeçalho | Logotipo (bola oval), Início + 6 menus (Temporada, Times, Jogadores, Estatísticas, História, Aprenda). Fontes e qualidade ficam no rodapé e no menu móvel |
+| Busca global | `Ctrl K` (ou `⌘ K` no macOS) abre paleta de busca por páginas, times e jogadores |
+| Seletor de temporada | Mostra “2026 · atual”; muda a temporada usada em todas as páginas |
+| Modo Iniciante / Expert | Iniciante: explicações simples, sem jargão. Expert: colunas e métricas avançadas (EPA, CPOE…) e notas técnicas. Persistido no navegador |
+| Tema claro/escuro | Botão sol/lua; persistido no navegador; logos com versão para fundo escuro |
+| Aviso de atualização | Só para administradores autenticados: faixa quando há dados novos, com atualização em um clique |
+| Tooltips ⓘ | Explicação de métricas e colunas, adaptada ao modo |
+| Tabelas (DataTable) | Ordenação por coluna, legenda acessível, colunas só-Expert, exportação |
+| Exportação | CSV (UTF-8 com BOM), JSON, SVG e PNG dos gráficos |
+| Gráficos | Barras, colunas, linhas, radar e dispersão (SVG próprio, sem biblioteca externa) |
+| Estados | Carregando (skeleton), vazio, erro com “Recarregar” (ErrorBoundary por página) |
+| Acessibilidade | Link “Pular para o conteúdo”, foco visível, `aria-*`, contraste AA, testes axe-core |
+| Rodapé | Mapa do site, fontes, licença, aviso de marcas registradas, data da última atualização |
+| 404 | Página “Página não encontrada” com atalhos |
+
+---
+
+## 3. Mapa de páginas
+
+| Rota | Página | Grupo do menu |
+|---|---|---|
+| `/` | Início | — |
+| `/season` (abas `standings`, `schedule`, `leaders`, `playoffs`, `power`, `sos`) | Temporada | Liga / Analytics |
+| `/teams` · `/teams/:abbr` | Times · Perfil do time | Times & Jogadores |
+| `/players` · `/players/:id` | Jogadores · Perfil do jogador | Times & Jogadores |
+| `/compare` | Comparador | Times & Jogadores |
+| `/matchup` (alias `/rivalries`) | Confrontos e rivalidades | Times & Jogadores |
+| `/stadiums` | Estádios | Times & Jogadores |
+| `/games/:id` | Página do jogo | — (via links) |
+| `/super-bowl` · `/super-bowl/:n` | Super Bowl · Edição | História |
+| `/records` | Recordes | História |
+| `/draft` | Draft | História |
+| `/hall-of-fame` | Hall of Fame | História |
+| `/history` | História da NFL | História / Analytics |
+| `/rankings` | Ranking de QBs | Analytics |
+| `/explorer` | Explorador de dados | Analytics |
+| `/learn` | Comece aqui | Aprenda |
+| `/rules` | Regras e faltas | Aprenda |
+| `/positions` | Posições | Aprenda |
+| `/playbook` | Playbook | Aprenda |
+| `/strategy` | Estratégia | Aprenda |
+| `/glossary` | Glossário | Aprenda |
+| `/data` | Fontes e qualidade dos dados (pública) | Rodapé e menu móvel |
+| `/admin` | Administração (protegida no servidor) | Fora do menu; ausente do build estático |
+| `*` | Não encontrada | — |
+
+---
+
+## 4. Especificação por página
+
+### 4.1 Início (`/`)
+- **Hero:** “End Zone Analytics — O jogo em números.”, ilustração vetorial da bola oval, botões “Ver a temporada” e “Calendário completo”, atalho “Comece aqui”.
+- **Números da base** (só valores reais): times ativos, jogos na temporada regular, Super Bowls na base, verificações de qualidade aprovadas.
+- **Faixa de confiabilidade:** atualização relativa, último jogo registrado, link para fontes.
+- **Jogos da semana:** cards com logos, placar, estado (agendado, ao vivo, intervalo, finalizado, adiado, cancelado, resultado indisponível) e horário no fuso local; navegação por botões e teclado. Jogo não disputado mostra “×”, nunca 0 × 0.
+- **Painéis:** Classificação (Liga, AFC, NFC, Divisão; PF/PA/Div no modo Expert), Destaques da temporada (líder em passe, corrida, recepção e defesa, com critério e fonte; EPA/CPOE no Expert), Entenda o jogo (conteúdo editorial próprio).
+- **Jogo em destaque**, **Líderes da temporada**, **Último Super Bowl**, **Mais títulos**, **Explore mais**.
+
+### 4.2 Temporada (`/season`)
+Abas (estado na URL `?tab=`):
+
+| Aba | Conteúdo |
+|---|---|
+| Classificação | Por divisão, conferência ou liga. Colunas: W, L, T, PCT, PF, PA, DIFF, Casa, Fora, Div, Conf, Seq., Últ. 5 (Expert). Exportável |
+| Calendário | Todos os jogos semana a semana, placar, ao vivo quando aplicável, link para o jogo |
+| Líderes | Líderes por estatística (passe, corrida, recepção, defesa, chutes) |
+| Playoffs | Chave interativa da temporada; aviso “Playoffs ainda não disputados” |
+| Power ranking | Modelo transparente: Power Score (soma ponderada de z-scores), campanha, saldo/jogo, SOS, EPA/jogada, forma (4 jogos); seção “Como é calculado?” |
+| Força de tabela | SOS jogado, SOS restante, jogos restantes; destaque “Tabela mais difícil até agora” |
+
+Observação: a classificação usa critério de desempate **simplificado** (informado na tela).
+
+### 4.3 Times (`/teams`) e Perfil do time (`/teams/:abbr`)
+- Lista: 32 franquias ativas por conferência/divisão, com logo, cores e campanha da temporada selecionada.
+- Perfil — abas:
+  - **Visão geral:** campanha, cores (primária/secundária), gráfico “Vitórias por temporada”, Super Bowls, rivais, times semelhantes (similaridade).
+  - **Temporada a temporada:** campanha, PF, PA, DIFF, playoffs, resultado, técnico, QB com mais jogos.
+  - **Calendário** da temporada selecionada.
+  - **Destaques do elenco.**
+  - **História** da franquia (inclui nomes/cidades anteriores, ex.: OAK → LV).
+
+### 4.4 Jogadores (`/players`) e Perfil (`/players/:id`)
+- Busca sem acento/maiúsculas, filtro por posição (QB, RB, WR, TE, OL, DL, LB, DB, K, P), colunas primeira/última temporada e último time; filtros na URL.
+- Perfil:
+  - Bio (foto, posição, universidade, altura, peso, nascimento, draft, número, status).
+  - **Carreira — temporada regular** e playoffs; aviso “Carreira parcial” quando começou antes de 1999.
+  - **Temporada a temporada** com métricas por posição (ex.: CMP%, Y/A, EPA/DB, Rec/j, Y/R, Sacks/j, Tackles/j).
+  - Gráfico de evolução e radar por percentil.
+  - **Jogadores semelhantes** (similaridade estatística).
+
+### 4.5 Comparador (`/compare`)
+Três modos:
+- **Jogadores:** lado a lado (atalhos prontos: Brady × Mahomes, Brady × Manning, Mahomes × Allen, Moss × Fitzgerald, J. J. Watt × Aaron Donald), totais e por jogo, radar, **ajuste de era**, longevidade, playoffs, participações em Super Bowl.
+- **Times:** campanha desde 1999, pontos marcados/sofridos por jogo, EPA por jogada, melhor temporada.
+- **Temporadas:** uma temporada de time contra outra.
+
+### 4.6 Confrontos e rivalidades (`/matchup`)
+- Escolha de dois times (validação “Escolha dois times diferentes”).
+- Retrospecto, **linha do tempo dos confrontos**, tabela “Todos os jogos” (data, tipo, placar, vencedor, estádio).
+- Rivalidades clássicas pré-configuradas. Cobertura: desde 1999.
+
+### 4.7 Página do jogo (`/games/:id`)
+- Ficha do jogo (data, estádio, teto, gramado, clima, técnicos, árbitro, QBs).
+- Placar por quarto, **evolução do placar**, jogadas de pontuação, drives, destaques, estatísticas dos times.
+- **Probabilidade de vitória** jogada a jogada (modelo da ESPN).
+- “Antes deste jogo”: contexto das campanhas e confrontos.
+- Quando a ESPN não tem detalhes: aviso “Detalhes jogada a jogada indisponíveis”.
+
+### 4.8 Super Bowl (`/super-bowl`) e Edição (`/super-bowl/:n`)
+- Todas as edições I–LX: temporada, campeão, vice, placar, MVP, estádio.
+- Gráfico “Diferença de pontos em cada Super Bowl” (barras na cor do campeão; clique abre a edição).
+- Edição: ficha (técnicos, QBs, MVP, prorrogação), links para jogo/times.
+
+### 4.9 Recordes (`/records`)
+Abas: **Oficiais (todos os tempos)** · Temporada (1999+) · Carreira (1999+) · Playoffs (1999+) · Jogos · Times.
+- Detecção de recorde em andamento: líder atual × recorde oficial, com ritmo projetado para 17 jogos.
+
+### 4.10 Draft (`/draft`)
+- Escolhas por ano desde 1980 (rodada, pick, time, jogador, posição, universidade, AV, Pro Bowls, All-Pro, HOF).
+- **Valor de carreira por número de escolha** (gráfico), **Draft Value Score**, melhores por rodada, maiores “achados”.
+- Só drafts “maduros” entram na análise de valor.
+
+### 4.11 Hall of Fame (`/hall-of-fame`)
+- Membros **draftados desde 1980** (limitação informada em “Cobertura desta página”), com draft, time que draftou, AV, Pro Bowls, All-Pro, jogos e última temporada.
+
+### 4.12 História da NFL (`/history`)
+- Linha do tempo por eras (1920 → hoje) e “O que mudou” em cada uma.
+- **Evolução do jogo em números** (1999+): pontos por jogo, jardas de passe/corrida, taxa de passe, sacks, turnovers, vitórias do mandante, diferença média, FG% e XP%.
+- Médias por década e comparação entre eras.
+
+### 4.13 Estádios (`/stadiums`)
+- Estádio, times, teto, gramado, jogos (1999+), primeiro/último jogo, Super Bowls sediados (1999+).
+
+### 4.14 Ranking de QBs (`/rankings`)
+- Modelo **EZA-QB v1** baseado em dados, com **pesos ajustáveis** e predefinições: Equilibrado (padrão), Só eficiência, Só títulos, Volume e longevidade.
+- Componentes: anos, jardas, TD, rating, EPA/DB, ajuste de era (+Era), playoffs, Super Bowls.
+- Elegibilidade: mínimo de 1.500 tentativas.
+
+### 4.15 Explorador de dados (`/explorer`)
+- Monta rankings de **Jogadores** ou **Times (temporadas)**: fase (temporada regular/playoffs), período, “por temporada” ou “total do período”, posição, métrica, ordenação.
+- Volume mínimo para métricas de taxa; filtros na URL; exportação.
+- Consultas prontas (ex.: ataques mais eficientes por EPA/jogada, mais sacks desde 2015).
+
+### 4.16 Aprenda
+| Página | Conteúdo |
+|---|---|
+| Comece aqui (`/learn`) | “A NFL em 10 minutos”: o campo, como se pontua, fluxo de um jogo, **Simulador de Down & Distance** |
+| Regras e faltas (`/rules`) | Regras avançadas, penalidades (descrição, jardas, sinal) e equipe de arbitragem |
+| Posições (`/positions`) | Campo interativo; ataque, defesa e times especiais; responsabilidades, movimentação, porte típico, nota técnica |
+| Playbook (`/playbook`) | 29 jogadas e coberturas **animadas**: “Funciona contra”, “Ponto fraco”; explicação técnica no modo Expert |
+| Estratégia (`/strategy`) | Relógio, 4º down, red zone e mais; **teste uma decisão de 4º down** |
+| Glossário (`/glossary`) | Termos do básico ao avançado, busca, termos relacionados, link direto por âncora |
+
+### 4.17 Fontes e qualidade dos dados (`/data`, pública)
+Última atualização publicada, cobertura, verificações, como os números chegam ao site (coleta → transformação → validação → publicação), fontes e licenças, limitações conhecidas, tabela de qualidade e API pública. Sem controles de carga, tokens ou histórico operacional.
+
+### 4.18 Administração (`/admin`)
+Autorização sempre no servidor (sessão em cookie `HttpOnly`/`SameSite=Strict` via `ADMIN_TOKEN`; acesso local liberado só fora de produção).
+- **Visão geral:** API, arquivos publicados, última publicação bem-sucedida × última tentativa, qualidade, token do GitHub, alertas (carga falha, token ausente, arquivos faltando), conjuntos publicados com versão e sha256.
+- **Fontes e cargas:** verificação de dados novos (fonte indisponível ≠ atualizado), carga parcial/completa com fontes e temporadas, confirmação para carga completa, progresso e log do job, comando equivalente no terminal, execuções recentes (painel e terminal).
+- **Logs e alertas:** severidade, componente, job, mensagem, ação recomendada, detalhes técnicos, resolvido/em aberto; filtros por severidade, componente e período.
+- **Histórico:** publicações (ingestões) e todas as execuções.
+
+---
+
+## 5. Funcionalidades de dados (carga e atualização)
+
+| Modo | Comando | O que faz |
+|---|---|---|
+| Completa | `npm run data:full` | Baixa e reprocessa todas as fontes (~114 arquivos, ~40 MB, ~1 min) |
+| Parcial | `npm run data:partial` | Sem filtros: incremental (baixa só arquivos com versão remota diferente). Com filtros: força fontes/temporadas escolhidas |
+| Verificação | `npm run data:check` | Só compara versões locais × remotas, sem baixar |
+| Qualidade | `npm run data:quality` | Reexecuta as verificações sobre os dados publicados |
+
+Regras do pipeline:
+- Cache em `data-raw/` com `.meta.json` (versão, data, URL); escrita atômica (arquivo temporário + troca, com nova tentativa no Windows).
+- Até 3 tentativas por download; em falha, usa o cache local.
+- Cada execução incrementa `ingestionVersion`, grava o manifest anterior em `data/history/` e registra as mudanças em `history/changes.json`.
+- Verificações de qualidade: alertas não bloqueiam a publicação; falhas aparecem na página de dados e quebram o teste `published.test.ts`.
+
+Verificações de qualidade atuais (18): 32 franquias ativas; IDs de jogos únicos; times dos jogos existem; placares não negativos e completos; nenhum time contra si mesmo; nenhum placar no futuro; 16/17 jogos por time em temporadas encerradas; formato dos playoffs; uma linha por jogador/temporada/fase; estatísticas possíveis; alvos consistentes com recepções (inconsistentes viram “Não disponível”); passer rating em 0–158,3; todos os jogadores com nome; pick único por draft; Super Bowls em sequência; Super Bowls conferem com nflverse; recordes de temporada conferem; estatísticas não superam recordes oficiais (divergências conhecidas ficam documentadas em `knownDivergences` na curadoria).
+
+**Limitações conhecidas**
+- A verificação usa a API do GitHub: sem `GITHUB_TOKEN`, o limite é **60 requisições/hora por IP** (HTTP 403). Com token: 5.000/h. O erro informa o horário de liberação e a ação recomendada.
+- Requisições condicionais (ETag) evitam gastar o limite quando nada mudou; o cache de versões é renovado a cada execução.
+- Se a lista de versões não puder ser consultada, a carga parcial **falha com erro explícito** (não reporta sucesso sem atualizar). Execuções e falhas ficam registradas em `ops/` e aparecem no admin.
+- **[Planejado]** Carga parcial agendada automaticamente (ex.: a cada 6 h e após a rodada de domingo).
+
+---
+
+## 6. Dados
+
+### 6.1 Fontes
+
+| Conjunto | Fonte | Licença | Cobertura |
+|---|---|---|---|
+| Times, cores e logos | nflverse (`teams`) | CC-BY 4.0; logos são marcas dos detentores (CDN ESPN) | Atual + nomes históricos |
+| Calendário e resultados | nflverse (`schedules`) | CC-BY 4.0 | 1999 → atual |
+| Cadastro de jogadores | nflverse (`players`) | CC-BY 4.0 | Todos |
+| Estatísticas de jogadores | nflverse (`stats_player`, REG/POST por temporada) | CC-BY 4.0 | 1999 → atual |
+| Estatísticas de times | nflverse (`stats_team`) | CC-BY 4.0 | 1999 → atual |
+| Draft | nflverse (`draft_picks`, derivado de Pro Football Reference) | CC-BY 4.0 | 1980 → atual |
+| Super Bowls I–LX e recordes oficiais | Curadoria (`data-curated/`, NFL Record & Fact Book) | Fatos; texto próprio | Todos os tempos |
+| Ao vivo (placar, drives, probabilidade de vitória) | API pública do site da ESPN | Sem garantia de disponibilidade | Temporada atual |
+
+### 6.2 Arquivos publicados (`data/`)
+
+| Arquivo | Conteúdo |
+|---|---|
+| `manifest.json` | Versão do schema, data de geração, `ingestionVersion`, último modo, cobertura (primeira/última/atual temporada, semana, último jogo), metadados por conjunto (fonte, URL, licença, versão remota, linhas, sha256), resumo de qualidade |
+| `quality.json` | Resultado de cada verificação (id, conjunto, descrição, status, detalhe) |
+| `teams.json` | abbr, nome, apelido, conferência, divisão, cores, logo claro/escuro, wordmark, franquia, ativo |
+| `games/all.json`, `games/{ano}.json` | id, temporada, tipo (REG/WC/DIV/CON/SB), semana, data/hora, times, placar, prorrogação, campo neutro, jogo de divisão, teto, gramado, temperatura, vento, QBs, técnicos, árbitro, estádio, ID ESPN |
+| `stats/players-{ano}.json` | Por jogador/temporada/fase: jogos; passe (cmp, att, jardas, TD, INT, sacks, EPA, CPOE, air yards); corrida (tentativas, jardas, TD, EPA); recepção (rec, alvos, jardas, TD, YAC, EPA); defesa (tackles, TFL, sacks, QB hits, INT, PD, FF, TD); chutes (FG, XP, punts); fumbles perdidos; fantasy |
+| `stats/teams-{ano}.json` | Totais de time: passe, corrida, EPA, sacks, INT, fumbles, penalidades, chutes, TD de times especiais |
+| `players/index.json` | Índice de busca: id, nome, posição, último time, primeira/última temporada |
+| `players/careers/NN.json` | Bio + todas as temporadas + semelhantes; 64 arquivos (bucket = FNV-1a(id) mod 64) |
+| `team-seasons.json` | Por time/temporada: W-L-T, PF, PA, playoffs, título, EPA, jogadas, takeaways/giveaways, técnico, QB principal |
+| `trends.json` | Médias da liga por temporada (pontos, mandante, margem, prorrogação, passe/corrida, sacks, turnovers, FG%, XP%) |
+| `superbowls.json` | Número, romano, temporada, data, estádio, cidade, campeão/vice, placar, prorrogação, MVP, técnicos, QBs, `gameId`, fonte |
+| `records-curated.json` / `records-computed.json` | Recordes oficiais / top 10 calculados (1999+) |
+| `draft.json` | Temporada, rodada, pick, time, jogador, posição, universidade, idade, AV, Pro Bowls, All-Pro, HOF, jogos |
+| `stadiums.json` | Estádio, times, teto, gramado, jogos, primeiro/último, Super Bowls |
+| `models/qb-model.json` | Componentes brutos do ranking de QBs |
+| `history/` | Manifests anteriores e log de mudanças |
+
+Convenções: arquivos grandes em formato colunar `{cols, rows}`; ausência = `null` (exibida como “Não disponível”); temporada = ano de início (Super Bowl LX, fev/2026 → temporada 2025); IDs estáveis (time = abreviação nflverse, jogo = `game_id`, jogador = GSIS ID).
+
+### 6.3 Banco de dados
+Hoje não há banco: o volume (~35 MB) e o uso somente leitura são atendidos por JSON.
+**[Planejado]** SQLite/DuckDB como destino do ETL quando houver dados de jogada a jogada, consultas livres no Explorador ou contas de administrador; PostgreSQL apenas para várias instâncias ou muitos usuários escrevendo.
+
+---
+
+## 7. API REST
+
+Base `http://localhost:8787`. Somente leitura, exceto `/api/admin/*`. Especificação em `/api/openapi.json`.
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/health`, `/ready` | Saúde do processo / dados carregados (`ingestionVersion`) |
+| GET | `/api/openapi.json` | Documentação OpenAPI 3.1 |
+| GET | `/api/meta`, `/api/quality`, `/api/changes` | Manifest, qualidade, histórico de mudanças |
+| GET | `/api/teams`, `/api/teams/:abbr` | Franquias ativas / perfil (404 se inexistente) |
+| GET | `/api/games?season&team&week&type&limit`, `/api/games/:id` | Jogos filtrados / jogo |
+| GET | `/api/standings?season` | Classificação calculada (desempate simplificado) |
+| GET | `/api/players?q&pos&limit`, `/api/players/:id` | Busca / carreira do jogador |
+| GET | `/api/stats/leaders?season&stat&limit` | Líderes (400 para estatística desconhecida) |
+| GET | `/api/super-bowls`, `/api/super-bowls/:n` | Super Bowls |
+| GET | `/api/records`, `/api/draft` | Recordes / draft |
+| GET | `/api/rankings/qb` | Ranking de QBs |
+| GET | `/api/live/scoreboard`, `/api/live/game/:espnId` | Ao vivo via ESPN (cache 30 s / 60 s) |
+| GET/POST | `/api/admin/session` (GET), `/api/admin/login`, `/api/admin/logout` (POST) | Sessão administrativa |
+| GET | `/api/admin/check` | Verifica dados novos (cache 10 min) 🔒 |
+| POST | `/api/admin/sync` | Inicia carga `{mode, datasets?, seasons?}` → 202 + job (máx. 5/min) 🔒 |
+| GET | `/api/admin/jobs`, `/api/admin/jobs/:id` | Status das cargas 🔒 |
+| GET | `/api/admin/overview`, `/api/admin/events` | Painel e logs/alertas 🔒 |
+
+Segurança: 🔒 = sessão administrativa, `Authorization: Bearer <ADMIN_TOKEN>` ou acesso local (só fora de produção); ações por cookie exigem `X-EZA-Admin: 1`; rate limit geral de 600 req/min; cabeçalhos CSP, `nosniff` etc. via helmet; parâmetros validados com zod.
+
+---
+
+## 8. Configuração
+
+| Variável | Uso |
+|---|---|
+| `API_PORT` | Porta da API (padrão 8787) |
+| `HOST` | Interface de rede |
+| `ADMIN_TOKEN` | Login da área administrativa (obrigatório em produção) |
+| `OPS_DIR` | Log operacional privado (padrão `ops/`) |
+| `SITE_URL` | URL pública usada para gerar `sitemap.xml` no `build:static` |
+| `GITHUB_TOKEN` | Aumenta o limite da API do GitHub (verificação de versões) |
+| `FIRST_SEASON` | Primeira temporada da cobertura detalhada (padrão 1999) |
+| `NODE_ENV` | `production` serve o build estático pela API |
+
+Scripts: `dev`, `dev:web`, `dev:api`, `build`, `build:static`, `start`, `preview`, `data:full`, `data:partial`, `data:check`, `data:quality`, `typecheck`, `test`, `test:e2e`, `spell`, `qa`.
+
+---
+
+## 9. Qualidade e testes
+
+| Tipo | Ferramenta | Cobertura |
+|---|---|---|
+| Tipos | `tsc` | Todo o projeto |
+| Unitários / componentes | Vitest + Testing Library | Bibliotecas, componentes, ETL (transformação, analytics, qualidade), API (`fastify.inject`), dados publicados |
+| E2E + acessibilidade | Playwright + axe-core | Navegação de todas as páginas, fluxos principais, violações WCAG |
+| Ortografia | cspell (pt-BR + en) | Código, docs e curadoria |
+
+Critério de pronto: `npm run qa` e `npm run test:e2e` sem falhas.
+
+---
+
+## 10. Melhorias planejadas (resumo)
+
+| Prioridade | Item |
+|---|---|
+| P1 | Carga parcial agendada automaticamente |
+| P1 | CI (GitHub Actions) com `qa` e E2E |
+| P2 | Pré-renderização (SSG) das páginas públicas para SEO; regressão visual automatizada por screenshot |
+| P2 | Time favorito; filtros compartilháveis em todas as tabelas; onboarding de 3 passos |
+| Futuro | SQLite/DuckDB; play-by-play; simulador de playoffs; prêmios; dados pré-1999 |

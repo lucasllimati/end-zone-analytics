@@ -1,34 +1,53 @@
 /*
  * Design tokens — End Zone Analytics
- * Escuro é o padrão. O claro é selecionado (não invertido automaticamente).
+ * Identidade: azul-marinho profundo + azul elétrico. Escuro é o padrão; o claro é selecionado (não invertido).
+ * Azul é a cor de identidade (ações, estados ativos, dados em destaque) — não a cor de tudo.
+ * Verde/âmbar/vermelho são reservados a significado (sucesso, atenção, erro).
  * Cores de séries de gráfico vêm da paleta validada (CVD) — ver docs/DESIGN_SYSTEM.md.
  */
 :root {
   color-scheme: dark;
   --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-display: 'Barlow Condensed', 'Arial Narrow', var(--font-sans);
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace;
 
-  --bg: #0b0c0e;
-  --surface-1: #131417;
-  --surface-2: #1a1c20;
-  --surface-3: #24272c;
-  --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.16);
-  --text: #f3f3f1;
-  --text-2: #bdbcb5;
-  --muted: #8f8e88;
-  --accent: #e0ad4b;
-  --accent-strong: #f0c066;
-  --accent-ink: #1b1406;
-  --accent-soft: rgba(224, 173, 75, 0.12);
-  --focus: #7cb4ff;
+  /* Superfícies */
+  --bg: #050b16;
+  --bg-2: #081426;
+  --surface-1: #0b1728;
+  --surface-2: #101f34;
+  --surface-3: #172a45;
+  --border: #1b3553;
+  --border-soft: rgba(27, 53, 83, 0.6);
+  --border-strong: #2a4d75;
 
-  --good: #0ca30c;
-  --good-text: #3ccf5a;
-  --warning: #fab219;
-  --critical: #e05252;
-  --critical-text: #ff8a8a;
+  /* Texto */
+  --text: #f4f7fc;
+  --text-2: #a7b6cc;
+  --muted: #8396b1;
 
+  /* Identidade */
+  --accent: #078bff; /* ativo, indicadores, texto de destaque */
+  --accent-strong: #35b6ff; /* dados em destaque, hover */
+  --accent-fill: #0a6fd8; /* fundo de botão primário (contraste AA com texto branco) */
+  --accent-fill-hover: #0862c4;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(7, 139, 255, 0.14);
+  --accent-glow: rgba(7, 139, 255, 0.35);
+  --focus: #5cc2ff;
+
+  /* Semânticas (reservadas) */
+  --good: #24c78a;
+  --good-text: #3ddc9b;
+  --good-soft: rgba(36, 199, 138, 0.14);
+  --warning: #f5b942;
+  --warning-text: #f5b942;
+  --warning-soft: rgba(245, 185, 66, 0.14);
+  --critical: #ff5c69;
+  --critical-text: #ff7a85;
+  --critical-soft: rgba(255, 92, 105, 0.15);
+
+  /* Gráficos */
   --series-1: #3987e5;
   --series-2: #d95926;
   --series-3: #199e70;
@@ -40,18 +59,20 @@
   --seq-100: #cde2fb;
   --seq-400: #3987e5;
   --seq-700: #0d366b;
-  --grid: #26272a;
-  --axis: #3a3b3e;
+  --grid: #142843;
+  --axis: #25466c;
 
+  /* Campo (diagramas) */
   --turf: #1c5232;
   --turf-2: #184a2c;
   --turf-line: rgba(255, 255, 255, 0.55);
   --endzone: #143d25;
 
-  --radius-sm: 6px;
-  --radius: 10px;
-  --radius-lg: 16px;
-  --shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 8px 24px rgba(0, 0, 0, 0.35);
+  /* Forma e espaço */
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 14px;
+  --shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -59,29 +80,36 @@
   --space-5: 24px;
   --space-6: 32px;
   --space-7: 48px;
-  --header-h: 60px;
-  --maxw: 1240px;
+  --space-8: 64px;
+  --header-h: 68px;
+  --maxw: 1400px;
 }
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme='dark']) {
     color-scheme: light;
-    --bg: #f6f6f3;
+    --bg: #f4f7fc;
+    --bg-2: #ffffff;
     --surface-1: #ffffff;
-    --surface-2: #f1f0ec;
-    --surface-3: #e7e6e0;
-    --border: rgba(11, 11, 11, 0.09);
-    --border-strong: rgba(11, 11, 11, 0.18);
-    --text: #111110;
-    --text-2: #4b4a46;
-    --muted: #6b6a65;
-    --accent: #8f6410;
-    --accent-strong: #6f4c08;
+    --surface-2: #eef3fa;
+    --surface-3: #e1e9f4;
+    --border: #d6e0ee;
+    --border-soft: rgba(214, 224, 238, 0.7);
+    --border-strong: #b6c7dd;
+    --text: #0a1628;
+    --text-2: #3a4a63;
+    --muted: #586a85;
+    --accent: #0a6fd8;
+    --accent-strong: #0858b0;
+    --accent-fill: #0a6fd8;
+    --accent-fill-hover: #0858b0;
     --accent-ink: #ffffff;
-    --accent-soft: rgba(143, 100, 16, 0.1);
-    --focus: #1f6fd6;
-    --good-text: #006300;
-    --critical-text: #b42323;
+    --accent-soft: rgba(10, 111, 216, 0.1);
+    --accent-glow: rgba(10, 111, 216, 0.18);
+    --focus: #0a6fd8;
+    --good-text: #0b7a50;
+    --warning-text: #8a5a00;
+    --critical-text: #c42634;
     --series-1: #2a78d6;
     --series-2: #eb6834;
     --series-3: #1baf7a;
@@ -90,34 +118,40 @@
     --series-6: #008300;
     --series-7: #4a3aa7;
     --series-8: #e34948;
-    --grid: #e8e7e1;
-    --axis: #c3c2b7;
+    --grid: #e3e9f2;
+    --axis: #b9c7da;
     --turf: #2f7d4a;
     --turf-2: #2a7243;
     --turf-line: rgba(255, 255, 255, 0.75);
     --endzone: #24633b;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+    --shadow: 0 1px 2px rgba(10, 22, 40, 0.05), 0 12px 28px rgba(10, 22, 40, 0.08);
   }
 }
 
 :root[data-theme='light'] {
   color-scheme: light;
-  --bg: #f6f6f3;
+  --bg: #f4f7fc;
+  --bg-2: #ffffff;
   --surface-1: #ffffff;
-  --surface-2: #f1f0ec;
-  --surface-3: #e7e6e0;
-  --border: rgba(11, 11, 11, 0.09);
-  --border-strong: rgba(11, 11, 11, 0.18);
-  --text: #111110;
-  --text-2: #4b4a46;
-  --muted: #6b6a65;
-  --accent: #8f6410;
-  --accent-strong: #6f4c08;
+  --surface-2: #eef3fa;
+  --surface-3: #e1e9f4;
+  --border: #d6e0ee;
+  --border-soft: rgba(214, 224, 238, 0.7);
+  --border-strong: #b6c7dd;
+  --text: #0a1628;
+  --text-2: #3a4a63;
+  --muted: #586a85;
+  --accent: #0a6fd8;
+  --accent-strong: #0858b0;
+  --accent-fill: #0a6fd8;
+  --accent-fill-hover: #0858b0;
   --accent-ink: #ffffff;
-  --accent-soft: rgba(143, 100, 16, 0.1);
-  --focus: #1f6fd6;
-  --good-text: #006300;
-  --critical-text: #b42323;
+  --accent-soft: rgba(10, 111, 216, 0.1);
+  --accent-glow: rgba(10, 111, 216, 0.18);
+  --focus: #0a6fd8;
+  --good-text: #0b7a50;
+  --warning-text: #8a5a00;
+  --critical-text: #c42634;
   --series-1: #2a78d6;
   --series-2: #eb6834;
   --series-3: #1baf7a;
@@ -126,11 +160,11 @@
   --series-6: #008300;
   --series-7: #4a3aa7;
   --series-8: #e34948;
-  --grid: #e8e7e1;
-  --axis: #c3c2b7;
+  --grid: #e3e9f2;
+  --axis: #b9c7da;
   --turf: #2f7d4a;
   --turf-2: #2a7243;
   --turf-line: rgba(255, 255, 255, 0.75);
   --endzone: #24633b;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+  --shadow: 0 1px 2px rgba(10, 22, 40, 0.05), 0 12px 28px rgba(10, 22, 40, 0.08);
 }

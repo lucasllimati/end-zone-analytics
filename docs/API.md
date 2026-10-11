@@ -27,9 +27,15 @@ Todas as respostas são JSON. Valores ausentes são `null`. Erros seguem `{ "err
 | GET | `/api/rankings/qb?championships=20&…` | Ranking de QBs com pesos |
 | GET | `/api/live/scoreboard` | Placar da semana (ao vivo) |
 | GET | `/api/live/game/{espnId}` | Quartos, drives, pontuações, probabilidade de vitória |
-| GET | `/api/admin/check?force=1` | Há dados novos nas fontes? |
-| POST | `/api/admin/sync` | Inicia carga `full` ou `partial` (local ou `Authorization: Bearer ADMIN_TOKEN`) |
-| GET | `/api/admin/jobs`, `/api/admin/jobs/{id}` | Status e log dos jobs |
+| GET | `/api/admin/session` | Estado da sessão (`authenticated`, `method`, `tokenConfigured`) — público, sem segredos |
+| POST | `/api/admin/login`, `/api/admin/logout` | Login com `{ token }` (cookie de sessão) / encerrar sessão |
+| GET | `/api/admin/check?force=1` | Há dados novos nas fontes? 🔒 |
+| POST | `/api/admin/sync` | Inicia carga `full` ou `partial` 🔒 (cookie + `X-EZA-Admin: 1`, ou Bearer) |
+| GET | `/api/admin/jobs`, `/api/admin/jobs/{id}` | Status e log dos jobs 🔒 |
+| GET | `/api/admin/overview` | Saúde, arquivos publicados, última publicação, última tentativa, execuções 🔒 |
+| GET | `/api/admin/events?severity&component&jobId&days` | Logs e alertas com ação recomendada e estado de resolução 🔒 |
+
+🔒 = exige sessão administrativa, `Authorization: Bearer ADMIN_TOKEN` ou (somente fora de produção) acesso local.
 
 ## Exemplos
 
@@ -60,7 +66,8 @@ Resposta de `/api/admin/check`:
 | Código | Quando |
 |---|---|
 | 400 | Parâmetro inválido (validação zod; detalhes em `issues`) |
-| 401 | `/api/admin/sync` sem acesso local nem token válido |
+| 401 | Rota administrativa sem sessão, token válido ou acesso local permitido |
+| 403 | Ação administrativa por cookie sem o cabeçalho `X-EZA-Admin` |
 | 404 | Recurso inexistente |
 | 409 | Já existe uma sincronização em andamento |
 | 429 | Limite de requisições (600/min geral; 5/min para sync) |

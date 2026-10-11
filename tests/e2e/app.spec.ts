@@ -4,7 +4,7 @@ import AxeBuilder from '@axe-core/playwright';
 const PAGES = [
   '/', '/season', '/season?tab=schedule', '/season?tab=playoffs', '/season?tab=power', '/teams', '/teams/kc', '/players', '/players/00-0033873',
   '/compare', '/matchup', '/super-bowl', '/super-bowl/51', '/records', '/rankings', '/draft', '/hall-of-fame', '/history', '/stadiums',
-  '/learn', '/rules', '/positions', '/playbook', '/strategy', '/glossary', '/explorer', '/data', '/games/2025_22_SEA_NE',
+  '/learn', '/rules', '/positions', '/playbook', '/strategy', '/glossary', '/explorer', '/data', '/games/2025_22_SEA_NE', '/admin',
 ];
 
 /** Falha o teste se houver erro de JavaScript ou erro de console. */
@@ -33,7 +33,7 @@ test.describe('todas as páginas', () => {
 });
 
 test.describe('acessibilidade (axe, WCAG 2.1 AA)', () => {
-  for (const url of ['/', '/season', '/teams/kc', '/players/00-0033873', '/learn', '/rules', '/positions', '/glossary', '/data']) {
+  for (const url of ['/', '/season', '/teams/kc', '/players/00-0033873', '/learn', '/rules', '/positions', '/glossary', '/data', '/admin', '/compare', '/games/2025_22_SEA_NE']) {
     test(`sem violações sérias ou críticas: ${url}`, async ({ page }) => {
       await page.goto(url);
       await page.waitForLoadState('networkidle');
@@ -119,6 +119,41 @@ test.describe('fluxos de UX', () => {
     await page.goto('/super-bowl/60');
     await expect(page.getByRole('heading', { level: 2, name: 'Ficha' })).toBeVisible();
     await expect(page.locator('main')).toContainText('Kenneth Walker III');
+  });
+
+  test('página pública de dados não expõe operações', async ({ page }) => {
+    await page.goto('/data');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Fontes e qualidade dos dados');
+    await expect(page.getByRole('button', { name: /Iniciar carga|Verificar/ })).toHaveCount(0);
+    await expect(page.getByText(/Token de administrador/)).toHaveCount(0);
+    await expect(page.locator('header nav a[href="/admin"]')).toHaveCount(0);
+  });
+
+  test('admin (acesso local em desenvolvimento) mostra saúde, cargas e alertas', async ({ page }) => {
+    await page.goto('/admin');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Operação dos dados');
+    await expect(page.getByText('Última publicação bem-sucedida')).toBeVisible();
+    await page.getByRole('tab', { name: 'Fontes e cargas' }).click();
+    await page.getByRole('radio', { name: /Completa/ }).check();
+    await page.getByRole('button', { name: 'Iniciar carga completa…' }).click();
+    await expect(page.getByRole('alertdialog')).toContainText('Confirmar carga completa?');
+    await page.getByRole('button', { name: 'Cancelar' }).click();
+    await page.getByRole('tab', { name: 'Logs e alertas' }).click();
+    await expect(page.getByLabel('Severidade')).toBeVisible();
+  });
+
+  test('início: hero, jogos da semana e painéis com dados reais', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('O jogo em números');
+    await expect(page.locator('.game-tile').first()).toBeVisible();
+    // Jogo sem placar nunca aparece como 0 × 0.
+    const scheduled = page.locator('.game-tile', { hasText: 'Agendado' });
+    for (const t of await scheduled.all()) await expect(t.locator('.game-tile-score')).toHaveText('×');
+    await expect(page.getByRole('heading', { name: 'Classificação' })).toBeVisible();
+    await page.getByRole('button', { name: 'NFC', exact: true }).click();
+    await expect(page.locator('.standings-mini tbody tr').first()).toBeVisible();
+    await page.getByRole('button', { name: 'Próximo destaque' }).click();
+    await expect(page.getByText(/Critério: maior total de jardas corridas/)).toBeVisible();
   });
 
   test('página inexistente mostra 404 amigável', async ({ page }) => {

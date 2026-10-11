@@ -8,3 +8,4 @@ playwright-report/
 .env
 # Dados gerados pelo pipeline (recrie com `npm run data:full`)
 data/
+ops/

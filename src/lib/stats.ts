@@ -27,6 +27,8 @@ export function sumLines(lines: PlayerSeasonLine[]): PlayerSeasonLine | null {
   ];
   const out: PlayerSeasonLine = { ...first, season: Math.max(...lines.map((l) => l.season)), team: lines[lines.length - 1].team };
   for (const k of keys) (out as unknown as Record<string, number>)[k] = lines.reduce((s, l) => s + ((l[k] as number) ?? 0), 0);
+  // Alvos ausentes em alguma temporada: o total da carreira não é conhecido.
+  if (lines.some((l) => l.tgt === null)) out.tgt = null;
   const sumNullable = (k: 'passEpa' | 'rushEpa' | 'recEpa') => {
     const vals = lines.map((l) => l[k]).filter((v): v is number => v !== null);
     return vals.length ? vals.reduce((a, b) => a + b, 0) : null;
@@ -51,7 +53,7 @@ export function derived(l: PlayerSeasonLine) {
     epaPerDb: l.passEpa !== null ? safeDiv(l.passEpa, l.att + l.sacked) : null,
     ypc: safeDiv(l.rushYds, l.carries),
     ypr: safeDiv(l.recYds, l.rec),
-    catchRate: safeDiv(l.rec, l.tgt),
+    catchRate: l.tgt === null ? null : safeDiv(l.rec, l.tgt),
     fgPct: safeDiv(l.fgm, l.fga),
     puntAvg: safeDiv(l.puntYds, l.punts),
     scrimYds: l.rushYds + l.recYds,

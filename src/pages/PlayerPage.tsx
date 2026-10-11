@@ -34,7 +34,7 @@ const RADAR: Record<string, { key: string; label: string; f: (l: PlayerSeasonLin
     { key: 'recYds', label: 'J. rec/j', f: (l) => l.recYds / l.games },
   ],
   WR: [
-    { key: 'tgt', label: 'Alvos/j', f: (l) => l.tgt / l.games },
+    { key: 'tgt', label: 'Alvos/j', f: (l) => (l.tgt === null ? null : l.tgt / l.games) },
     { key: 'rec', label: 'Rec/j', f: (l) => l.rec / l.games },
     { key: 'recYds', label: 'Jardas/j', f: (l) => l.recYds / l.games },
     { key: 'ypr', label: 'Y/R', f: (l) => derived(l).ypr },

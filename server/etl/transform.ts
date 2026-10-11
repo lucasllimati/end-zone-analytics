@@ -121,7 +121,8 @@ export function toPlayerLines(rows: Row[], st: SeasonType): PlayerSeasonLine[] {
       rushTd: cnt(r.rushing_tds),
       rushEpa: round(num(r.rushing_epa), 2),
       rec: cnt(r.receptions),
-      tgt: cnt(r.targets),
+      // A fonte registra alvos = 1 para algumas temporadas antigas (recepções > alvos): tratamos como ausente.
+      tgt: cnt(r.targets) >= cnt(r.receptions) || cnt(r.receptions) === 0 ? cnt(r.targets) : null,
       recYds: cnt(r.receiving_yards),
       recTd: cnt(r.receiving_tds),
       yac: cnt(r.receiving_yards_after_catch),

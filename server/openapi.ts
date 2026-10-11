@@ -114,6 +114,31 @@ export const openapi = {
         responses: { 202: ok('Job iniciado'), 401: err('Não autorizado'), 409: ok('Já existe um job em execução') },
       },
     },
+    '/api/admin/session': { get: { summary: 'Estado da sessão administrativa (sem segredos)', tags: ['Admin'], responses: { 200: ok('Sessão') } } },
+    '/api/admin/login': {
+      post: {
+        summary: 'Login com ADMIN_TOKEN; cria sessão em cookie HttpOnly (8 h)',
+        tags: ['Admin'],
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['token'], properties: { token: { type: 'string' } } } } } },
+        responses: { 200: ok('Autenticado'), 401: err('Token inválido'), 503: err('ADMIN_TOKEN não configurado') },
+      },
+    },
+    '/api/admin/logout': { post: { summary: 'Encerra a sessão', tags: ['Admin'], responses: { 200: ok('Sessão encerrada') } } },
+    '/api/admin/overview': { get: { summary: 'Saúde, arquivos publicados, última publicação e última tentativa', tags: ['Admin'], security: [{ bearer: [] }], responses: { 200: ok('Painel'), 401: err('Não autorizado') } } },
+    '/api/admin/events': {
+      get: {
+        summary: 'Logs e alertas operacionais',
+        tags: ['Admin'],
+        security: [{ bearer: [] }],
+        parameters: [
+          { name: 'severity', in: 'query', schema: { type: 'string', enum: ['info', 'warning', 'error', 'critical'] } },
+          { name: 'component', in: 'query', schema: { type: 'string', enum: ['pipeline', 'sources', 'quality', 'auth', 'api'] } },
+          { name: 'jobId', in: 'query', schema: { type: 'string', format: 'uuid' } },
+          { name: 'days', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 365 } },
+        ],
+        responses: { 200: ok('Eventos'), 400: err('Parâmetro inválido'), 401: err('Não autorizado') },
+      },
+    },
     '/api/admin/jobs/{id}': { get: { summary: 'Status e log de um job de sincronização', tags: ['Admin'], parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: ok('Job'), 404: err('Não encontrado') } } },
   },
   components: {

@@ -24,7 +24,7 @@ export interface QualityInput {
   superBowls: SuperBowl[];
   sbIssues: string[];
   teamSeasons: TeamSeason[];
-  curatedRecords: (CuratedRecord & { season?: number; verify?: string })[];
+  curatedRecords: (CuratedRecord & { season?: number; verify?: string; knownDivergences?: { player: string; season: number; source: number; official: number; note: string }[] })[];
   currentSeason: number;
 }
 
@@ -75,7 +75,15 @@ export function runQuality(q: QualityInput): QualityCheck[] {
     lineKeys.add(k);
   }
   out.push(check('players-dup', 'playerStats', 'Uma linha por jogador/temporada/tipo', dupLines));
-  out.push(check('players-impossible', 'playerStats', 'Estatísticas possíveis (completos ≤ tentativas, valores ≥ 0)', q.lines.filter((l) => l.cmp > l.att || l.att < 0 || l.carries < 0 || (l.tgt > 0 && l.rec > l.tgt) || l.fgm > l.fga).map((l) => `${l.name} ${l.season}`), true));
+  out.push(check('players-impossible', 'playerStats', 'Estatísticas possíveis (completos ≤ tentativas, valores ≥ 0)', q.lines.filter((l) => l.cmp > l.att || l.att < 0 || l.carries < 0 || (l.tgt !== null && l.tgt > 0 && l.rec > l.tgt) || l.fgm > l.fga).map((l) => `${l.name} ${l.season}`), true));
+  const noTargets = q.lines.filter((l) => l.tgt === null);
+  const tgtSeasons = [...new Set(noTargets.map((l) => l.season))].sort();
+  out.push(
+    check('players-targets', 'playerStats', 'Alvos (targets) consistentes com recepções', [], true,
+      noTargets.length
+        ? `Tratado: ${noTargets.length} linha(s) com alvos inconsistentes na fonte (${tgtSeasons[0]}–${tgtSeasons.at(-1)}) aparecem como “Não disponível”`
+        : 'Sem problemas'),
+  );
   out.push(check('players-rating', 'playerStats', 'Passer rating dentro de 0–158,3', q.lines.filter((l) => {
     const r = passerRating(l.cmp, l.att, l.passYds, l.passTd, l.int);
     return r !== null && (r < 0 || r > 158.34);
@@ -98,6 +106,7 @@ export function runQuality(q: QualityInput): QualityCheck[] {
 
   const recordIssues: string[] = [];
   const recordNotes: string[] = [];
+  const recordKnown: string[] = [];
   for (const r of q.curatedRecords) {
     if (!r.verify || !r.season) continue;
     if (r.verify === 'teamPoints') {
@@ -112,11 +121,20 @@ export function runQuality(q: QualityInput): QualityCheck[] {
     if (seasonMax !== r.value) recordIssues.push(`${r.label}: curadoria ${r.value}, dados ${seasonMax}`);
     else if (globalMax > r.value) {
       const who = all.find((l) => (l[k] as number) === globalMax)!;
+      // Divergências já conferidas e documentadas na curadoria não geram alerta (ficam registradas no detalhe).
+      const known = r.knownDivergences?.find((d) => d.player === who.name && d.season === who.season && d.source === globalMax);
+      if (known) {
+        recordKnown.push(`${r.label}: ${who.name} ${who.season} — nflverse ${known.source} × oficial ${known.official} (${known.note})`);
+        continue;
+      }
       recordNotes.push(`${r.label}: nflverse registra ${globalMax} para ${who.name} (${who.season}), acima do oficial ${r.value} — divergência de contagem play-by-play ou novo recorde a confirmar`);
     }
   }
   out.push(check('records-crosscheck', 'records', 'Recordes de temporada (1999+) conferem com o nflverse', recordIssues));
-  out.push(check('records-divergence', 'records', 'Estatísticas do nflverse não superam recordes oficiais (divergências de contagem)', recordNotes, true));
+  out.push(
+    check('records-divergence', 'records', 'Estatísticas do nflverse não superam recordes oficiais (divergências de contagem)', recordNotes, true,
+      recordKnown.length ? `Sem divergências novas. Conhecida(s) e documentada(s): ${recordKnown.join('; ')}` : 'Sem problemas'),
+  );
 
   return out;
 }
