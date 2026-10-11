@@ -1,11 +1,13 @@
 node_modules/
-dist/
+/dist/
 .cache/
-data-raw/
 test-results/
 playwright-report/
 *.log
 .env
-# Dados gerados pelo pipeline (recrie com `npm run data:full`)
-data/
-ops/
+# Gerados pelo pipeline (recrie com `npm run data:full`). A "/" inicial ancora na raiz:
+# sem ela, "data/" também ignoraria src/data/ e tests/data/, que são código.
+/data/
+/data-raw/
+# Log operacional privado (execuções, alertas, auditoria)
+/ops/
