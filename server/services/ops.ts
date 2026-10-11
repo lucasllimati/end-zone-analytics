@@ -24,7 +24,7 @@ export interface OpsEvent {
 export interface OpsRun {
   id: string;
   mode: 'full' | 'partial';
-  trigger: 'admin' | 'cli';
+  trigger: 'admin' | 'cli' | 'scheduler';
   datasets: string[];
   seasons: number[];
   status: 'running' | 'done' | 'error';
@@ -35,14 +35,46 @@ export interface OpsRun {
   warnings: string[];
   error: string | null;
   ingestionVersion: number | null;
+  /** true = gerou nova publicação; false = nada mudou; null = falhou ou em andamento. */
+  changed?: boolean | null;
 }
 
 const MAX_RUNS = 100;
 const MAX_EVENTS = 500;
 
+export interface Notifier {
+  url: string;
+  format: 'ntfy' | 'discord' | 'slack';
+  minSeverity: Severity;
+}
+
+const RANK: Record<Severity, number> = { info: 0, warning: 1, error: 2, critical: 3 };
+
+/** Monta a requisição do webhook no formato do serviço escolhido. */
+export function webhookRequest(n: Notifier, e: OpsEvent, site = 'End Zone Analytics'): { body: string; headers: Record<string, string> } {
+  const title = `[${site}] ${e.severity.toUpperCase()} · ${e.component}`;
+  const text = [e.message, e.action ? `Ação: ${e.action}` : null, e.detail ? e.detail.slice(0, 600) : null].filter(Boolean).join('\n');
+  if (n.format === 'discord') return { body: JSON.stringify({ content: `**${title}**\n${text}` }), headers: { 'Content-Type': 'application/json' } };
+  if (n.format === 'slack') return { body: JSON.stringify({ text: `*${title}*\n${text}` }), headers: { 'Content-Type': 'application/json' } };
+  // ntfy: cabeçalhos HTTP só aceitam ASCII — o título vai sem acentos/símbolos.
+  const asciiTitle = title.normalize('NFD').replace(/[^\x20-\x7E]/g, '').replace(/\s+/g, ' ');
+  return {
+    body: text,
+    headers: { 'Content-Type': 'text/plain; charset=utf-8', Title: asciiTitle, Priority: RANK[e.severity] >= 2 ? 'high' : 'default', Tags: e.severity === 'info' ? 'football' : 'warning' },
+  };
+}
+
 export class OpsLog {
   private queue: Promise<unknown> = Promise.resolve();
-  constructor(private dir: string) {}
+  constructor(private dir: string, private notifier?: Notifier) {}
+
+  /** Envia alertas acima da severidade mínima para o webhook configurado. Falhas de envio são ignoradas. */
+  private notify(e: OpsEvent) {
+    const n = this.notifier;
+    if (!n?.url || RANK[e.severity] < RANK[n.minSeverity]) return;
+    const { body, headers } = webhookRequest(n, e);
+    void fetch(n.url, { method: 'POST', body, headers, signal: AbortSignal.timeout(10_000) }).catch(() => {});
+  }
 
   private async read<T>(file: string): Promise<T[]> {
     try {
@@ -71,6 +103,7 @@ export class OpsLog {
 
   event(e: Omit<OpsEvent, 'id' | 'at' | 'jobId' | 'detail' | 'action'> & Partial<Pick<OpsEvent, 'jobId' | 'detail' | 'action'>>) {
     const full: OpsEvent = { id: crypto.randomUUID(), at: new Date().toISOString(), jobId: null, detail: null, action: null, ...e };
+    this.notify(full);
     return this.exclusive(async () => {
       const list = await this.events();
       list.unshift(full);

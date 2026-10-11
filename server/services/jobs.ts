@@ -24,13 +24,14 @@ export interface SyncJob {
 const jobs = new Map<string, SyncJob>();
 let running: SyncJob | null = null;
 
-export type Runner = (opts: PipelineOptions) => Promise<{ downloaded: string[]; warnings?: string[]; manifest?: Manifest }>;
+export type Runner = (opts: PipelineOptions) => Promise<{ downloaded: string[]; warnings?: string[]; manifest?: Manifest; changed?: boolean; changedSets?: { label: string }[] }>;
 
 export function startSync(
   opts: { mode: 'full' | 'partial'; datasets?: string[]; seasons?: number[] },
   onDone?: () => void,
   runner: Runner = runPipeline,
   ops?: OpsLog,
+  trigger: OpsRun['trigger'] = 'admin',
 ) {
   if (running) return { job: running, alreadyRunning: true };
   const job: SyncJob = {
@@ -49,12 +50,12 @@ export function startSync(
   jobs.set(job.id, job);
   running = job;
   const run: OpsRun = {
-    id: job.id, mode: job.mode, trigger: 'admin', datasets: job.datasets, seasons: job.seasons, status: 'running', startedAt: job.startedAt,
+    id: job.id, mode: job.mode, trigger, datasets: job.datasets, seasons: job.seasons, status: 'running', startedAt: job.startedAt,
     finishedAt: null, durationMs: null, downloaded: 0, warnings: [], error: null, ingestionVersion: null,
   };
   const record = (p: Promise<unknown> | undefined) => p?.catch(() => {});
   record(ops?.saveRun(run));
-  record(ops?.event({ severity: 'info', component: 'pipeline', jobId: job.id, message: `Carga ${job.mode === 'full' ? 'completa' : 'parcial'} iniciada` }));
+  record(ops?.event({ severity: 'info', component: 'pipeline', jobId: job.id, message: `Carga ${job.mode === 'full' ? 'completa' : 'parcial'} iniciada${trigger === 'scheduler' ? ' (agendada)' : ''}` }));
 
   runner({ ...opts, log: (m) => job.log.push(m) })
     .then((r) => {
@@ -62,13 +63,17 @@ export function startSync(
       job.downloaded = r.downloaded;
       job.warnings = r.warnings ?? [];
       run.ingestionVersion = r.manifest?.ingestionVersion ?? null;
+      run.changed = r.changed ?? r.downloaded.length > 0;
       const q = r.manifest?.quality;
       record(
         ops?.event({
           severity: job.warnings.length ? 'warning' : 'info',
           component: 'pipeline',
           jobId: job.id,
-          message: `Carga concluída: ${r.downloaded.length} arquivo(s) novo(s)${job.warnings.length ? `, ${job.warnings.length} aviso(s)` : ''}`,
+          message:
+            r.changed === false
+              ? `Carga concluída: sem mudanças nos dados (publicação mantida)${job.warnings.length ? `, ${job.warnings.length} aviso(s)` : ''}`
+              : `Carga concluída: ${r.downloaded.length} arquivo(s) novo(s)${r.changedSets?.length ? ` · atualizado: ${r.changedSets.map((c) => c.label).join(', ')}` : ''}${job.warnings.length ? `, ${job.warnings.length} aviso(s)` : ''}`,
           detail: job.warnings.join('\n') || null,
         }),
       );

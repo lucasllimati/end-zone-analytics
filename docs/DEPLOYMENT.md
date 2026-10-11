@@ -1,5 +1,7 @@
 # Deploy
 
+> **Para publicar na internet de graça (Oracle Cloud + HTTPS + cargas automáticas + alertas), siga o guia passo a passo: [PUBLICACAO.md](PUBLICACAO.md).** As opções abaixo são referências técnicas.
+
 ## Opção 1 — Node (recomendada)
 
 ```bash
@@ -39,7 +41,9 @@ Publique `dist/` em qualquer hospedagem estática (configure fallback de SPA par
 
 ## Checklist
 
-- [ ] `ADMIN_TOKEN` definido (sem ele, só `localhost` sincroniza)
+- [ ] `ADMIN_TOKEN` definido (em produção, sem ele não há acesso ao `/admin`)
+- [ ] `SYNC_PARTIAL_EVERY_HOURS` definido (agendador interno; dispensa o cron abaixo)
+- [ ] `ALERT_WEBHOOK_URL` definido (alertas de falha no celular)
 - [ ] HTTPS no proxy
 - [ ] `/ready` monitorado
 - [ ] Agendamento da carga parcial

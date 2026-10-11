@@ -18,4 +18,14 @@ export const config = {
   githubToken: process.env.GITHUB_TOKEN ?? '',
   firstSeason: Number(process.env.FIRST_SEASON ?? 1999),
   isProd: process.env.NODE_ENV === 'production',
+  /** Agendamento das cargas (ver services/scheduler.ts). */
+  schedule: {
+    partialEveryHours: Number(process.env.SYNC_PARTIAL_EVERY_HOURS ?? 0),
+    fullWeekday: process.env.SYNC_FULL_WEEKDAY ? Number(process.env.SYNC_FULL_WEEKDAY) : null,
+    fullHourUtc: Number(process.env.SYNC_FULL_HOUR_UTC ?? 7),
+  },
+  /** Alertas externos (opcional): URL de webhook e formato (ntfy, discord ou slack). */
+  alertWebhook: process.env.ALERT_WEBHOOK_URL ?? '',
+  alertFormat: (process.env.ALERT_WEBHOOK_FORMAT ?? 'ntfy') as 'ntfy' | 'discord' | 'slack',
+  alertMinSeverity: (process.env.ALERT_MIN_SEVERITY ?? 'warning') as 'info' | 'warning' | 'error' | 'critical',
 };

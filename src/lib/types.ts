@@ -355,6 +355,8 @@ export interface Manifest {
   };
   datasets: Record<string, DatasetMeta>;
   quality: { pass: number; warn: number; fail: number; checkedAt: string };
+  /** Última verificação das fontes (mesmo quando nada mudou e a publicação foi mantida). */
+  lastCheckedAt?: string;
 }
 
 export interface UpdateCheckItem {

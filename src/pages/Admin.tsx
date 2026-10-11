@@ -14,7 +14,7 @@ import { dateBR, relativeTime } from '../lib/format';
 interface Run {
   id: string;
   mode: 'full' | 'partial';
-  trigger: 'admin' | 'cli';
+  trigger: 'admin' | 'cli' | 'scheduler';
   datasets: string[];
   seasons: number[];
   status: 'running' | 'done' | 'error';
@@ -25,14 +25,18 @@ interface Run {
   warnings: string[];
   error: string | null;
   ingestionVersion: number | null;
+  changed?: boolean | null;
 }
 
 interface Overview {
   api: { status: string; uptime: number; node: string; env: string };
   githubTokenConfigured: boolean;
+  alertsConfigured: boolean;
+  schedule: { partialEveryHours: number; fullWeekday: number | null; fullHourUtc: number; next: { partial: string | null; full: string | null } | null } | null;
   data: {
     generatedAt: string;
     ingestionVersion: number;
+    lastCheckedAt?: string;
     lastMode: 'full' | 'partial';
     coverage: { firstSeason: number; lastSeason: number; currentSeason: number; currentWeek: number | null };
     quality: { pass: number; warn: number; fail: number };
@@ -209,13 +213,23 @@ function OverviewView({ ov }: { ov: Overview }) {
           value={ov.files.missing.length ? <span className="bad">{ov.files.missing.length} ausente(s)</span> : <span className="good">Completos</span>}
           note={`${ov.files.expected - ov.files.missing.length}/${ov.files.expected} esperados`}
         />
-        <StatTile label="Última publicação bem-sucedida" value={<span style={{ fontSize: '1.1rem' }}>{fmt(d?.generatedAt)}</span>} note={d ? `${relativeTime(d.generatedAt)} · v${d.ingestionVersion} (${d.lastMode === 'full' ? 'completa' : 'parcial'})` : 'Sem dados'} />
+        <StatTile label="Última publicação bem-sucedida" value={<span style={{ fontSize: '1.1rem' }}>{fmt(d?.generatedAt)}</span>} note={d ? `${relativeTime(d.generatedAt)} · fontes verificadas ${relativeTime(d.lastCheckedAt ?? d.generatedAt)}` : 'Sem dados'} />
         <StatTile
           label="Última tentativa de carga"
           value={ov.lastAttempt ? <RunStatus s={ov.lastAttempt.status} /> : '—'}
-          note={ov.lastAttempt ? `${fmt(ov.lastAttempt.startedAt)} · ${ov.lastAttempt.trigger === 'cli' ? 'terminal' : 'painel'}` : 'Nenhuma registrada'}
+          note={ov.lastAttempt ? `${fmt(ov.lastAttempt.startedAt)} · ${ov.lastAttempt.trigger === 'cli' ? 'terminal' : ov.lastAttempt.trigger === 'scheduler' ? 'agendada' : 'painel'}` : 'Nenhuma registrada'}
         />
         <StatTile label="Qualidade" value={d ? `${d.quality.pass}/${d.quality.pass + d.quality.warn + d.quality.fail}` : '—'} note={d ? `${d.quality.warn} alerta(s), ${d.quality.fail} falha(s)` : undefined} />
+        <StatTile
+          label="Cargas automáticas"
+          value={ov.schedule ? <span className="good">Ativas</span> : <span className="warn-text">Desligadas</span>}
+          note={
+            ov.schedule
+              ? `Parcial a cada ${ov.schedule.partialEveryHours} h · próxima ${fmt(ov.schedule.next?.partial)}${ov.schedule.next?.full ? ` · completa ${fmt(ov.schedule.next.full)}` : ''}`
+              : 'Defina SYNC_PARTIAL_EVERY_HOURS no servidor'
+          }
+        />
+        <StatTile label="Alertas externos" value={ov.alertsConfigured ? <span className="good">Configurados</span> : <span className="warn-text">Desligados</span>} note={ov.alertsConfigured ? 'Falhas chegam no seu celular' : 'Defina ALERT_WEBHOOK_URL (ntfy, Discord ou Slack)'} />
         <StatTile label="Token do GitHub" value={ov.githubTokenConfigured ? <span className="good">Configurado</span> : <span className="warn-text">Ausente</span>} note={ov.githubTokenConfigured ? '5.000 consultas/hora' : '60 consultas/hora por IP'} />
       </div>
       {ov.running && (
@@ -464,7 +478,7 @@ function RunsTable({ runs }: { runs: Run[] }) {
             <th scope="col" className="num">
               Arquivos
             </th>
-            <th scope="col">Versão</th>
+            <th scope="col">Resultado</th>
             <th scope="col">Detalhe</th>
           </tr>
         </thead>
@@ -473,13 +487,13 @@ function RunsTable({ runs }: { runs: Run[] }) {
             <tr key={r.id}>
               <td className="small">{fmt(r.startedAt)}</td>
               <td>{r.mode === 'full' ? 'Completa' : 'Parcial'}</td>
-              <td className="small">{r.trigger === 'cli' ? 'Terminal' : 'Painel'}</td>
+              <td className="small">{r.trigger === 'cli' ? 'Terminal' : r.trigger === 'scheduler' ? 'Agendada' : 'Painel'}</td>
               <td>
                 <RunStatus s={r.status} />
               </td>
               <td className="num">{dur(r.durationMs)}</td>
               <td className="num">{r.downloaded}</td>
-              <td className="small">{r.ingestionVersion ? `v${r.ingestionVersion}` : '—'}</td>
+              <td className="small">{r.status !== 'done' ? '—' : r.changed === false ? 'Sem mudanças' : r.changed ? 'Nova publicação' : '—'}</td>
               <td className="small text-2" style={{ whiteSpace: 'normal', minWidth: 220 }}>
                 {r.error ?? (r.warnings.length ? `${r.warnings.length} aviso(s): ${r.warnings[0]}` : [r.datasets.join(', '), r.seasons.join(', ')].filter(Boolean).join(' · ') || '—')}
               </td>
@@ -571,24 +585,72 @@ function EventsView() {
   );
 }
 
+type Change = Awaited<ReturnType<typeof api.changes>>[number];
+const LABEL: Record<string, string> = Object.fromEntries(SOURCES.map((x) => [x.key, x.label]));
+
+/** O que mudou numa publicação, em linguagem legível (registros antigos são reconstruídos pelas variações de linhas). */
+function describe(c: Change): { label: string; detail: string }[] {
+  if (c.changed)
+    return c.changed.map((x) => ({
+      label: x.label,
+      detail: x.delta === null ? `${x.rows.toLocaleString('pt-BR')} linhas` : x.delta === 0 ? 'valores atualizados' : `${x.delta > 0 ? '+' : ''}${x.delta.toLocaleString('pt-BR')} linhas`,
+    }));
+  const rows = Object.entries(c.rows ?? {}).filter(([, r]) => r.delta);
+  if (rows.length) return rows.map(([k, r]) => ({ label: LABEL[k] ?? k, detail: `${r.delta! > 0 ? '+' : ''}${r.delta!.toLocaleString('pt-BR')} linhas` }));
+  if (c.downloaded.length) return [{ label: `${c.downloaded.length} arquivo(s) da fonte`, detail: 'valores atualizados' }];
+  return [];
+}
+
 function HistoryView({ ov }: { ov: Overview }) {
   const changes = useAsync(() => api.changes().catch(() => []), []);
+  const list = changes.data ?? [];
+  // Agrupa execuções consecutivas sem mudança em uma única linha discreta.
+  const items: ({ kind: 'pub'; c: Change; what: ReturnType<typeof describe> } | { kind: 'quiet'; n: number; from: string; to: string })[] = [];
+  for (const c of list.slice(0, 40)) {
+    const what = describe(c);
+    const last = items.at(-1);
+    if (what.length || c.qualityChanged) items.push({ kind: 'pub', c, what });
+    else if (last?.kind === 'quiet') {
+      last.n += 1;
+      last.from = c.at;
+    } else items.push({ kind: 'quiet', n: 1, from: c.at, to: c.at });
+  }
   return (
     <div className="stack">
       <section>
         <div className="section-title">
-          <h2>Publicações (ingestões)</h2>
+          <h2>Atualizações publicadas</h2>
+          {ov.data && <span className="small muted">Fontes verificadas pela última vez {relativeTime(ov.data.lastCheckedAt ?? ov.data.generatedAt)}</span>}
         </div>
+        <p className="small text-2">Uma nova publicação só é criada quando o conteúdo dos dados muda. Execuções sem mudança apenas registram a verificação.</p>
         {changes.loading ? (
           <Loading />
         ) : (
           <div className="timeline">
-            {(changes.data ?? []).slice(0, 20).map((c) => (
-              <div className="timeline-item" key={c.version}>
-                <div className="when">{fmt(c.at)}</div>
-                <strong>v{c.version}</strong> · carga {c.mode === 'full' ? 'completa' : 'parcial'} · {c.downloaded.length} arquivo(s) baixado(s)
-              </div>
-            ))}
+            {items.map((it, k) =>
+              it.kind === 'quiet' ? (
+                <div className="timeline-item quiet" key={`q${k}`}>
+                  <div className="when">{it.n > 1 ? `${fmt(it.from)} – ${fmt(it.to)}` : fmt(it.to)}</div>
+                  <span className="small muted">{it.n > 1 ? `${it.n} verificações sem mudanças nos dados` : 'Verificação sem mudanças nos dados'}</span>
+                </div>
+              ) : (
+                <div className="timeline-item" key={it.c.version} title={`Publicação interna nº ${it.c.version}`}>
+                  <div className="when">
+                    {fmt(it.c.at)} · carga {it.c.mode === 'full' ? 'completa' : 'parcial'}
+                  </div>
+                  <strong>{it.what.length ? 'Dados atualizados' : 'Verificações de qualidade reavaliadas'}</strong>
+                  {it.what.length > 0 && (
+                    <ul className="change-list">
+                      {it.what.map((w) => (
+                        <li key={w.label}>
+                          {w.label} <span className="muted">· {w.detail}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ),
+            )}
           </div>
         )}
       </section>

@@ -10,7 +10,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { DATA_DIR, OPS_DIR } from '../config';
+import { DATA_DIR, OPS_DIR, config } from '../config';
 import { OpsLog, recommendedAction, type OpsRun } from '../services/ops';
 import { SOURCES } from '../../src/lib/sources';
 import { checkForUpdates } from '../../src/lib/updates';
@@ -38,15 +38,15 @@ async function main() {
     }
     const seasons = list(arg('seasons'))?.map(Number);
     // Registra a execução no log operacional (visível na área administrativa), com sucesso ou falha.
-    const ops = new OpsLog(OPS_DIR);
+    const ops = new OpsLog(OPS_DIR, { url: config.alertWebhook, format: config.alertFormat, minSeverity: config.alertMinSeverity });
     const run: OpsRun = {
       id: crypto.randomUUID(), mode: cmd, trigger: 'cli', datasets: datasets ?? [], seasons: seasons ?? [], status: 'running',
       startedAt: new Date().toISOString(), finishedAt: null, durationMs: null, downloaded: 0, warnings: [], error: null, ingestionVersion: null,
     };
     try {
       const r = await runPipeline({ mode: cmd, datasets, seasons, log: (m) => console.log(m) });
-      Object.assign(run, { status: 'done', downloaded: r.downloaded.length, warnings: r.warnings, ingestionVersion: r.manifest.ingestionVersion });
-      await ops.event({ severity: r.warnings.length ? 'warning' : 'info', component: 'pipeline', jobId: run.id, message: `Carga via terminal concluída: ${r.downloaded.length} arquivo(s) novo(s)`, detail: r.warnings.join('\n') || null });
+      Object.assign(run, { status: 'done', downloaded: r.downloaded.length, warnings: r.warnings, ingestionVersion: r.manifest.ingestionVersion, changed: r.changed });
+      await ops.event({ severity: r.warnings.length ? 'warning' : 'info', component: 'pipeline', jobId: run.id, message: r.changed ? `Carga via terminal concluída: atualizado ${r.changedSets.map((c) => c.label).join(', ') || 'qualidade reavaliada'}` : 'Carga via terminal concluída: sem mudanças nos dados (publicação mantida)', detail: r.warnings.join('\n') || null });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       Object.assign(run, { status: 'error', error: msg });

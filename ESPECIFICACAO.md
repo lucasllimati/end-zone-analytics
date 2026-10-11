@@ -218,7 +218,8 @@ Autorização sempre no servidor (sessão em cookie `HttpOnly`/`SameSite=Strict`
 Regras do pipeline:
 - Cache em `data-raw/` com `.meta.json` (versão, data, URL); escrita atômica (arquivo temporário + troca, com nova tentativa no Windows).
 - Até 3 tentativas por download; em falha, usa o cache local.
-- Cada execução incrementa `ingestionVersion`, grava o manifest anterior em `data/history/` e registra as mudanças em `history/changes.json`.
+- Uma nova publicação só é criada quando o conteúdo muda (sha256 dos conjuntos ou resultado da qualidade). Nesse caso, o manifest anterior vai para `data/history/` e `history/changes.json` registra o que mudou (conjuntos e variação de linhas). Sem mudanças, a publicação é mantida e só `lastCheckedAt` é atualizado.
+- Cargas automáticas pelo agendador interno (`SYNC_*`), registradas como “Agendada” no admin; falhas e alertas podem ser enviados por webhook.
 - Verificações de qualidade: alertas não bloqueiam a publicação; falhas aparecem na página de dados e quebram o teste `published.test.ts`.
 
 Verificações de qualidade atuais (18): 32 franquias ativas; IDs de jogos únicos; times dos jogos existem; placares não negativos e completos; nenhum time contra si mesmo; nenhum placar no futuro; 16/17 jogos por time em temporadas encerradas; formato dos playoffs; uma linha por jogador/temporada/fase; estatísticas possíveis; alvos consistentes com recepções (inconsistentes viram “Não disponível”); passer rating em 0–158,3; todos os jogadores com nome; pick único por draft; Super Bowls em sequência; Super Bowls conferem com nflverse; recordes de temporada conferem; estatísticas não superam recordes oficiais (divergências conhecidas ficam documentadas em `knownDivergences` na curadoria).
@@ -227,7 +228,7 @@ Verificações de qualidade atuais (18): 32 franquias ativas; IDs de jogos únic
 - A verificação usa a API do GitHub: sem `GITHUB_TOKEN`, o limite é **60 requisições/hora por IP** (HTTP 403). Com token: 5.000/h. O erro informa o horário de liberação e a ação recomendada.
 - Requisições condicionais (ETag) evitam gastar o limite quando nada mudou; o cache de versões é renovado a cada execução.
 - Se a lista de versões não puder ser consultada, a carga parcial **falha com erro explícito** (não reporta sucesso sem atualizar). Execuções e falhas ficam registradas em `ops/` e aparecem no admin.
-- **[Planejado]** Carga parcial agendada automaticamente (ex.: a cada 6 h e após a rodada de domingo).
+- Publicação em produção: guia completo em [docs/PUBLICACAO.md](docs/PUBLICACAO.md).
 
 ---
 
@@ -312,6 +313,9 @@ Segurança: 🔒 = sessão administrativa, `Authorization: Bearer <ADMIN_TOKEN>`
 | `ADMIN_TOKEN` | Login da área administrativa (obrigatório em produção) |
 | `OPS_DIR` | Log operacional privado (padrão `ops/`) |
 | `SITE_URL` | URL pública usada para gerar `sitemap.xml` no `build:static` |
+| `SYNC_PARTIAL_EVERY_HOURS`, `SYNC_FULL_WEEKDAY`, `SYNC_FULL_HOUR_UTC` | Agendador interno de cargas (parcial a cada N h; completa semanal) |
+| `ALERT_WEBHOOK_URL`, `ALERT_WEBHOOK_FORMAT`, `ALERT_MIN_SEVERITY` | Alertas externos (ntfy, Discord, Slack) |
+| `DOMAIN`, `ACME_EMAIL` | Domínio e e-mail do HTTPS automático (Caddy) no `docker compose` |
 | `GITHUB_TOKEN` | Aumenta o limite da API do GitHub (verificação de versões) |
 | `FIRST_SEASON` | Primeira temporada da cobertura detalhada (padrão 1999) |
 | `NODE_ENV` | `production` serve o build estático pela API |
@@ -337,8 +341,7 @@ Critério de pronto: `npm run qa` e `npm run test:e2e` sem falhas.
 
 | Prioridade | Item |
 |---|---|
-| P1 | Carga parcial agendada automaticamente |
-| P1 | CI (GitHub Actions) com `qa` e E2E |
+| P1 | E2E no CI (hoje o CI roda `qa`, build e auditoria; E2E é local) |
 | P2 | Pré-renderização (SSG) das páginas públicas para SEO; regressão visual automatizada por screenshot |
 | P2 | Time favorito; filtros compartilháveis em todas as tabelas; onboarding de 3 passos |
 | Futuro | SQLite/DuckDB; play-by-play; simulador de playoffs; prêmios; dados pré-1999 |

@@ -41,6 +41,9 @@ export interface PipelineResult {
   downloaded: string[];
   /** Avisos não bloqueantes (ex.: cache local usado após falha de download). */
   warnings: string[];
+  /** false = nenhum dado mudou; a publicação anterior foi mantida (sem nova versão). */
+  changed: boolean;
+  changedSets: { key: string; label: string; rows: number; delta: number | null }[];
   durationMs: number;
 }
 
@@ -235,6 +238,23 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineResult
     seasons: null,
   };
   const played = games.filter((g) => g.homeScore !== null).sort((a, b) => a.date.localeCompare(b.date));
+  const qualityCounts = {
+    pass: quality.filter((q) => q.status === 'pass').length,
+    warn: quality.filter((q) => q.status === 'warn').length,
+    fail: quality.filter((q) => q.status === 'fail').length,
+  };
+  // O que mudou de fato em relação à publicação anterior (conteúdo, não o simples fato de ter rodado).
+  const changedSets = Object.values(datasets)
+    .filter((d) => !prev || prev.datasets[d.key]?.sha256 !== d.sha256)
+    .map((d) => ({ key: d.key, label: d.label, rows: d.rows, delta: prev?.datasets[d.key] ? d.rows - prev.datasets[d.key].rows : null }));
+  const qualityChanged = !prev || (['pass', 'warn', 'fail'] as const).some((k) => prev.quality[k] !== qualityCounts[k]);
+  if (prev && changedSets.length === 0 && !qualityChanged) {
+    // Nada mudou: mantém a publicação (mesma data e versão, caches do navegador continuam válidos) e só registra a verificação.
+    const kept: Manifest = { ...prev, lastCheckedAt: now, quality: { ...prev.quality, checkedAt: now } };
+    await writeJson('manifest.json', kept);
+    log(`✔ Concluído em ${((Date.now() - t0) / 1000).toFixed(1)}s · sem mudanças nos dados — publicação mantida`);
+    return { manifest: kept, downloaded, warnings, changed: false, changedSets: [], durationMs: Date.now() - t0 };
+  }
   const manifest: Manifest = {
     schemaVersion: 1,
     app: 'End Zone Analytics',
@@ -249,12 +269,8 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineResult
       lastCompletedGame: played.at(-1)?.date ?? null,
     },
     datasets,
-    quality: {
-      pass: quality.filter((q) => q.status === 'pass').length,
-      warn: quality.filter((q) => q.status === 'warn').length,
-      fail: quality.filter((q) => q.status === 'fail').length,
-      checkedAt: now,
-    },
+    quality: { ...qualityCounts, checkedAt: now },
+    lastCheckedAt: now,
   };
   if (prev) {
     await writeJson(`history/manifest-${prev.ingestionVersion}.json`, prev);
@@ -266,12 +282,15 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineResult
     at: now,
     mode: opts.mode,
     downloaded,
+    changed: changedSets,
+    qualityChanged,
+    quality: qualityCounts,
     rows: Object.fromEntries(Object.entries(datasets).map(([k, d]) => [k, { rows: d.rows, delta: prev?.datasets[k] ? d.rows - prev.datasets[k].rows : null }])),
   });
   await writeJson('history/changes.json', changeLog.slice(0, 50));
   await writeJson('manifest.json', manifest);
-  log(`✔ Concluído em ${((Date.now() - t0) / 1000).toFixed(1)}s · ${downloaded.length} arquivo(s) baixado(s) · qualidade: ${manifest.quality.pass} ok, ${manifest.quality.warn} alerta(s), ${manifest.quality.fail} falha(s)`);
-  return { manifest, downloaded, warnings, durationMs: Date.now() - t0 };
+  log(`✔ Concluído em ${((Date.now() - t0) / 1000).toFixed(1)}s · nova publicação: ${changedSets.map((c) => c.label).join(', ') || 'qualidade reavaliada'} · ${downloaded.length} arquivo(s) baixado(s) · qualidade: ${manifest.quality.pass} ok, ${manifest.quality.warn} alerta(s), ${manifest.quality.fail} falha(s)`);
+  return { manifest, downloaded, warnings, changed: true, changedSets, durationMs: Date.now() - t0 };
 }
 
 async function readChanges(): Promise<unknown[]> {

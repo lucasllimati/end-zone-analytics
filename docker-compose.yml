@@ -1,0 +1,49 @@
+# Produção: API + site (app) atrás do Caddy, que cuida do HTTPS (Let's Encrypt) automaticamente.
+# Uso: cp .env.example .env  →  editar  →  docker compose up -d --build
+services:
+  app:
+    build: .
+    image: end-zone-analytics:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      API_PORT: 8787
+    # Sem "ports": a API só é acessível pelo Caddy, na rede interna do Docker.
+    expose:
+      - '8787'
+    volumes:
+      - eza-data:/app/data
+      - eza-raw:/app/data-raw
+      - eza-ops:/app/ops
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      DOMAIN: ${DOMAIN:?Defina DOMAIN no arquivo .env}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+
+volumes:
+  eza-data:
+  eza-raw:
+  eza-ops:
+  caddy-data:
+  caddy-config:

@@ -724,3 +724,18 @@ a.score-card:hover {
   gap: 6px;
   align-items: center;
 }
+.timeline-item.quiet::before {
+  border-color: var(--border-strong);
+  width: 7px;
+  height: 7px;
+  left: -19px;
+}
+.change-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 0.86rem;
+}
+.search-btn .label,
+.search-btn kbd {
+  white-space: nowrap;
+}

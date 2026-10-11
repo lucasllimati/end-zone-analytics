@@ -1,0 +1,21 @@
+# HTTPS automático (Let's Encrypt) para o domínio definido em DOMAIN no .env.
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Os cabeçalhos de segurança (CSP, HSTS, nosniff…) vêm da própria aplicação (helmet).
+	header -Server
+
+	reverse_proxy app:8787 {
+		health_uri /health
+		health_interval 30s
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

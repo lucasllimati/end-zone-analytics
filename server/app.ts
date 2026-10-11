@@ -16,7 +16,8 @@ import { TtlCache } from './services/ttlCache';
 import { gameDetail, scoreboard } from './services/espn';
 import { currentJob, getJob, listJobs, startSync, type Runner } from './services/jobs';
 import { AdminAuth } from './services/auth';
-import { OpsLog, recommendedAction } from './services/ops';
+import { OpsLog, recommendedAction, type Notifier } from './services/ops';
+import { Scheduler, type ScheduleConfig } from './services/scheduler';
 import { fetchJson } from './etl/fetcher';
 import { openapi } from './openapi';
 import { SOURCES } from '../src/lib/sources';
@@ -36,6 +37,10 @@ export interface AppOptions {
   opsDir?: string;
   /** Libera o admin sem token para requisições de localhost (padrão: somente fora de produção). */
   allowLocalAdmin?: boolean;
+  /** Agendamento das cargas; padrão vem das variáveis SYNC_* (desligado se não configurado). false desliga. */
+  schedule?: ScheduleConfig | false;
+  /** Webhook de alertas; padrão vem de ALERT_WEBHOOK_URL. */
+  notifier?: Notifier;
 }
 
 const seasonQ = z.coerce.number().int().min(1920).max(2100);
@@ -49,7 +54,19 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
   const store = new DataStore(opts.dataDir ?? DATA_DIR);
   const checkCache = new TtlCache<UpdateCheckResult>();
   const auth = new AdminAuth(opts.adminToken ?? config.adminToken, opts.allowLocalAdmin ?? !config.isProd, config.isProd);
-  const ops = new OpsLog(opts.opsDir ?? OPS_DIR);
+  const ops = new OpsLog(opts.opsDir ?? OPS_DIR, opts.notifier ?? { url: config.alertWebhook, format: config.alertFormat, minSeverity: config.alertMinSeverity });
+  const afterSync = () => {
+    store.invalidate();
+    checkCache.clear();
+  };
+  const scheduler =
+    opts.schedule === false
+      ? null
+      : new Scheduler(opts.schedule ?? config.schedule, (mode) => !startSync({ mode }, afterSync, opts.syncRunner, ops, 'scheduler').alreadyRunning);
+  if (scheduler?.enabled) {
+    scheduler.run();
+    app.addHook('onClose', async () => scheduler.stop());
+  }
 
   await app.register(helmet, {
     contentSecurityPolicy: {
@@ -289,15 +306,7 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
       })
       .safeParse(req.body ?? {});
     if (!body.success) return reply.code(400).send({ error: 'bad_request', issues: body.error.issues });
-    const { job, alreadyRunning } = startSync(
-      body.data,
-      () => {
-        store.invalidate();
-        checkCache.clear();
-      },
-      opts.syncRunner,
-      ops,
-    );
+    const { job, alreadyRunning } = startSync(body.data, afterSync, opts.syncRunner, ops);
     if (!alreadyRunning)
       void ops
         .event({ severity: 'info', component: 'auth', jobId: job.id, message: `Carga ${body.data.mode === 'full' ? 'completa' : 'parcial'} solicitada (${auth.method(req)})`, detail: `IP ${ip(req)}` })
@@ -318,6 +327,8 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
     return {
       api: { status: 'ok', uptime: Math.round(process.uptime()), node: process.version, env: config.isProd ? 'production' : 'development' },
       githubTokenConfigured: Boolean(config.githubToken),
+      alertsConfigured: Boolean(opts.notifier?.url ?? config.alertWebhook),
+      schedule: scheduler?.enabled ? { ...scheduler.cfg, next: scheduler.next() } : null,
       data: m
         ? {
             generatedAt: m.generatedAt,
