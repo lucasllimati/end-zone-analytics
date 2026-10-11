@@ -130,6 +130,7 @@ test.describe('fluxos de UX', () => {
   });
 
   test('admin (acesso local em desenvolvimento) mostra saúde, cargas e alertas', async ({ page }) => {
+    test.skip(process.env.E2E_STATIC === '1', 'o build estático (Cloudflare Pages) não inclui a área administrativa');
     await page.goto('/admin');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Operação dos dados');
     await expect(page.getByText('Última publicação bem-sucedida')).toBeVisible();

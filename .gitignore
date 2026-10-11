@@ -11,3 +11,5 @@ playwright-report/
 /data-raw/
 # Log operacional privado (execuções, alertas, auditoria)
 /ops/
+# Estado local do emulador do Cloudflare (wrangler pages dev)
+.wrangler/

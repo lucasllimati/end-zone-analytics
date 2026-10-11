@@ -50,16 +50,7 @@ export default function TeamPage() {
   const titles = (sbs.data ?? []).filter((s) => s.winner === code);
   const apps = (sbs.data ?? []).filter((s) => s.winner === code || s.loser === code);
 
-  if (!team && !map.size) return <Loading height={300} />;
-  if (!team || !team.active) return <Unavailable>Time não encontrado. <Link to="/teams">Ver todos os times</Link></Unavailable>;
-
-  const gp = cur ? cur.w + cur.l + cur.t : 0;
-  const totals = history.reduce((a, h) => ({ w: a.w + h.w, l: a.l + h.l, t: a.t + h.t, pw: a.pw + h.playoffW, pl: a.pl + h.playoffL, po: a.po + (h.madePlayoffs ? 1 : 0) }), { w: 0, l: 0, t: 0, pw: 0, pl: 0, po: 0 });
-  const rivals = RIVALRIES.filter((r) => r.a === code || r.b === code);
-  const divMates = Object.entries(DIVISIONS_CURRENT).filter(([t, d]) => d === team.division && t !== code).map(([t]) => t);
-  const teamPlayers = (stats.data ?? []).filter((l) => l.st === 'REG' && franchiseOf(l.team) === code);
-
-  // Temporadas semelhantes (perfil: pontos marcados/sofridos por jogo, jardas, EPA).
+  // Temporadas semelhantes — hook antes dos returns condicionais (ordem dos hooks precisa ser estável) (perfil: pontos marcados/sofridos por jogo, jardas, EPA).
   const similar = useMemo(() => {
     if (!cur || !teamSeasons.data) return [];
     const feat = (t: TeamSeason) => {
@@ -82,6 +73,16 @@ export default function TeamPage() {
       .sort((a, b) => b.score - a.score)
       .slice(0, 8);
   }, [cur, teamSeasons.data, code]);
+
+  if (!team && !map.size) return <Loading height={300} />;
+  if (!team || !team.active) return <Unavailable>Time não encontrado. <Link to="/teams">Ver todos os times</Link></Unavailable>;
+
+  const gp = cur ? cur.w + cur.l + cur.t : 0;
+  const totals = history.reduce((a, h) => ({ w: a.w + h.w, l: a.l + h.l, t: a.t + h.t, pw: a.pw + h.playoffW, pl: a.pl + h.playoffL, po: a.po + (h.madePlayoffs ? 1 : 0) }), { w: 0, l: 0, t: 0, pw: 0, pl: 0, po: 0 });
+  const rivals = RIVALRIES.filter((r) => r.a === code || r.b === code);
+  const divMates = Object.entries(DIVISIONS_CURRENT).filter(([t, d]) => d === team.division && t !== code).map(([t]) => t);
+  const teamPlayers = (stats.data ?? []).filter((l) => l.st === 'REG' && franchiseOf(l.team) === code);
+
 
   return (
     <div className="stack">

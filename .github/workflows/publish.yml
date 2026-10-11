@@ -1,0 +1,107 @@
+name: Atualizar dados e publicar
+
+# Mantém o site no ar sem servidor:
+#   - a cada 6 h: carga parcial dos dados → portão de qualidade → publica no Cloudflare Pages se algo mudou
+#   - a cada push na main: testes → build → publica a nova versão do código
+#   - manual (aba Actions → "Run workflow"): carga parcial ou completa
+on:
+  schedule:
+    - cron: '17 */6 * * *' # 00:17, 06:17, 12:17 e 18:17 UTC
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Tipo de carga
+        type: choice
+        options: [partial, full]
+        default: partial
+
+permissions:
+  contents: read
+
+# Nunca duas publicações ao mesmo tempo; a próxima espera a atual terminar.
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # Token automático do Actions: ~1.000 consultas/h à API do GitHub (evita o erro 403 do nflverse).
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PROJECT: ${{ vars.CF_PAGES_PROJECT || 'end-zone-analytics' }}
+      SITE_URL: ${{ vars.SITE_URL }}
+      # Opcional: URL de um tópico ntfy (https://ntfy.sh/<tópico>) para receber falhas no celular.
+      NTFY_URL: ${{ secrets.NTFY_URL }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Testes do código (só em push)
+        if: github.event_name == 'push'
+        run: npm run qa
+
+      - name: Restaurar dados da execução anterior
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            data
+            data-raw
+          key: eza-data-${{ github.run_id }}
+          restore-keys: eza-data-
+
+      - name: Carga de dados
+        id: data
+        run: |
+          before=$(node -p "try { require('./data/manifest.json').generatedAt } catch { '' }")
+          if [ ! -f data/manifest.json ] || [ "${{ inputs.mode }}" = "full" ]; then
+            npm run data:full
+          else
+            npm run data:partial
+          fi
+          after=$(node -p "require('./data/manifest.json').generatedAt")
+          if [ "$before" != "$after" ]; then echo "changed=true" >> "$GITHUB_OUTPUT"; else echo "changed=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Portão de qualidade (nada é publicado se falhar)
+        run: npx vitest run tests/data/published.test.ts
+
+      - name: Guardar dados para a próxima execução
+        if: steps.data.outputs.changed == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            data
+            data-raw
+          key: eza-data-${{ github.run_id }}
+
+      - name: Build do site estático
+        id: build
+        if: steps.data.outputs.changed == 'true' || github.event_name != 'schedule'
+        run: npm run build:static
+
+      - name: Publicar no Cloudflare Pages
+        id: deploy
+        if: steps.build.outcome == 'success'
+        run: |
+          npx --yes wrangler@4 pages project create "$PROJECT" --production-branch=main >/dev/null 2>&1 || true
+          npx --yes wrangler@4 pages deploy dist --project-name="$PROJECT" --branch=main --commit-dirty=true
+
+      - name: Resumo da execução
+        if: always()
+        run: node scripts/publish-summary.mjs "${{ steps.data.outputs.changed }}" "${{ steps.deploy.outcome == 'success' }}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Alerta no celular (opcional, ntfy)
+        if: failure() && env.NTFY_URL != ''
+        run: |
+          curl -s -H "Title: End Zone Analytics - falha na publicacao" -H "Priority: high" -H "Tags: warning" \
+            -d "A execucao ${{ github.run_number }} falhou. O site continua no ar com os dados anteriores. Detalhes: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            "$NTFY_URL"

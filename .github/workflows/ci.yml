@@ -1,8 +1,9 @@
-name: CI e deploy
+name: CI
 
+# Testes em pull requests e em branches de trabalho. Pushes na main são testados e publicados por publish.yml.
 on:
   push:
-    branches: [main]
+    branches-ignore: [main]
   pull_request:
   workflow_dispatch:
 
@@ -24,24 +25,3 @@ jobs:
       - run: npm run qa
       - run: npm run build
       - run: npm audit --omit=dev --audit-level=high
-
-  deploy:
-    # Ative criando a variável de repositório DEPLOY_ENABLED=true e os segredos SSH_HOST, SSH_USER e SSH_KEY.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
-    needs: qa
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    concurrency: production
-    environment: production
-    steps:
-      - name: Publicar no servidor via SSH
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_KEY: ${{ secrets.SSH_KEY }}
-        run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
-          chmod 600 ~/.ssh/id_deploy
-          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
-          ssh -i ~/.ssh/id_deploy "$SSH_USER@$SSH_HOST" 'cd ~/end-zone-analytics && bash deploy/update.sh'

@@ -1,0 +1,17 @@
+# Cabeçalhos HTTP do site estático (Cloudflare Pages). Equivalem aos que a API Fastify envia via helmet.
+/*
+  Content-Security-Policy: default-src 'self'; img-src 'self' data: blob: https://a.espncdn.com https://static.www.nfl.com; connect-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  Cross-Origin-Opener-Policy: same-origin
+
+# Arquivos com hash no nome nunca mudam.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Dados: o site já pede ?v=<data da publicação>, então um cache curto é seguro.
+/data/*
+  Cache-Control: public, max-age=300

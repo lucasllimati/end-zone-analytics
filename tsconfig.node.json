@@ -22,6 +22,7 @@
   },
   "include": [
     "server",
+    "functions",
     "tests/api",
     "tests/data",
     "tests/e2e",

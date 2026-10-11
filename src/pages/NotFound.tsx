@@ -7,9 +7,9 @@ export default function NotFound() {
   return (
     <div className="empty" style={{ padding: 48 }}>
       <Seo title="Página não encontrada" />
-      <div className="hero-number" style={{ color: 'var(--text)' }}>
+      <h1 className="hero-number" style={{ color: 'var(--text)', margin: 0 }}>
         4th &amp; 404
-      </div>
+      </h1>
       <p style={{ marginTop: 12 }}>Esta página não existe — mas ainda dá para converter.</p>
       <div className="row" style={{ justifyContent: 'center' }}>
         <Link className="btn primary" to="/">

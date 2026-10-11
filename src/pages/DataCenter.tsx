@@ -5,6 +5,9 @@ import { api } from '../data/client';
 import { useAsync, useManifest } from '../data/hooks';
 import { dateBR, relativeTime } from '../lib/format';
 
+/** Site estático (Cloudflare Pages): sem a API completa, os dados são servidos como arquivos JSON. */
+const STATIC_SITE = import.meta.env.VITE_PUBLIC_STATIC === '1';
+
 const STATUS: Record<string, { cls: string; label: string }> = {
   pass: { cls: 'good', label: '✓ ok' },
   warn: { cls: 'warn', label: '! alerta' },
@@ -192,15 +195,28 @@ export default function DataCenter() {
         <p className="xsmall muted">Alertas não bloqueiam a publicação, mas ficam visíveis aqui.</p>
       </section>
 
-      <section className="card">
-        <div className="card-title">
-          <h2>API pública</h2>
-        </div>
-        <p className="small text-2" style={{ margin: 0 }}>
-          API REST somente leitura com documentação OpenAPI em <a href="/api/openapi.json">/api/openapi.json</a>. Exemplos: <code>/api/teams</code>, <code>/api/standings?season=2025</code>,{' '}
-          <code>/api/players?q=mahomes</code>, <code>/api/super-bowls</code>, <code>/api/rankings/qb</code>. Metodologia das métricas: <Link to="/glossary">glossário</Link>.
-        </p>
-      </section>
+      {STATIC_SITE ? (
+        <section className="card">
+          <div className="card-title">
+            <h2>Dados abertos</h2>
+          </div>
+          <p className="small text-2" style={{ margin: 0 }}>
+            Todos os números do site estão disponíveis em arquivos JSON, a partir de <a href="/data/manifest.json">/data/manifest.json</a> (fontes, versões e cobertura). Exemplos:{' '}
+            <code>/data/teams.json</code>, <code>/data/superbowls.json</code>, <code>/data/games/{man.coverage.currentSeason}.json</code>. Metodologia das métricas:{' '}
+            <Link to="/glossary">glossário</Link>.
+          </p>
+        </section>
+      ) : (
+        <section className="card">
+          <div className="card-title">
+            <h2>API pública</h2>
+          </div>
+          <p className="small text-2" style={{ margin: 0 }}>
+            API REST somente leitura com documentação OpenAPI em <a href="/api/openapi.json">/api/openapi.json</a>. Exemplos: <code>/api/teams</code>, <code>/api/standings?season=2025</code>,{' '}
+            <code>/api/players?q=mahomes</code>, <code>/api/super-bowls</code>, <code>/api/rankings/qb</code>. Metodologia das métricas: <Link to="/glossary">glossário</Link>.
+          </p>
+        </section>
+      )}
     </div>
   );
 }
