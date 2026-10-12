@@ -70,7 +70,7 @@ flowchart LR
     LIVE --> UI
 ```
 
-Em produção o site roda como **site estático + Cloudflare Worker** (placar ao vivo), atualizado pelo GitHub Actions a cada 6 h — ver [PUBLICACAO.md](PUBLICACAO.md). A API completa e o `/admin` existem na versão com servidor ([PUBLICACAO_SERVIDOR.md](PUBLICACAO_SERVIDOR.md)).
+Em produção o site roda como **site estático + Cloudflare Worker** (placar ao vivo), atualizado pelo GitHub Actions a cada 6 h — ver [PUBLICACAO.md](PUBLICACAO.md). Operação do dia a dia: [PUBLICACAO_SERVIDOR.md](PUBLICACAO_SERVIDOR.md). A API REST completa e o `/admin` exigem um servidor Node.js (uso local ou hospedagem própria — ver [DEPLOYMENT.md](DEPLOYMENT.md)).
 
 **Decisões principais**
 
@@ -293,7 +293,7 @@ Resultados da última execução estão em [TESTING.md](TESTING.md).
 - **Saúde:** `GET /health` (processo) e `GET /ready` (dados carregados, versão, qualidade, sync em andamento).
 - **Logs:** JSON estruturado (pino); cada resposta traz `Server-Timing` com a latência.
 - **Segurança:** CSP restritiva, rate limit, validação de entrada com zod; admin com sessão em cookie HttpOnly, anti-CSRF e `ADMIN_TOKEN` (acesso local sem token só fora de produção). Ver [SECURITY.md](SECURITY.md).
-- **Publicação:** Cloudflare Workers + GitHub Actions ([PUBLICACAO.md](PUBLICACAO.md), em uso) ou servidor próprio com Docker ([PUBLICACAO_SERVIDOR.md](PUBLICACAO_SERVIDOR.md)). Referência técnica: [DEPLOYMENT.md](DEPLOYMENT.md).
+- **Publicação:** Cloudflare Workers + GitHub Actions — configuração em [PUBLICACAO.md](PUBLICACAO.md), operação em [PUBLICACAO_SERVIDOR.md](PUBLICACAO_SERVIDOR.md). Referência técnica e hospedagem própria: [DEPLOYMENT.md](DEPLOYMENT.md).
 - **Agendamento:** GitHub Actions (cron a cada 6 h) no site publicado; agendador interno (`SYNC_PARTIAL_EVERY_HOURS`, `SYNC_FULL_*`) na versão com servidor.
 - **Eventos e alertas:** resumo de cada execução no Actions; com servidor, `/admin` → *Logs e alertas* e webhook (ntfy, Discord, Slack).
 
@@ -309,8 +309,8 @@ end-zone-analytics/
 ├── ops/                      log operacional privado: execuções, eventos, auditoria (gerado; ignorado pelo git)
 ├── worker/                   Cloudflare Worker (placar ao vivo no site publicado)
 ├── wrangler.jsonc            configuração da publicação no Cloudflare
-├── deploy/                   servidor próprio: Caddyfile, setup, update, backup
-├── .github/workflows/        publish (Cloudflare + cron), deploy-server, ci
+├── deploy/                   hospedagem própria (opcional): Caddyfile, setup, update, backup
+├── .github/workflows/        publish (cargas + deploy no Cloudflare, cron 6 h), ci (testes)
 ├── server/
 │   ├── app.ts                API Fastify (rotas, segurança, estáticos)
 │   ├── index.ts              inicialização

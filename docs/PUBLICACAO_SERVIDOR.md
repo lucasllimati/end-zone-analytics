@@ -1,353 +1,174 @@
-# Publicação em servidor próprio (alternativa), passo a passo
+# Servidor no Cloudflare: operação, monitoramento e manutenção
 
-> **Caminho recomendado:** [PUBLICACAO.md](PUBLICACAO.md) — Cloudflare Workers + GitHub Actions, sem servidor para manter. É o que está no ar hoje.
-> Use **este** guia só se quiser, online, o painel administrativo (`/admin`) e a API REST completa.
+O End Zone Analytics roda **sem servidor tradicional**. O "servidor" é um **Cloudflare Worker**, que serve o site e os dados pela CDN e executa código só no placar ao vivo. Quem faz o trabalho de bastidor (cargas, validação, publicação, histórico e alertas) é o **GitHub Actions**.
 
-| | Cloudflare (recomendado) | Servidor próprio (este guia) |
-|---|---|---|
-| Custo | R$ 0, sem cartão | R$ 0 (a Oracle pede cartão para verificação) |
-| Manutenção | Nenhuma | Atualizações do sistema, disco, backups |
-| Site, dados, placar ao vivo | ✅ | ✅ |
-| Painel `/admin` (jobs, logs, alertas, cargas por botão) | — (o painel é a aba Actions) | ✅ |
-| API REST completa (`/api/teams`, `/api/standings`…) | — (dados em `/data/*.json`) | ✅ |
-| Quem roda as cargas | GitHub Actions (cron) | Agendador interno da aplicação |
-| Tempo de configuração | ~20 min | ~1 h a 1 h 30 |
-
-Os dois caminhos são **excludentes**: escolha um. A variável de repositório `DEPLOY_TARGET` (passo 11) decide qual workflow publica.
+> **Site no ar:** <https://end-zone-analytics.insanogamerj.workers.dev>
+> **Configuração inicial (do zero):** [PUBLICACAO.md](PUBLICACAO.md). Este guia cobre o **dia a dia** depois que o site está no ar.
 
 ---
 
-## 0. Visão geral
+## 1. Como o servidor funciona
 
 ```mermaid
 flowchart LR
-  U[Visitantes] -->|HTTPS| C[Caddy<br/>certificado automático]
-  subgraph VM[Oracle Cloud · Always Free · Ubuntu]
-    C --> A[App: site + API + /admin<br/>+ agendador de cargas]
-    A --> V[(Volumes<br/>dados · cache · ops)]
+  subgraph CF[Cloudflare · Worker end-zone-analytics]
+    SA[Static assets<br/>site + /data/*.json<br/>CDN · HTTPS · public/_headers]
+    WK[worker/index.ts<br/>só /api/*]
   end
-  A -->|a cada 6 h| N[nflverse / GitHub]
-  A -->|ao vivo| E[ESPN]
-  A -->|falhas| P[ntfy · Discord · Slack<br/>alerta no celular]
-  G[GitHub Actions<br/>deploy-server.yml] -->|testes + deploy via SSH| VM
-  R[UptimeRobot] -->|/ready a cada 5 min| C
+  V[Visitantes] --> SA
+  V -->|/api/live/*| WK --> E[ESPN<br/>cache 30–60 s]
+  subgraph GH[GitHub Actions · publish.yml]
+    C[cron 6 h · push · manual] --> D[carga de dados] --> Q{qualidade} -->|ok| B[build] --> P[wrangler deploy]
+  end
+  P --> CF
+  Q -->|falha| A[e-mail + ntfy<br/>site segue com os dados anteriores]
 ```
 
-| Peça | Serviço | Custo |
+| Peça | Arquivo | Função |
 |---|---|---|
-| Servidor | Oracle Cloud **Always Free** (VM ARM até 4 CPUs e 24 GB de RAM) | R$ 0 |
-| Domínio + HTTPS | **DuckDNS** (subdomínio grátis) + Caddy (Let's Encrypt) | R$ 0 |
-| Cargas de dados | Agendador interno da aplicação (parcial a cada 6 h, completa semanal) | R$ 0 |
-| Logs, jobs e eventos | Área `/admin` (protegida por token) | R$ 0 |
-| Alertas no celular | **ntfy.sh** (ou Discord/Slack) | R$ 0 |
-| Monitoramento externo | **UptimeRobot** | R$ 0 |
-| Testes e deploy automático | **GitHub Actions** (`.github/workflows/deploy-server.yml`) | R$ 0 |
+| Configuração do Worker | `wrangler.jsonc` | Nome (`end-zone-analytics`), pasta `dist/`, fallback de rotas para o React, `/api/*` passa pelo código |
+| Código do servidor | `worker/index.ts` | `/api/live/scoreboard` e `/api/live/game/{id}` (ESPN, com cache); o resto de `/api/*` responde 404 |
+| Cabeçalhos de segurança | `public/_headers` | CSP, HSTS, nosniff, proteção contra embutir o site, cache dos arquivos |
+| Publicação e cargas | `.github/workflows/publish.yml` | Cron a cada 6 h, a cada push e manual; portão de qualidade; deploy |
+| Resumo de cada execução | `scripts/publish-summary.mjs` | O que mudou, qualidade, se publicou |
+| Testes (PRs e branches) | `.github/workflows/ci.yml` | Tipos, testes, ortografia, build e auditoria de dependências |
+| Segredos | GitHub → *Settings → Secrets* | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `NTFY_URL` (opcional) |
 
-O que o projeto já traz pronto: `Dockerfile`, `docker-compose.yml`, `deploy/Caddyfile`, `deploy/setup-server.sh`, `deploy/update.sh`, `deploy/backup.sh` e `.github/workflows/deploy-server.yml`.
+**O que fica onde:**
+- **Código:** GitHub.
+- **Dados publicados:** Cloudflare (junto com o site) e cache do GitHub Actions.
+- **Dados brutos baixados:** cache do GitHub Actions.
 
----
-
-## 1. Antes de começar
-
-- Conta no **GitHub** com o repositório do projeto (`main` atualizada).
-- No seu computador: terminal com `ssh` (o PowerShell do Windows 10/11 já tem).
-- Gere uma chave SSH só para o servidor:
-
-```powershell
-ssh-keygen -t ed25519 -f $HOME\.ssh\eza -C "end-zone-analytics"
-```
-
-Isso cria dois arquivos:
-- `eza`: a chave privada. Nunca compartilhe.
-- `eza.pub`: a chave pública, que vai para a Oracle.
+Nada fica no seu computador ou num servidor que você precise manter.
 
 ---
 
-## 2. Criar o servidor na Oracle Cloud
+## 2. Onde está cada função do "painel administrativo"
 
-1. Crie a conta em **cloud.oracle.com** → *Start for free*.
-   - **Região inicial:** escolha **Brazil East (São Paulo)** ou **Brazil Southeast (Vinhedo)**. Ela **não pode ser trocada depois** e é onde ficam os recursos gratuitos.
-   - O cartão é só para verificação; recursos *Always Free* não são cobrados.
-2. Menu → **Compute → Instances → Create instance**.
-   - **Name:** `end-zone-analytics`
-   - **Image:** *Canonical Ubuntu 24.04* (aarch64)
-   - **Shape:** *Ampere* → **VM.Standard.A1.Flex** → **2 OCPUs e 12 GB** (o limite grátis é 4 OCPUs/24 GB no total)
-   - **Networking:** crie uma VCN nova com **sub-rede pública** e marque *Assign a public IPv4 address*
-   - **SSH keys:** *Upload public key files* → selecione `eza.pub`
-   - **Boot volume:** 50 GB (padrão) é suficiente
-3. Clique em **Create** e anote o **Public IP address**.
+No Cloudflare não existe a página `/admin`, porque ela depende de um servidor Node. Todas as funções dela têm um equivalente:
 
-> **"Out of capacity"?** É comum no plano grátis. Tente outro *Availability Domain*, tente mais tarde, ou use o shape **VM.Standard.E2.1.Micro** (1 GB de RAM; funciona, porque o script do passo 4 cria 2 GB de swap).
+| Você quer… | Onde |
+|---|---|
+| Ver se o site está saudável | Abra `…/data/manifest.json` (deve ser JSON) e o resumo da última execução na aba **Actions** |
+| Ver quando os dados foram atualizados | Rodapé do site, página `/data` ou o resumo da execução ("Publicação atual" e "Fontes verificadas") |
+| Ver a qualidade dos dados | Página `/data` (pública) ou o resumo da execução (✅ ok · ⚠️ alertas · ❌ falhas) |
+| Verificar se há dados novos | **Actions → Atualizar dados e publicar → Run workflow → `partial`**: verifica e só republica se algo mudou |
+| Rodar uma carga completa | **Run workflow → `full`** |
+| Ver jobs (execuções) | Aba **Actions**: cada execução mostra a origem (agendada, push ou manual), a duração e o resultado |
+| Ver logs de uma carga | Clique na execução → passo **Carga de dados** |
+| Logs e alertas | E-mail do GitHub em falhas · ntfy no celular · **Cloudflare → Worker → Observability** (placar ao vivo) |
+| Histórico do que mudou | Resumo de cada execução ("O que mudou") e `…/data/history/changes.json` |
+| Saber a próxima atualização | Agendadas para 00:17, 06:17, 12:17 e 18:17 UTC (21:17, 03:17, 09:17 e 15:17 em Brasília) |
 
-### Liberar as portas 80 e 443 na rede da Oracle
+> **Quer ver o `/admin` funcionando?** Ele existe no ambiente local: `npm run dev` e abra `http://localhost:5173/admin`.
 
-Instância → **Subnet** → **Security List** padrão → **Add Ingress Rules**:
+---
 
-| Source CIDR | Protocolo | Porta de destino |
+## 3. Rotina: o que acontece sozinho
+
+| Quando | O que acontece | Você precisa fazer algo? |
 |---|---|---|
-| `0.0.0.0/0` | TCP | 80 |
-| `0.0.0.0/0` | TCP | 443 |
-| `0.0.0.0/0` | UDP | 443 |
-
-(A porta 22/SSH já vem liberada.)
-
-> **Evite que a Oracle recupere a VM ociosa:** instâncias Always Free com uso muito baixo por 7 dias podem ser recuperadas. Para evitar, faça *Upgrade to Pay As You Go* em **Billing** (continua grátis dentro dos limites Always Free) e crie um **Budget** de US$ 1 com alerta por e-mail como garantia.
+| A cada 6 h | Carga parcial → qualidade → publica **só se algo mudou** | Não |
+| Fonte fora do ar ou dado reprovado | Nada é publicado; o site segue com os dados anteriores; você recebe e-mail (e ntfy) | Só se repetir por mais de um dia |
+| `git push` na `main` | Testes → dados → build → publica a nova versão do código | Não |
+| 60 dias sem commits (repositório público) | O GitHub pausa o cron e avisa por e-mail | Clicar em **Enable workflow** |
 
 ---
 
-## 3. Domínio grátis com HTTPS (DuckDNS)
-
-1. Entre em **duckdns.org** (login com GitHub ou Google).
-2. Crie um subdomínio, ex.: `endzone-analytics` → fica `endzone-analytics.duckdns.org`.
-3. No campo **current ip**, coloque o IP público da VM e clique em **update ip**.
-
-> Tem domínio próprio? Crie um registro **A** apontando para o IP da VM e use esse domínio no passo 5.
-
----
-
-## 4. Preparar o servidor
-
-Entre no servidor:
-
-```powershell
-ssh -i $HOME\.ssh\eza ubuntu@SEU_IP
-```
-
-### 4.1 Acesso do servidor ao repositório
-
-O repositório é **privado**, então o servidor precisa de uma chave de leitura. No servidor:
-
-```bash
-ssh-keygen -t ed25519 -f ~/.ssh/github -N "" -C "eza-servidor"
-cat ~/.ssh/github.pub
-printf 'Host github.com\n  IdentityFile ~/.ssh/github\n' >> ~/.ssh/config
-```
-
-Copie a linha exibida pelo `cat` e cadastre em GitHub → repositório → **Settings → Deploy keys → Add deploy key**, **sem** marcar *Allow write access*.
-
-> Se o repositório fosse público, este passo não seria necessário: bastaria `git clone https://github.com/…`.
-
-### 4.2 Clonar e configurar
-
-```bash
-git clone git@github.com:lucasllimati/end-zone-analytics.git
-cd end-zone-analytics
-bash deploy/setup-server.sh
-exit
-```
-
-O script atualiza o sistema e liga as atualizações de segurança automáticas. Ele também:
-- instala Docker e fail2ban;
-- configura o firewall (só SSH, 80 e 443), incluindo a regra extra que as imagens Ubuntu da Oracle exigem;
-- desativa o login por senha e o login como root;
-- cria 2 GB de swap.
-
-Entre de novo, para o grupo `docker` passar a valer:
-
-```bash
-ssh -i ~/.ssh/eza ubuntu@SEU_IP
-cd end-zone-analytics
-```
-
----
-
-## 5. Configurar o `.env` (segredos)
-
-```bash
-cp .env.example .env
-openssl rand -hex 32        # copie o resultado para ADMIN_TOKEN
-nano .env
-chmod 600 .env
-```
-
-Preencha:
-
-| Variável | Valor |
-|---|---|
-| `ADMIN_TOKEN` | o valor gerado acima. É a senha do `/admin`; guarde num gerenciador de senhas |
-| `GITHUB_TOKEN` | GitHub → *Settings → Developer settings → Fine-grained tokens* → *Public repositories (read-only)*, **sem nenhuma permissão extra**. Sobe o limite de consultas de 60 para 5.000 por hora (fim do erro 403) |
-| `DOMAIN` | `endzone-analytics.duckdns.org` |
-| `ACME_EMAIL` | seu e-mail, para avisos do certificado |
-| `SYNC_PARTIAL_EVERY_HOURS` | `6` (carga parcial a cada 6 h) |
-| `SYNC_FULL_WEEKDAY` / `SYNC_FULL_HOUR_UTC` | `2` / `7` (completa às terças, 04:00 de Brasília) |
-| `ALERT_WEBHOOK_URL` | veja o passo 8 |
-
-Não mexa em `HOST` e `API_PORT`: o `docker-compose.yml` já define.
-
----
-
-## 6. Subir a aplicação
-
-```bash
-docker compose up -d --build
-docker compose logs -f app
-```
-
-- O primeiro build leva de 3 a 8 minutos.
-- Na primeira execução, a aplicação faz a **carga completa** dos dados (1–3 min) e depois começa a responder. Saia dos logs com `Ctrl+C`.
-- O Caddy emite o certificado HTTPS sozinho, em menos de 1 minuto.
-
-Teste no navegador:
-
-- `https://endzone-analytics.duckdns.org` → site
-- `https://endzone-analytics.duckdns.org/ready` → `{"status":"ready", …}`
-- `https://endzone-analytics.duckdns.org/admin` → tela de login
-
----
-
-## 7. Área administrativa, jobs e eventos
-
-Abra `https://SEU_DOMINIO/admin` e entre com o `ADMIN_TOKEN`.
-
-| Aba | O que você acompanha |
-|---|---|
-| **Visão geral** | API, arquivos publicados, última publicação × última tentativa, qualidade, **Cargas automáticas** (com a próxima execução), **Alertas externos**, token do GitHub |
-| **Fontes e cargas** | Verificar dados novos; rodar carga parcial (por fonte/temporada) ou completa (com confirmação); acompanhar o log do job; execuções recentes (*Painel*, *Terminal* ou *Agendada*) |
-| **Logs e alertas** | Eventos por severidade (informativo, atenção, erro, crítico), componente, job, ação recomendada e se já foi resolvido |
-| **Histórico** | Só as publicações em que **os dados mudaram** (ex.: "Calendário e resultados · +16 linhas"); verificações sem mudança aparecem agrupadas |
-
-Como as cargas funcionam:
-- Rodam **dentro da aplicação**, sem cron externo.
-- Só uma carga roda por vez.
-- Se uma falhar, o site continua com os dados anteriores e um alerta é registrado (e enviado ao celular).
-- Uma carga sem mudanças **não cria nova publicação**.
-
-A sessão do admin expira em 8 h. Em produção não existe acesso sem token, nem a partir do próprio servidor.
-
----
-
-## 8. Alertas no celular (ntfy, grátis)
-
-1. Instale o app **ntfy** (Android/iOS).
-2. Escolha um tópico difícil de adivinhar, ex.: `eza-alertas-7f3k9q2m`, e assine no app.
-3. No `.env`:
-
-```bash
-ALERT_WEBHOOK_URL=https://ntfy.sh/eza-alertas-7f3k9q2m
-ALERT_WEBHOOK_FORMAT=ntfy
-ALERT_MIN_SEVERITY=warning
-```
-
-4. Aplique e teste:
-
-```bash
-docker compose up -d
-curl -d "Teste de alerta do End Zone Analytics" https://ntfy.sh/eza-alertas-7f3k9q2m
-```
-
-- **O que chega no celular:** cargas que falharam, fontes indisponíveis, alertas de qualidade, tentativas de login recusadas.
-- **Quer receber também as cargas bem-sucedidas?** Use `ALERT_MIN_SEVERITY=info`.
-- **Prefere Discord?** Copie a URL do webhook do canal e use `ALERT_WEBHOOK_FORMAT=discord`. No Slack, use `slack`.
-
----
-
-## 9. Monitoramento externo (UptimeRobot)
-
-Em **uptimerobot.com** (grátis), crie um monitor:
-- **Tipo:** HTTP(s) – Keyword
-- **URL:** `https://SEU_DOMINIO/ready`, palavra-chave `ready`
-- **Intervalo:** 5 minutos
-
-Você recebe e-mail se o site cair.
-
----
-
-## 10. Backups
-
-Os dados publicados podem ser recriados com uma carga completa. O que vale guardar é o **log operacional** (execuções, alertas, auditoria) e o `.env`:
-
-```bash
-crontab -e
-# adicione:
-0 4 * * * bash /home/ubuntu/end-zone-analytics/deploy/backup.sh >> /home/ubuntu/backup.log 2>&1
-```
-
-Os backups ficam em `~/backups` (os 14 mais recentes). Também dá para ativar a política de backup do *Boot Volume* na Oracle.
-
----
-
-## 11. Deploy automático a cada push (GitHub Actions)
-
-O workflow `.github/workflows/deploy-server.yml` roda os testes e, se passarem, entra no servidor e executa `deploy/update.sh`.
-
-1. **No servidor**, crie uma chave só para o GitHub Actions entrar:
-
-```bash
-ssh-keygen -t ed25519 -f ~/.ssh/deploy -N "" -C "github-actions"
-cat ~/.ssh/deploy.pub >> ~/.ssh/authorized_keys
-cat ~/.ssh/deploy          # copie a chave PRIVADA (para o segredo SSH_KEY)
-```
-
-2. **No GitHub** → repositório → **Settings → Secrets and variables → Actions**:
-   - **Secrets:** `SSH_HOST` (IP ou domínio), `SSH_USER` (`ubuntu`), `SSH_KEY` (a chave privada inteira, incluindo as linhas `-----BEGIN…` e `-----END…`).
-   - **Variables:** `DEPLOY_TARGET` = `server`.
-   - *Environments → production* (opcional): marque *Required reviewers* para aprovar cada deploy manualmente.
-
-A partir daí, a cada `git push` na `main`:
-1. O Actions testa o código (`npm run qa`).
-2. Se passar, entra no servidor e roda `deploy/update.sh`, que baixa o código novo e reconstrói a aplicação.
-3. O deploy só termina com sucesso quando `/ready` responde.
-
-- **Os dados não se perdem:** ficam nos volumes do Docker.
-- **As cargas de dados não dependem do GitHub:** o agendador do servidor cuida delas.
-- **Com `DEPLOY_TARGET=server`, o workflow do Cloudflare (`publish.yml`) fica desligado**, aparecendo como *skipped*.
-- **Sem o deploy automático**, publique manualmente com `bash deploy/update.sh` no servidor.
-
-### Trocar de caminho
-
-| De → Para | O que fazer |
-|---|---|
-| Cloudflare → servidor | Siga este guia e crie `DEPLOY_TARGET=server`. O Worker na Cloudflare pode ser apagado (*Settings → Delete*) ou ficar como espelho parado |
-| Servidor → Cloudflare | Apague a variável `DEPLOY_TARGET` e siga [PUBLICACAO.md](PUBLICACAO.md). Depois, desligue a VM |
-
----
-
-## 12. Operação do dia a dia
+## 4. Operações comuns
 
 | Tarefa | Como |
 |---|---|
-| Ver jobs, falhas e alertas | `/admin` → *Logs e alertas* |
-| Ver a próxima carga agendada | `/admin` → *Visão geral* → *Cargas automáticas* |
-| Forçar uma carga agora | `/admin` → *Fontes e cargas* |
-| Publicar nova versão do código | `git push` (com deploy automático) ou `bash deploy/update.sh` |
-| Ver logs brutos | `docker compose logs --tail=200 app` |
-| Reiniciar | `docker compose restart app` |
-| Carga completa pelo terminal | `docker compose exec app node_modules/.bin/tsx server/etl/cli.ts full` |
-| Espaço em disco | `df -h` e `docker system df` |
-| Trocar o token do admin | Edite `ADMIN_TOKEN` no `.env` e rode `docker compose up -d` (derruba as sessões abertas) |
+| Forçar atualização agora | **Actions → Atualizar dados e publicar → Run workflow → `partial`** |
+| Recarregar tudo do zero | **Run workflow → `full`** |
+| Publicar uma mudança de código | `git push` na `main` |
+| Voltar à versão anterior do site (rollback) | Cloudflare → **Workers & Pages → end-zone-analytics → Deployments** → versão anterior → **Rollback**. Ou, no terminal: `npx wrangler@4 rollback` |
+| Ver o placar ao vivo em tempo real (logs) | Cloudflare → Worker → **Observability**. Ou, no terminal: `npx wrangler@4 login` e depois `npx wrangler@4 tail` |
+| Pausar as atualizações automáticas | **Actions → Atualizar dados e publicar → ⋯ → Disable workflow** (o site continua no ar) |
+| Mudar a frequência | Edite `cron` em `.github/workflows/publish.yml` (horário UTC). Exemplo para dias de jogo: `- cron: '47 * * * 0,1,2,4,5'` |
+| Trocar o token da Cloudflare | Cloudflare → **My Profile → API Tokens → ⋯ → Roll** → atualize `CLOUDFLARE_API_TOKEN` no GitHub |
+| Domínio próprio | Worker → **Settings → Domains & Routes → Add → Custom domain**; atualize a variável `SITE_URL` |
+| Ver uso e limites | Cloudflare → Worker → **Metrics**; GitHub → *Settings → Billing → Usage* (minutos do Actions) |
+| Testar localmente a versão publicada | `npm run build:static` e `npx wrangler@4 dev --port 8788` |
 
 ---
 
-## 13. Checklist de segurança
+## 5. Monitoramento (grátis)
 
-- [ ] `ADMIN_TOKEN` longo e aleatório, guardado fora do servidor
-- [ ] `.env` com `chmod 600` e **fora do git** (já está no `.gitignore`)
-- [ ] SSH só com chave; login como root desativado (feito pelo `setup-server.sh`)
-- [ ] Deploy key do GitHub **somente leitura**
-- [ ] Firewall: somente 22, 80 e 443 (Oracle Security List + ufw)
-- [ ] Atualizações automáticas de segurança ativas
-- [ ] API não exposta diretamente (o Compose só publica o Caddy)
-- [ ] HTTPS ativo; HSTS, CSP e demais cabeçalhos vêm da aplicação
-- [ ] Alertas chegando no celular (teste do passo 8)
-- [ ] UptimeRobot monitorando `/ready`
-- [ ] Backup diário agendado
-- [ ] Verificação em duas etapas na Oracle, no GitHub e na conta usada no DuckDNS
+1. **Falhas de publicação:** o GitHub envia e-mail automaticamente. Confira em github.com → *Settings → Notifications → Actions*.
+2. **Celular (ntfy):** crie o segredo `NTFY_URL` (ver [PUBLICACAO.md](PUBLICACAO.md), passo 8). Chega aviso sempre que uma execução falhar.
+3. **Site no ar (UptimeRobot, opcional):** em **uptimerobot.com**, crie um monitor:
+   - **Tipo:** *HTTP(s) – Keyword*
+   - **URL:** `https://end-zone-analytics.insanogamerj.workers.dev/data/manifest.json`
+   - **Palavra-chave:** `schemaVersion`
+   - **Intervalo:** 5 min
+
+   Assim você é avisado se o site cair **ou** se for publicado sem dados.
+4. **Placar ao vivo:** Cloudflare → Worker → **Observability** mostra chamadas, erros e tempo de resposta (ativado em `wrangler.jsonc`).
 
 ---
 
-## 14. Problemas comuns
+## 6. Recuperação e backups
+
+Não há backup a fazer manualmente:
+
+| O que | Onde está a cópia | Como recuperar |
+|---|---|---|
+| Código | GitHub | `git revert` + push, ou rollback da versão na Cloudflare |
+| Versões publicadas do site | Cloudflare guarda as anteriores | **Deployments → Rollback** |
+| Dados | Recriados a partir das fontes abertas | **Run workflow → `full`** (3–6 min) |
+| Segredos | GitHub Secrets (não dá para lê-los de volta) | Gere de novo na Cloudflare e cadastre outra vez |
+
+---
+
+## 7. Segurança
+
+- [ ] **Só o GitHub Actions publica.** O build automático da Cloudflare (*Settings → Build*) fica desconectado; se ficar ligado, publica o site sem dados.
+- [ ] O token da Cloudflare foi criado pelo modelo **Edit Cloudflare Workers** e está só em *GitHub → Secrets*. Faça o *Roll* se ele tiver aparecido em print ou chat.
+- [ ] Verificação em duas etapas no **GitHub** e na **Cloudflare**.
+- [ ] O site público não tem `/admin` nem login (o build estático exclui), e o Worker responde 404 ao resto de `/api/*`.
+- [ ] Os cabeçalhos de segurança vêm de `public/_headers`. Para conferir, rode `curl -sI <endereço>` e veja `content-security-policy` e `strict-transport-security`.
+- [ ] `.env`, `/data/`, `/data-raw/`, `/ops/` e `.wrangler/` estão fora do git (`.gitignore`).
+
+---
+
+## 8. Custos e limites
+
+Tudo cabe no plano grátis:
+
+| Recurso | Limite grátis | Uso do projeto |
+|---|---|---|
+| Cloudflare Workers: páginas e dados (static assets) | Sem limite de requisições | Todo o tráfego do site |
+| Cloudflare Workers: código (`/api/live/*`) | 100 mil requisições/dia | Só o placar ao vivo, com cache de 30–60 s |
+| Tamanho do site | 20 mil arquivos; 25 MB por arquivo | ~290 arquivos, ~35 MB no total |
+| GitHub Actions | Repositório público: ilimitado. Privado: 2.000 min/mês | ~200–500 min/mês (1,5–5 min por execução) |
+| Cache do Actions | 10 GB | Dezenas de MB |
+
+Sem cartão de crédito em nenhum dos dois serviços.
+
+---
+
+## 9. Problemas comuns
 
 | Sintoma | Causa e solução |
 |---|---|
-| `git clone` pede usuário/senha ou dá "Permission denied (publickey)" | Deploy key não cadastrada ou `~/.ssh/config` ausente (passo 4.1) |
-| O site não abre (tempo esgotado) | Portas 80/443 não liberadas na **Security List** da Oracle (passo 2) ou o `setup-server.sh` não rodou |
-| Erro de certificado | O DNS ainda não aponta para o IP (confira no DuckDNS) ou a porta 80 está fechada. Veja `docker compose logs caddy` |
-| `502 Bad Gateway` logo após subir | Normal durante a primeira carga completa (1–3 min). Acompanhe com `docker compose logs -f app` |
-| Alerta "Limite de consultas da API do GitHub (HTTP 403)" | `GITHUB_TOKEN` ausente ou inválido no `.env`. Corrija e rode `docker compose up -d` |
-| "Cargas automáticas: Desligadas" no admin | `SYNC_PARTIAL_EVERY_HOURS` vazio ou `0` no `.env` |
-| Não consigo entrar no `/admin` | Token diferente do `.env`; após 5 tentativas em 1 minuto há bloqueio temporário |
-| Deploy do Actions não roda (aparece *skipped*) | Falta a variável `DEPLOY_TARGET=server` (passo 11) |
-| Deploy do Actions falha no SSH | `SSH_KEY` incompleta (precisa das linhas BEGIN/END) ou chave pública fora do `authorized_keys` |
-| Build lento ou travando na VM de 1 GB | Confirme a swap (`swapon --show`) ou use o shape Ampere A1 |
-| "Out of capacity" ao criar a VM | Tente outro *Availability Domain* ou outro horário |
-| A VM sumiu ou parou | Recuperação por ociosidade do plano grátis: faça o *upgrade Pay As You Go* (continua grátis) |
+| Site sem dados ("Sem jogos para esta seleção") | Foi publicado pelo build automático da Cloudflare. Desconecte em *Settings → Build* e rode **Run workflow → `full`** |
+| `…/data/manifest.json` abre a página do site | Mesmo caso acima |
+| Placar ao vivo devolve HTML | O Worker publicado é anterior ao `worker/index.ts`. Rode o workflow de novo |
+| Falha em *Publicar no Cloudflare* ("Authentication error") | Token sem o modelo **Edit Cloudflare Workers**, token trocado sem atualizar o segredo, ou Account ID errado |
+| Falha no *Portão de qualidade* | Dados novos da fonte com problema real. O site segue com os anteriores; veja o log e tente mais tarde |
+| Falha na *Carga de dados* | Fonte (nflverse/GitHub) fora do ar. A próxima execução tenta de novo |
+| Execução agendada não aparece há dias | Workflow pausado (60 dias sem commits) ou desabilitado. Vá em **Actions → Enable workflow** |
+| Site antigo depois de um push | Veja se a execução terminou com "🚀 publicado no Cloudflare". O navegador pode guardar cache por até 5 min nos dados; recarregue com `Ctrl+F5` |
+| Console do navegador: "violates Content Security Policy" com fontes | Costuma vir de extensões do navegador; teste numa janela anônima |
+| Erro ao salvar segredo no GitHub ("Secret names can only contain…") | Nome com espaço/hífen, ou o token colado no campo Name |
+
+---
+
+## 10. E se um dia precisar do `/admin` e da API completa online?
+
+O painel `/admin` e a API REST (`/api/teams`, `/api/standings`…) precisam de um servidor **Node.js** rodando sem parar. Isso não faz parte do plano grátis da Cloudflare. As opções são:
+- um serviço pago de containers;
+- um VPS em qualquer provedor.
+
+O projeto já traz `Dockerfile`, `docker-compose.yml` (com HTTPS automático via Caddy) e scripts em `deploy/` para esse caso. A referência técnica está em [DEPLOYMENT.md](DEPLOYMENT.md#hospedagem-própria-avançado). Para o site atual, nada disso é necessário.

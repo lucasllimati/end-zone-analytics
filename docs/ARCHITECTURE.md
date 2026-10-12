@@ -14,7 +14,7 @@ Resumo técnico. Os diagramas completos (macro, micro e sequência) estão no [G
 | Armazenamento | JSON versionados em `data/` | Leitura pura, cacheável, funciona sem servidor |
 | Testes | Vitest, Testing Library, Playwright, axe-core, cspell | Unitários a E2E, acessibilidade e ortografia |
 | Publicação | Cloudflare Workers (static assets) + GitHub Actions | Grátis, sem servidor; cron de dados com portão de qualidade |
-| Operação (servidor) | Docker + Caddy, agendador interno, log operacional (`ops/`), webhooks | Alternativa com `/admin` e API completa online |
+| Operação (servidor Node) | Agendador interno, log operacional (`ops/`), webhooks; Docker + Caddy para hospedagem própria | `/admin` e API completa (local ou hospedagem própria) |
 
 ## Fluxo
 
@@ -36,7 +36,7 @@ GitHub Actions (cron 6 h · push · manual)
         └─ worker/index.ts: só /api/live/* (ESPN, cache 30–60 s)
 ```
 
-Na versão com servidor (`docs/PUBLICACAO_SERVIDOR.md`), a API Fastify serve tudo e o agendador interno (`server/services/scheduler.ts`) roda as cargas; execuções e eventos ficam em `ops/` e aparecem no `/admin`.
+Operação em produção: `docs/PUBLICACAO_SERVIDOR.md`. Rodando o servidor Node (localmente ou em hospedagem própria — `docs/DEPLOYMENT.md`), a API Fastify serve tudo, inclusive o `/admin`, e o agendador interno (`server/services/scheduler.ts`) roda as cargas; execuções e eventos ficam em `ops/`.
 
 ## Princípios
 

@@ -1,8 +1,25 @@
 # Deploy
 
-> **Para publicar na internet de graça, siga o guia passo a passo: [PUBLICACAO.md](PUBLICACAO.md)** (Cloudflare Workers + GitHub Actions, sem servidor — em uso). Com servidor próprio e `/admin` online: [PUBLICACAO_SERVIDOR.md](PUBLICACAO_SERVIDOR.md). As opções abaixo são referências técnicas.
+> **O site é publicado no Cloudflare (Workers + GitHub Actions), de graça e sem servidor:** configuração em [PUBLICACAO.md](PUBLICACAO.md), operação em [PUBLICACAO_SERVIDOR.md](PUBLICACAO_SERVIDOR.md).
+> Este documento é referência técnica: como o build publicado funciona e como rodar a versão completa (API + `/admin`) em hospedagem própria, se um dia for necessário.
 
-## Opção 1 — Node
+## Publicação em uso — site estático + Cloudflare Worker
+
+```bash
+npm run data:full && npm run build:static   # dist/ com dist/data, sem /admin (VITE_PUBLIC_STATIC=1)
+npx wrangler@4 dev --port 8788              # testa localmente exatamente o que vai ao ar
+npx wrangler@4 deploy                       # publica (normalmente feito pelo GitHub Actions)
+```
+
+`wrangler.jsonc` serve `dist/` como *static assets* (com fallback de SPA e `public/_headers`) e executa `worker/index.ts` só em `/api/*` (placar ao vivo). O GitHub Actions (`publish.yml`) faz carga, portão de qualidade, build e deploy a cada 6 h e a cada push. Passo a passo: [PUBLICACAO.md](PUBLICACAO.md).
+
+Em outra hospedagem estática, publique `dist/` com fallback de SPA para `index.html`; funciona tudo, exceto placar ao vivo e detalhes do Game Center.
+
+## Hospedagem própria (avançado)
+
+Necessária só para ter a API REST completa e o `/admin` online (servidor Node.js rodando sem parar — fora do plano grátis da Cloudflare). Funciona em qualquer VPS Linux ou serviço de containers.
+
+### Node
 
 ```bash
 npm ci
@@ -24,33 +41,24 @@ Atualização dos dados: prefira o **agendador interno** (`SYNC_PARTIAL_EVERY_HO
 
 A API recarrega os dados automaticamente quando o manifest muda (sem reiniciar).
 
-## Opção 2 — Docker Compose (Caddy + HTTPS)
+### Docker Compose (Caddy + HTTPS)
 
 ```bash
 cp .env.example .env   # preencha DOMAIN, ADMIN_TOKEN, GITHUB_TOKEN, SYNC_*, ALERT_*
 docker compose up -d --build
 ```
 
-O contêiner roda como usuário sem privilégios, faz a carga completa na primeira execução (volume vazio) e o Caddy emite o certificado. Passo a passo completo: [PUBLICACAO_SERVIDOR.md](PUBLICACAO_SERVIDOR.md).
+O contêiner roda como usuário sem privilégios, faz a carga completa na primeira execução (volume vazio) e o Caddy emite o certificado para o `DOMAIN` do `.env` (o DNS do domínio precisa apontar para o IP do servidor, com as portas 80 e 443 abertas).
 
-## Opção 3 — Site estático + Cloudflare Worker (em uso)
+Scripts de apoio em `deploy/`: `setup-server.sh` (Ubuntu: Docker, firewall, SSH só com chave, atualizações automáticas, swap), `update.sh` (`git pull` + rebuild, só termina quando `/ready` responde) e `backup.sh` (log operacional `ops/` + `.env`). Monitore `/ready` e use `ALERT_WEBHOOK_URL` para alertas. Nesta modalidade, **desative** o workflow `publish.yml` do Cloudflare (Actions → Disable workflow) para não haver dois publicadores.
 
-```bash
-npm run data:full && npm run build:static   # dist/ com dist/data, sem /admin (VITE_PUBLIC_STATIC=1)
-npx wrangler@4 dev --port 8788              # testa localmente exatamente o que vai ao ar
-npx wrangler@4 deploy                       # publica (normalmente feito pelo GitHub Actions)
-```
-
-`wrangler.jsonc` serve `dist/` como *static assets* (com fallback de SPA e `public/_headers`) e executa `worker/index.ts` só em `/api/*` (placar ao vivo). O GitHub Actions (`publish.yml`) faz carga, portão de qualidade, build e deploy a cada 6 h e a cada push. Passo a passo: [PUBLICACAO.md](PUBLICACAO.md).
-
-Em outra hospedagem estática, publique `dist/` com fallback de SPA para `index.html`; funciona tudo, exceto placar ao vivo e detalhes do Game Center.
-
-## Checklist
+## Checklist da hospedagem própria
 
 - [ ] `ADMIN_TOKEN` definido (em produção, sem ele não há acesso ao `/admin`)
-- [ ] `SYNC_PARTIAL_EVERY_HOURS` definido (agendador interno; dispensa o cron abaixo)
+- [ ] `SYNC_PARTIAL_EVERY_HOURS` definido (agendador interno; dispensa o cron mostrado acima)
 - [ ] `ALERT_WEBHOOK_URL` definido (alertas de falha no celular)
 - [ ] HTTPS no proxy
 - [ ] `/ready` monitorado
-- [ ] Agendamento da carga parcial (interno, cron do sistema ou GitHub Actions)
+- [ ] Agendamento da carga parcial (interno ou cron do sistema)
+- [ ] Workflow `publish.yml` do Cloudflare desativado (um único publicador)
 - [ ] `npm run qa` e `npm run test:e2e` verdes antes do deploy

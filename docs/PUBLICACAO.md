@@ -44,7 +44,7 @@ flowchart LR
 - A área `/admin` e a API REST completa (`/api/teams`…) não existem nesta versão.
 - O papel do painel passa para a aba **Actions**. Os dados ficam abertos em `/data/*.json`.
 - Todo o resto funciona igual, inclusive o placar ao vivo.
-- Quer o `/admin` online? Veja [PUBLICACAO_SERVIDOR.md](PUBLICACAO_SERVIDOR.md).
+- Onde fica cada função do painel no Cloudflare, e como operar o dia a dia: [PUBLICACAO_SERVIDOR.md](PUBLICACAO_SERVIDOR.md).
 
 > ### ⚠️ Por que o site aparece sem dados com o "Connect to Git" da Cloudflare
 > Os dados (`/data`) **não ficam no GitHub**: são gerados pelo pipeline. Se a Cloudflare faz o build sozinha a partir do repositório, publica só o site, sem dados. O resultado são páginas com "Sem jogos para esta seleção" e "A temporada ainda não tem jogos disputados", e `…/data/manifest.json` abre a página do site em vez de um JSON.
@@ -201,6 +201,12 @@ O certificado HTTPS é automático.
 
 ---
 
+## Depois de publicar
+
+Operação do dia a dia (forçar carga, ver jobs e logs, rollback, monitoramento, domínio, limites): **[PUBLICACAO_SERVIDOR.md](PUBLICACAO_SERVIDOR.md)**.
+
+---
+
 ## Limites do plano grátis (com folga)
 
 | Recurso | Uso esperado |
@@ -225,7 +231,6 @@ O certificado HTTPS é automático.
 | Falha no *Portão de qualidade* | Os dados novos da fonte têm um problema real. O site segue com os dados anteriores; veja o detalhe no log e rode de novo mais tarde |
 | Falha na *Carga de dados* | Fonte (nflverse/GitHub) fora do ar. A próxima execução tenta de novo |
 | Console do navegador: "Loading the font … violates Content Security Policy" | As fontes do site são do próprio domínio e são permitidas. Costuma vir de **extensões do navegador**; teste numa janela anônima |
-| O workflow aparece como "skipped" (pulado) | A variável `DEPLOY_TARGET` está como `server`. Apague-a para voltar ao Cloudflare |
 | Quero recarregar tudo | Actions → Run workflow → **full** |
 
 ## Segurança

@@ -228,7 +228,7 @@ Verificações de qualidade atuais (18): 32 franquias ativas; IDs de jogos únic
 - A verificação usa a API do GitHub: sem `GITHUB_TOKEN`, o limite é **60 requisições/hora por IP** (HTTP 403). Com token: 5.000/h. O erro informa o horário de liberação e a ação recomendada.
 - Requisições condicionais (ETag) evitam gastar o limite quando nada mudou; o cache de versões é renovado a cada execução.
 - Se a lista de versões não puder ser consultada, a carga parcial **falha com erro explícito** (não reporta sucesso sem atualizar). Execuções e falhas ficam registradas em `ops/` e aparecem no admin.
-- Publicação em produção: Cloudflare Workers com static assets (`wrangler.jsonc`) + GitHub Actions (carga parcial a cada 6 h, portão de qualidade, republica só quando algo muda; placar ao vivo em `worker/index.ts`). Guia: [docs/PUBLICACAO.md](docs/PUBLICACAO.md); alternativa com servidor: [docs/PUBLICACAO_SERVIDOR.md](docs/PUBLICACAO_SERVIDOR.md).
+- Publicação em produção: Cloudflare Workers com static assets (`wrangler.jsonc`) + GitHub Actions (carga parcial a cada 6 h, portão de qualidade, republica só quando algo muda; placar ao vivo em `worker/index.ts`). Configuração: [docs/PUBLICACAO.md](docs/PUBLICACAO.md); operação: [docs/PUBLICACAO_SERVIDOR.md](docs/PUBLICACAO_SERVIDOR.md).
 
 ---
 
@@ -326,17 +326,19 @@ Scripts: `dev`, `dev:web`, `dev:api`, `build`, `build:static`, `start`, `preview
 
 ## 9. Publicação
 
-| Item | Site publicado (em uso) | Servidor próprio (alternativa) |
-|---|---|---|
-| Hospedagem | Cloudflare Workers: *static assets* (`dist/` + `dist/data`) e `worker/index.ts` só para `/api/live/*` | Docker + Caddy (HTTPS) com a API Fastify completa |
-| Quem atualiza os dados | GitHub Actions `publish.yml`: cron a cada 6 h, a cada push e manual | Agendador interno (`SYNC_*`) e `/admin` |
-| Portão de qualidade | `tests/data/published.test.ts`: dados reprovados não são publicados | Verificações registradas como alertas no `/admin` |
-| Eventos e alertas | Resumo de cada execução no Actions; e-mail do GitHub; ntfy opcional (`NTFY_URL`) | `/admin` → Logs e alertas; webhook (`ALERT_WEBHOOK_URL`) |
-| `/admin` e API REST completa | Não existem (build estático) | Sim |
-| Segredos | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` (GitHub Secrets) | `.env` no servidor; `SSH_*` no GitHub para o deploy |
-| Seleção | padrão | variável de repositório `DEPLOY_TARGET=server` (desliga o `publish.yml`) |
+| Item | Como funciona |
+|---|---|
+| Hospedagem | Cloudflare Workers: *static assets* (`dist/` + `dist/data`, CDN, HTTPS, `public/_headers`) e `worker/index.ts` só para `/api/live/*` |
+| Endereço | <https://end-zone-analytics.insanogamerj.workers.dev> (domínio próprio opcional) |
+| Quem atualiza os dados | GitHub Actions `publish.yml`: cron a cada 6 h, a cada push e manual (`partial`/`full`) |
+| Portão de qualidade | `tests/data/published.test.ts`: dados reprovados não são publicados; o site segue com os anteriores |
+| Equivalente do `/admin` | Aba Actions (jobs, logs, resumo do que mudou), painel da Cloudflare (Deployments/rollback, Observability, Metrics), página pública `/data` |
+| Eventos e alertas | E-mail do GitHub em falhas; ntfy opcional (`NTFY_URL`); UptimeRobot opcional em `/data/manifest.json` |
+| Segredos | `CLOUDFLARE_API_TOKEN` (modelo *Edit Cloudflare Workers*) e `CLOUDFLARE_ACCOUNT_ID` em GitHub Secrets |
+| Custo | R$ 0 (planos grátis da Cloudflare e do GitHub, sem cartão) |
+| API completa e `/admin` online | Exigem servidor Node.js (hospedagem própria, fora do plano grátis) — referência em `docs/DEPLOYMENT.md` |
 
-Guias: [docs/PUBLICACAO.md](docs/PUBLICACAO.md) · [docs/PUBLICACAO_SERVIDOR.md](docs/PUBLICACAO_SERVIDOR.md).
+Guias: [docs/PUBLICACAO.md](docs/PUBLICACAO.md) (configuração) · [docs/PUBLICACAO_SERVIDOR.md](docs/PUBLICACAO_SERVIDOR.md) (operação).
 
 ---
 

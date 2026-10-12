@@ -2,7 +2,7 @@
 
 > 🌐 **Site no ar:** <https://end-zone-analytics.insanogamerj.workers.dev>
 > 🚀 **Publicar / atualizar o site (grátis, automático, sem servidor):** **[docs/PUBLICACAO.md](docs/PUBLICACAO.md)**
-> Alternativa com servidor próprio e painel `/admin` online: [docs/PUBLICACAO_SERVIDOR.md](docs/PUBLICACAO_SERVIDOR.md)
+> 🛠️ **Operar o servidor no Cloudflare (jobs, logs, alertas, rollback):** [docs/PUBLICACAO_SERVIDOR.md](docs/PUBLICACAO_SERVIDOR.md)
 
 Dados, história, estatísticas e educação sobre a NFL — para quem nunca viu um jogo e para especialistas.
 
@@ -36,7 +36,7 @@ npm run dev            # site em http://localhost:5173 (API em :8787)
 
 - Uma nova publicação de dados só é criada quando o conteúdo muda; cargas sem mudança apenas registram a verificação.
 - **No site publicado**, as cargas são automáticas: GitHub Actions a cada 6 h. Veja [PUBLICACAO.md](docs/PUBLICACAO.md).
-- **Com servidor**, as cargas também são feitas pelo `/admin` (verificar, cargas parcial e completa, logs e alertas) e pelo agendador interno.
+- **Localmente** (`npm run dev`), as cargas também podem ser feitas pelo `/admin` (verificar, carga parcial ou completa, logs e alertas).
 
 ## Qualidade
 
@@ -49,10 +49,10 @@ npm run test:e2e   # navegação, UX e acessibilidade (Playwright + axe), deskto
 
 | Caminho | Comando / guia |
 |---|---|
-| **Cloudflare + GitHub Actions (recomendado, em uso)** | [docs/PUBLICACAO.md](docs/PUBLICACAO.md) |
-| Servidor próprio (Docker + Caddy + `/admin`) | [docs/PUBLICACAO_SERVIDOR.md](docs/PUBLICACAO_SERVIDOR.md) |
+| **Configurar a publicação (Cloudflare + GitHub Actions)** | [docs/PUBLICACAO.md](docs/PUBLICACAO.md) |
+| **Operar o servidor no Cloudflare** (jobs, logs, alertas, rollback, limites) | [docs/PUBLICACAO_SERVIDOR.md](docs/PUBLICACAO_SERVIDOR.md) |
 | Testar a versão publicada localmente | `npm run build:static && npx wrangler@4 dev --port 8788` |
-| API + site com Node | `npm run build && npm start` (em <http://localhost:8787>) |
+| API completa + `/admin` com Node (local ou hospedagem própria) | `npm run build && npm start` (em <http://localhost:8787>) · [DEPLOYMENT.md](docs/DEPLOYMENT.md) |
 
 ## Documentação
 

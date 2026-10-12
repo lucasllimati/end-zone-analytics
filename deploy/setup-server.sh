@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Preparação de um servidor Ubuntu 22.04/24.04 novo (ex.: Oracle Cloud Always Free) para o End Zone Analytics.
+# Preparação de um servidor Ubuntu 22.04/24.04 novo (qualquer VPS) para a hospedagem própria do End Zone Analytics.
+# Opcional: o site publicado no Cloudflare não precisa de servidor (docs/PUBLICACAO.md).
 # Uso (no servidor, como usuário com sudo):  bash deploy/setup-server.sh
 set -euo pipefail
 
@@ -26,9 +27,9 @@ sudo ufw allow 443/tcp
 sudo ufw allow 443/udp
 sudo ufw --force enable
 
-# As imagens Ubuntu da Oracle trazem regras iptables próprias que bloqueiam 80/443 mesmo com o ufw liberado.
+# Algumas imagens Ubuntu de provedores de nuvem trazem regras iptables próprias que bloqueiam 80/443 mesmo com o ufw liberado.
 if [ -f /etc/iptables/rules.v4 ] && ! grep -q "dport 443" /etc/iptables/rules.v4; then
-  echo "==> Liberando 80/443 nas regras iptables da Oracle"
+  echo "==> Liberando 80/443 nas regras iptables do provedor"
   sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
   sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
   sudo iptables -I INPUT 6 -p udp --dport 443 -j ACCEPT
