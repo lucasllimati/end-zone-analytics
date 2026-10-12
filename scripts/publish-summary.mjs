@@ -23,7 +23,7 @@ if (!m) {
     `| | |`,
     `|---|---|`,
     `| Dados | ${changed === 'true' ? '🆕 **atualizados nesta execução**' : 'Sem mudanças nas fontes'} |`,
-    `| Site | ${deployed === 'true' ? '🚀 publicado no Cloudflare Pages' : 'não republicado (nada mudou)'} |`,
+    `| Site | ${deployed === 'true' ? '🚀 publicado no Cloudflare' : 'não republicado (nada mudou)'} |`,
     `| Publicação atual | ${br(m.generatedAt)} (horário de Brasília) |`,
     `| Fontes verificadas | ${br(m.lastCheckedAt ?? m.generatedAt)} |`,
     `| Cobertura | ${m.coverage.firstSeason}–${m.coverage.lastSeason} · semana atual: ${m.coverage.currentWeek ?? '—'} |`,

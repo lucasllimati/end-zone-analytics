@@ -1,6 +1,6 @@
 # Deploy
 
-> **Para publicar na internet de graça (Oracle Cloud + HTTPS + cargas automáticas + alertas), siga o guia passo a passo: [PUBLICACAO.md](PUBLICACAO.md)** (Cloudflare Pages + GitHub Actions, sem servidor). Com servidor próprio e `/admin` online: [PUBLICACAO_SERVIDOR.md](PUBLICACAO_SERVIDOR.md). As opções abaixo são referências técnicas.
+> **Para publicar na internet de graça (Oracle Cloud + HTTPS + cargas automáticas + alertas), siga o guia passo a passo: [PUBLICACAO.md](PUBLICACAO.md)** (Cloudflare Workers + GitHub Actions, sem servidor). Com servidor próprio e `/admin` online: [PUBLICACAO_SERVIDOR.md](PUBLICACAO_SERVIDOR.md). As opções abaixo são referências técnicas.
 
 ## Opção 1 — Node (recomendada)
 

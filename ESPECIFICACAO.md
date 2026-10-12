@@ -228,7 +228,7 @@ Verificações de qualidade atuais (18): 32 franquias ativas; IDs de jogos únic
 - A verificação usa a API do GitHub: sem `GITHUB_TOKEN`, o limite é **60 requisições/hora por IP** (HTTP 403). Com token: 5.000/h. O erro informa o horário de liberação e a ação recomendada.
 - Requisições condicionais (ETag) evitam gastar o limite quando nada mudou; o cache de versões é renovado a cada execução.
 - Se a lista de versões não puder ser consultada, a carga parcial **falha com erro explícito** (não reporta sucesso sem atualizar). Execuções e falhas ficam registradas em `ops/` e aparecem no admin.
-- Publicação em produção: Cloudflare Pages + GitHub Actions (carga parcial a cada 6 h, portão de qualidade, republica só quando algo muda, placar ao vivo por Pages Functions). Guia: [docs/PUBLICACAO.md](docs/PUBLICACAO.md); alternativa com servidor: [docs/PUBLICACAO_SERVIDOR.md](docs/PUBLICACAO_SERVIDOR.md).
+- Publicação em produção: Cloudflare Workers com static assets (`wrangler.jsonc`) + GitHub Actions (carga parcial a cada 6 h, portão de qualidade, republica só quando algo muda; placar ao vivo em `worker/index.ts`). Guia: [docs/PUBLICACAO.md](docs/PUBLICACAO.md); alternativa com servidor: [docs/PUBLICACAO_SERVIDOR.md](docs/PUBLICACAO_SERVIDOR.md).
 
 ---
 

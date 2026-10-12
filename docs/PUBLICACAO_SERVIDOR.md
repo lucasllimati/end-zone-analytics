@@ -1,6 +1,6 @@
 # Publicação em servidor próprio (alternativa), passo a passo
 
-> **Caminho recomendado:** [PUBLICACAO.md](PUBLICACAO.md) — Cloudflare Pages + GitHub Actions, sem servidor para manter. Use este guia só se quiser o painel `/admin` e a API REST completa online.
+> **Caminho recomendado:** [PUBLICACAO.md](PUBLICACAO.md) — Cloudflare Workers + GitHub Actions, sem servidor para manter. Use este guia só se quiser o painel `/admin` e a API REST completa online.
 
 Guia para colocar o **End Zone Analytics completo** no ar: site, API, placar ao vivo, área administrativa, cargas automáticas, logs e alertas no celular. Tudo em serviços gratuitos.
 

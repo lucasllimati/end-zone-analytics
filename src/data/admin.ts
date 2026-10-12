@@ -16,6 +16,8 @@ const listeners = new Set<(s: AdminSession | null) => void>();
 
 /** Sessão atual (null = API indisponível, ex.: hospedagem estática). */
 export function fetchAdminSession(force = false): Promise<AdminSession | null> {
+  // Site estático (Cloudflare): não existe área administrativa — nem consulta a API.
+  if (import.meta.env.VITE_PUBLIC_STATIC === '1') return Promise.resolve(null);
   if (!pending || force) {
     pending = apiGet<AdminSession>('/api/admin/session');
     void pending.then((s) => listeners.forEach((l) => l(s)));

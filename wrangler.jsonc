@@ -1,0 +1,20 @@
+// Publicação no Cloudflare Workers (site estático + placar ao vivo).
+// Quem publica é o GitHub Actions (.github/workflows/publish.yml), que gera os dados antes do build.
+// Não ligue o build automático do Cloudflare ("Connect to Git"): ele não tem os dados e publicaria o site vazio.
+{
+  "name": "end-zone-analytics",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    // Saída de "npm run build:static": site + dist/data com os JSON.
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // Rotas do React (ex.: /teams/kc) caem no index.html.
+    "not_found_handling": "single-page-application",
+    // Só /api/* executa o Worker; o resto é arquivo estático (não consome o limite de requisições).
+    "run_worker_first": ["/api/*"]
+  },
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": { "enabled": true }
+}

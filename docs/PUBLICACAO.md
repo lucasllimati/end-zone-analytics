@@ -1,6 +1,6 @@
 # Publicação na internet: grátis, automática e sem servidor
 
-O site fica no **Cloudflare Pages**. O **GitHub Actions** atualiza os dados sozinho a cada 6 horas, confere a qualidade e republica. Não há servidor para manter, atualizar ou pagar.
+O site roda num **Cloudflare Worker**. Os arquivos (páginas e dados) são servidos direto pela CDN da Cloudflare, e o código só executa no placar ao vivo. Quem atualiza os dados e publica é o **GitHub Actions**: a cada 6 horas ele baixa os dados novos, confere a qualidade e republica. Não há servidor para manter nem pagar.
 
 > Tempo: cerca de 20 minutos na primeira vez. Depois, nada a fazer.
 
@@ -10,21 +10,21 @@ O site fica no **Cloudflare Pages**. O **GitHub Actions** atualiza os dados sozi
 
 ```mermaid
 flowchart LR
-  C[GitHub Actions<br/>a cada 6 h · cron] --> D[Carga parcial<br/>nflverse]
+  C[GitHub Actions<br/>a cada 6 h · cron] --> D[Carga de dados<br/>nflverse]
   D --> Q{Portão de<br/>qualidade}
-  Q -->|ok e algo mudou| B[Build estático] --> P[Cloudflare Pages<br/>HTTPS · CDN]
+  Q -->|ok e algo mudou| B[Build estático<br/>site + /data] --> W[Cloudflare Worker<br/>HTTPS · CDN]
   Q -->|falhou| X[Não publica<br/>site segue com os dados anteriores<br/>+ e-mail / alerta no celular]
-  G[git push na main] --> B
-  V[Visitantes] --> P
-  P --> F[Pages Function<br/>/api/live/*] --> E[ESPN · placar ao vivo]
+  G[git push na main] --> D
+  V[Visitantes] --> W
+  W -->|/api/live/*| E[ESPN · placar ao vivo]
 ```
 
-| Parte | Serviço | Custo |
+| Parte | Onde | Custo |
 |---|---|---|
-| Hospedagem, HTTPS e CDN | Cloudflare Pages (sem limite de tráfego) | R$ 0, sem cartão |
-| Placar ao vivo | Pages Functions (`functions/api/live/`), com cache de 30–60 s na borda | R$ 0 (até 100 mil acessos/dia) |
+| Site, dados, HTTPS e CDN | Cloudflare Workers, com *static assets* (`wrangler.jsonc`) | R$ 0, sem cartão |
+| Placar ao vivo | O próprio Worker (`worker/index.ts`), com cache de 30–60 s | R$ 0 (até 100 mil chamadas/dia; páginas e dados não contam) |
 | Atualização automática (cron) | GitHub Actions: `.github/workflows/publish.yml` | R$ 0 |
-| Eventos e histórico | Aba **Actions** do GitHub, com o resumo de cada execução (o que mudou, qualidade, se publicou) | R$ 0 |
+| Eventos e histórico | Aba **Actions** do GitHub, com o resumo de cada execução | R$ 0 |
 | Alertas | E-mail automático do GitHub + celular (ntfy, opcional) | R$ 0 |
 
 **O que muda em relação a rodar com servidor:**
@@ -32,38 +32,42 @@ flowchart LR
 - O papel do painel passa para a aba **Actions**. Os dados ficam abertos em `/data/*.json`.
 - Todo o resto funciona igual, inclusive o placar ao vivo.
 
+> ### ⚠️ Por que o site aparece sem dados com o "Connect to Git" da Cloudflare
+> Os dados (`/data`) **não ficam no GitHub**: são gerados pelo pipeline. Quando a Cloudflare faz o build sozinha a partir do repositório, publica só o site (`npm run build`), sem dados. O resultado são páginas com "Sem jogos" e "A temporada ainda não tem jogos disputados".
+> **Quem publica é o GitHub Actions**, que gera os dados antes do build. Por isso o build automático da Cloudflare precisa ficar **desligado** (passo 1).
+
 ---
 
-## Passo 1 — Conferir o repositório
+## Passo 1 — Desligar o build automático da Cloudflare
 
-- `.env`, `/data/`, `/data-raw/` e `/ops/` já estão no `.gitignore`. Nunca suba tokens ou o `.env`.
-- Nesta forma de publicar não existe `ADMIN_TOKEN`. Os únicos segredos ficam guardados no GitHub (passo 3).
+Só se você já tiver usado o *Connect to Git*.
 
-## Passo 2 — Testar no seu computador
+Cloudflare → **Workers & Pages → end-zone-analytics → Settings → Build → Git repository → Disconnect**.
+
+O Worker e o endereço `*.workers.dev` continuam existindo. Só deixa de haver um segundo publicador sobrescrevendo o site sem dados.
+
+## Passo 2 — Testar no seu computador (opcional, recomendado)
 
 ```powershell
 npm run qa
 npm run build:static
+npx wrangler@4 dev --port 8788
 ```
 
-Os dois precisam terminar sem erro. O `build:static` gera a pasta `dist/` com o site e os dados.
+Abra `http://localhost:8788`: deve aparecer o site completo, com dados e placar. Esse é exatamente o que vai para a Cloudflare. Feche com `Ctrl+C`.
 
-## Passo 3 — Cloudflare: conta e token
+## Passo 3 — Cloudflare: token e Account ID
 
-1. Crie a conta grátis em **dash.cloudflare.com/sign-up**. Não pede cartão.
-2. **Account ID:** menu **Workers & Pages** → copie o *Account ID* na coluna da direita.
-3. **Token:** clique no ícone do perfil → **My Profile → API Tokens → Create Token → Create Custom Token**:
-   - *Permissions*: **Account** · **Cloudflare Pages** · **Edit** (só essa).
-   - *Account Resources*: a sua conta.
-   - Crie e **copie o token** (ele só aparece uma vez).
+1. **Account ID:** **Workers & Pages** → copie o *Account ID* na coluna da direita.
+2. **Token:**
+   - Clique no ícone do perfil → **My Profile → API Tokens → Create Token**.
+   - Escolha o modelo **Edit Cloudflare Workers** → *Use template*.
+   - Em *Account Resources*, selecione a sua conta. Em *Zone Resources*, *All zones* pode ficar.
+   - **Continue → Create Token** e **copie o token**: ele só aparece uma vez.
 
-> ⚠️ **Não** use o botão *Connect to Git* da Cloudflare. O build feito por lá não teria os dados, que são gerados no GitHub Actions. A publicação é feita pelo workflow, que já cria o projeto sozinho.
+## Passo 4 — GitHub: segredos
 
-## Passo 4 — GitHub: segredos e variáveis
-
-No repositório → **Settings → Secrets and variables → Actions**.
-
-Aba **Secrets** → *New repository secret*:
+No repositório → **Settings → Secrets and variables → Actions → Secrets → New repository secret**:
 
 | Nome | Valor |
 |---|---|
@@ -71,92 +75,93 @@ Aba **Secrets** → *New repository secret*:
 | `CLOUDFLARE_ACCOUNT_ID` | o Account ID do passo 3 |
 | `NTFY_URL` *(opcional)* | `https://ntfy.sh/<um-nome-dificil>`, para alertas no celular (passo 8) |
 
-Aba **Variables** → *New repository variable* (opcionais):
+Na aba **Variables** (opcional): `SITE_URL` = `https://end-zone-analytics.<sua-conta>.workers.dev`, usado no `sitemap.xml`.
 
-| Nome | Valor |
-|---|---|
-| `CF_PAGES_PROJECT` | nome do projeto; o padrão é `end-zone-analytics` |
-| `SITE_URL` | o endereço final (ex.: `https://end-zone-analytics.pages.dev`), usado no `sitemap.xml` |
+## Passo 5 — Publicar
 
-## Passo 5 — Primeira publicação
+Faça o commit e o push das alterações. O push na `main` já dispara a publicação. Para disparar manualmente:
 
-1. GitHub → aba **Actions** → **Atualizar dados e publicar** → **Run workflow** → tipo **full** → *Run*.
-2. Leva de 3 a 6 minutos. Ao terminar, abra a execução: o **resumo** mostra a qualidade dos dados e se o site foi publicado.
-3. O endereço principal é `https://<nome-do-projeto>.pages.dev` (ex.: `https://end-zone-analytics.pages.dev`). Ele aparece em **Workers & Pages → seu projeto** no painel da Cloudflare. O log do passo *Publicar no Cloudflare Pages* mostra também um endereço exclusivo de cada publicação. Se o endereço principal for diferente do esperado, atualize a variável `SITE_URL`.
+**Actions → Atualizar dados e publicar → Run workflow → full → Run workflow**.
+
+- Leva de 3 a 6 minutos.
+- No fim, o **resumo** da execução mostra a qualidade dos dados e "🚀 publicado no Cloudflare".
+- O endereço continua o mesmo: `https://end-zone-analytics.<sua-conta>.workers.dev`.
+
+> O nome do Worker vem do `wrangler.jsonc` (`"name": "end-zone-analytics"`). Ele precisa ser igual ao do Worker que já existe; assim a publicação substitui a versão sem dados.
 
 ## Passo 6 — Testar o endereço público
 
-- [ ] Início, Temporada, Times, Jogadores, Comparador e Super Bowl abrem e mostram dados
-- [ ] Link direto funciona (ex.: abrir `…/teams/kc` em uma aba nova)
-- [ ] Logos, gráficos, seletor de temporada, modo Iniciante/Expert e tema claro/escuro
-- [ ] Placar ao vivo em dia de jogo (selo **Ao vivo** nos cards)
-- [ ] No celular: menu, tabelas e cards de jogos
-- [ ] `…/data`: fontes, data da última atualização e qualidade
+- [ ] Início mostra jogos da semana, classificação e destaques
+- [ ] `…/data/manifest.json` abre um **JSON**, não a página do site
+- [ ] Link direto funciona (ex.: `…/teams/kc` em uma aba nova)
+- [ ] Logos, gráficos, seletor de temporada, Iniciante/Expert e tema claro/escuro
+- [ ] `…/api/live/scoreboard` responde JSON; em dia de jogo aparece o selo **Ao vivo**
+- [ ] No celular: menu, tabelas e cards
 
 ## Passo 7 — Atualização automática (já ligada)
 
 | Quando | O que acontece |
 |---|---|
 | A cada 6 h (00:17, 06:17, 12:17 e 18:17 UTC, ou seja, 21:17, 03:17, 09:17 e 15:17 em Brasília) | Carga parcial → portão de qualidade → **republica só se algum dado mudou** |
-| Todo `git push` na `main` | Testes → build → publica a nova versão do código |
-| Quando você quiser | Aba **Actions** → *Run workflow* (parcial ou completa) |
+| Todo `git push` na `main` | Testes → dados → build → publica |
+| Quando você quiser | **Actions → Run workflow** (parcial ou completa) |
 
-- **Nada muda nas fontes?** Nada é republicado. A execução fica registrada como "Sem mudanças nas fontes".
-- **Falhou** (fonte fora do ar, qualidade reprovada)? O site continua no ar com os dados anteriores e você é avisado.
-- Entre uma execução e outra, os dados ficam guardados no cache do Actions. Assim, cada carga parcial baixa só o que mudou.
-- O GitHub fornece um token automático: o erro **HTTP 403 (limite da API do GitHub) não acontece aqui**.
-- **Mais atualizações em dia de jogo?** Em `.github/workflows/publish.yml`, acrescente outra linha em `schedule`, por exemplo `- cron: '47 * * * 0,1,2,4,5'`. Ela roda de hora em hora de domingo a sexta e cobre os jogos de domingo, segunda e quinta, que terminam de madrugada no horário UTC. Os horários do cron são em UTC. Em repositório privado, isso consome mais minutos (veja os limites abaixo).
+- **Nada muda nas fontes?** Nada é republicado.
+- **Algo falhou?** O site continua no ar com os dados anteriores e você é avisado.
+- Os dados ficam guardados no cache do Actions entre as execuções. Assim, cada carga parcial baixa só o que mudou.
+- O GitHub fornece um token automático: o erro **HTTP 403** (limite da API do GitHub) não acontece aqui.
+- **Mais atualizações em dia de jogo?** Em `publish.yml`, acrescente em `schedule` a linha `- cron: '47 * * * 0,1,2,4,5'`. Ela roda de hora em hora de domingo a sexta. Os horários do cron são em UTC; em repositório privado, consome mais minutos.
 
 ## Passo 8 — Alertas e eventos
 
-- **E-mail:** o GitHub avisa automaticamente quando uma execução falha. Confira em github.com → *Settings → Notifications → Actions*.
+- **E-mail:** o GitHub avisa quando uma execução falha. Confira em github.com → *Settings → Notifications → Actions*.
 - **Celular (opcional):**
-  1. Instale o app **ntfy** e assine um tópico difícil de adivinhar (ex.: `eza-alertas-7f3k9q2m`).
-  2. Crie o segredo `NTFY_URL` (passo 4).
-  3. Teste com: `curl -d "teste" https://ntfy.sh/eza-alertas-7f3k9q2m`.
-- **Histórico:** cada execução na aba **Actions** tem um resumo com o que mudou (ex.: "Calendário e resultados: +16 linhas"), a qualidade e se publicou.
+  1. Instale o app **ntfy** e assine um tópico difícil de adivinhar.
+  2. Crie o segredo `NTFY_URL`.
+  3. Teste com `curl -d "teste" https://ntfy.sh/<tópico>`.
+- **Histórico:** cada execução na aba **Actions** tem um resumo com o que mudou, a qualidade e se publicou.
+- **Placar ao vivo:** Cloudflare → Worker → **Observability** mostra as chamadas e eventuais erros.
 
 ## Passo 9 — Domínio próprio (opcional)
 
-Comece com o endereço `*.pages.dev`, que é grátis e definitivo. Se depois comprar um domínio, que é um custo à parte:
-1. Cloudflare → **Workers & Pages → seu projeto → Custom domains → Set up a domain**.
-2. Atualize a variável `SITE_URL`.
-
-O certificado HTTPS é automático.
+O endereço `*.workers.dev` é grátis e definitivo. Com um domínio próprio, que é um custo à parte:
+1. Adicione o domínio na Cloudflare.
+2. Vá em **Worker → Settings → Domains & Routes → Add → Custom domain**.
+3. Atualize a variável `SITE_URL`.
 
 ---
 
-## Limites do plano grátis (com folga para este projeto)
+## Limites do plano grátis (com folga)
 
 | Recurso | Uso esperado |
 |---|---|
 | Minutos do GitHub Actions | Repositório público: ilimitado. Privado: 2.000 min/mês; cada execução leva de 1,5 a 5 min, o que dá ~200–500 min/mês |
-| Publicações no Cloudflare Pages | Só quando algo muda: até ~120 por mês |
-| Pages Functions (placar ao vivo) | 100 mil acessos/dia, e o cache de 30–60 s na borda reduz muito esse número |
-| Tamanho do site | ~35 MB em ~180 arquivos; o limite é 25 MB **por arquivo** e 20 mil arquivos |
-| Cache de dados do Actions | Bem abaixo do limite de 10 GB; é renovado a cada execução |
+| Requisições do Worker | Só o placar ao vivo conta (100 mil/dia, com cache); páginas e dados são arquivos estáticos e não contam |
+| Tamanho do site | ~35 MB em ~290 arquivos; o limite é 25 MB **por arquivo** e 20 mil arquivos |
+| Cache de dados do Actions | Bem abaixo do limite de 10 GB |
 
-> **Repositório sem commits por 60 dias:** em repositórios públicos, o GitHub pausa os workflows agendados e avisa por e-mail. Para reativar, vá em **Actions → Atualizar dados e publicar → Enable workflow**. Qualquer commit também evita a pausa.
+> **Repositório sem commits por 60 dias:** em repositórios públicos, o GitHub pausa os workflows agendados e avisa por e-mail. Para reativar, vá em **Actions → Atualizar dados e publicar → Enable workflow**.
 
 ## Problemas comuns
 
-| Sintoma | Solução |
+| Sintoma | Causa e solução |
 |---|---|
-| Falha em *Publicar no Cloudflare Pages* com "Authentication error" | Token sem a permissão **Cloudflare Pages · Edit**, ou Account ID errado (passos 3 e 4) |
-| Falha no *Portão de qualidade* | Os dados novos da fonte têm um problema real. O site segue com os dados anteriores; veja o detalhe no log e rode de novo mais tarde |
-| Falha na *Carga de dados* | Fonte (nflverse/GitHub) fora do ar. A próxima execução agendada tenta de novo |
-| Página em branco ou 404 ao abrir um link direto | Confirme que publicou a pasta `dist` gerada por `npm run build:static`, e não por `npm run build` |
-| Placar ao vivo não aparece | Fora do horário de jogo é normal. Em dia de jogo, teste `…/api/live/scoreboard`: deve responder com JSON |
-| Quero forçar a recarga de tudo | Actions → *Run workflow* → **full** |
+| Site sem dados ("Sem jogos para esta seleção") | Foi publicado pelo build da Cloudflare, que não tem os dados. Faça o passo 1 e rode o workflow (passo 5) |
+| `…/data/manifest.json` abre a página do site | Mesmo caso acima |
+| Falha em *Publicar no Cloudflare* com "Authentication error" | Token sem o modelo **Edit Cloudflare Workers**, ou Account ID errado (passos 3 e 4) |
+| Falha no *Portão de qualidade* | Os dados novos da fonte têm um problema real. O site segue com os dados anteriores; veja o log e rode de novo mais tarde |
+| Falha na *Carga de dados* | Fonte (nflverse/GitHub) fora do ar. A próxima execução tenta de novo |
+| Console do navegador: "Loading the font … violates Content Security Policy" | As fontes do site são do próprio domínio e são permitidas. Esse aviso costuma vir de **extensões do navegador**; teste numa janela anônima |
+| Quero recarregar tudo | Actions → Run workflow → **full** |
 
 ## Segurança
 
-- [ ] Token da Cloudflare só com **Cloudflare Pages · Edit**
-- [ ] Segredos só em *GitHub → Secrets* (nunca no código)
+- [ ] Build automático da Cloudflare desligado (só o GitHub Actions publica)
+- [ ] Token da Cloudflare criado pelo modelo **Edit Cloudflare Workers**, guardado só em *GitHub → Secrets*
 - [ ] Verificação em duas etapas no GitHub e na Cloudflare
 - [ ] Cabeçalhos de segurança (CSP, HSTS, nosniff, proteção contra embutir o site em outras páginas) vêm de `public/_headers`
-- [ ] Nada administrativo é publicado: o build estático exclui o `/admin`
+- [ ] Nada administrativo é publicado: o build estático exclui o `/admin`, e o Worker responde 404 para o resto de `/api/*`
 
 ---
 
-Quer o painel `/admin` e a API REST completa online? Veja o guia alternativo com servidor próprio: [PUBLICACAO_SERVIDOR.md](PUBLICACAO_SERVIDOR.md).
+Quer o painel `/admin` e a API REST completa online? Veja o guia com servidor próprio: [PUBLICACAO_SERVIDOR.md](PUBLICACAO_SERVIDOR.md).
