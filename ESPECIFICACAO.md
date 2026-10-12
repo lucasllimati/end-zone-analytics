@@ -1,7 +1,7 @@
 # End Zone Analytics — Especificação funcional
 
 Documento de referência de **todas as páginas, funcionalidades e dados** da plataforma.
-Reflete o estado atual do código (v1.1 — redesign azul-marinho, área administrativa protegida). Itens marcados como **[Planejado]** ainda não existem.
+Reflete o estado atual do código (v1.1 — redesign azul-marinho, área administrativa protegida, publicação no Cloudflare). Site no ar: <https://end-zone-analytics.insanogamerj.workers.dev>. Itens marcados como **[Planejado]** ainda não existem.
 
 > Documentos técnicos complementares: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATA_MODEL.md](docs/DATA_MODEL.md), [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md), [docs/API.md](docs/API.md), [docs/SECURITY.md](docs/SECURITY.md), [docs/ROADMAP.md](docs/ROADMAP.md).
 
@@ -324,7 +324,23 @@ Scripts: `dev`, `dev:web`, `dev:api`, `build`, `build:static`, `start`, `preview
 
 ---
 
-## 9. Qualidade e testes
+## 9. Publicação
+
+| Item | Site publicado (em uso) | Servidor próprio (alternativa) |
+|---|---|---|
+| Hospedagem | Cloudflare Workers: *static assets* (`dist/` + `dist/data`) e `worker/index.ts` só para `/api/live/*` | Docker + Caddy (HTTPS) com a API Fastify completa |
+| Quem atualiza os dados | GitHub Actions `publish.yml`: cron a cada 6 h, a cada push e manual | Agendador interno (`SYNC_*`) e `/admin` |
+| Portão de qualidade | `tests/data/published.test.ts`: dados reprovados não são publicados | Verificações registradas como alertas no `/admin` |
+| Eventos e alertas | Resumo de cada execução no Actions; e-mail do GitHub; ntfy opcional (`NTFY_URL`) | `/admin` → Logs e alertas; webhook (`ALERT_WEBHOOK_URL`) |
+| `/admin` e API REST completa | Não existem (build estático) | Sim |
+| Segredos | `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` (GitHub Secrets) | `.env` no servidor; `SSH_*` no GitHub para o deploy |
+| Seleção | padrão | variável de repositório `DEPLOY_TARGET=server` (desliga o `publish.yml`) |
+
+Guias: [docs/PUBLICACAO.md](docs/PUBLICACAO.md) · [docs/PUBLICACAO_SERVIDOR.md](docs/PUBLICACAO_SERVIDOR.md).
+
+---
+
+## 10. Qualidade e testes
 
 | Tipo | Ferramenta | Cobertura |
 |---|---|---|
@@ -337,7 +353,7 @@ Critério de pronto: `npm run qa` e `npm run test:e2e` sem falhas.
 
 ---
 
-## 10. Melhorias planejadas (resumo)
+## 11. Melhorias planejadas (resumo)
 
 | Prioridade | Item |
 |---|---|

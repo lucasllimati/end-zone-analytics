@@ -1,5 +1,7 @@
 # API
 
+> **Site publicado (Cloudflare):** apenas `/api/live/scoreboard` e `/api/live/game/{id}` existem (servidos por `worker/index.ts`); o restante da API e o `/admin` só existem na versão com servidor. No site publicado, os dados ficam abertos em `/data/*.json` (a partir de `/data/manifest.json`).
+
 Base: `http://localhost:8787` (desenvolvimento: também via proxy em `http://localhost:5173`). Especificação completa: **`GET /api/openapi.json`** (OpenAPI 3.1).
 
 Todas as respostas são JSON. Valores ausentes são `null`. Erros seguem `{ "error": "código", "message": "texto" }`.

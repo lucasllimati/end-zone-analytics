@@ -27,6 +27,8 @@ concurrency:
 
 jobs:
   publish:
+    # Caminho padrão (Cloudflare). Se a variável de repositório DEPLOY_TARGET for "server", quem publica é deploy-server.yml.
+    if: vars.DEPLOY_TARGET != 'server'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:

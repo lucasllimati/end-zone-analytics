@@ -9,20 +9,20 @@ npm run test:e2e    # E2E, UX e acessibilidade (Playwright + axe) — desktop e 
 node scripts/screenshots.mjs   # capturas de tela + detector de rolagem horizontal
 ```
 
-## Última execução (10/10/2026, dados até a semana 5 de 2026)
+## Última execução (11/10/2026, dados até a semana 5 de 2026)
 
 | Suíte | Resultado |
 |---|---|
-| TypeScript (app + servidor), modo estrito | ✅ sem erros |
-| Vitest — 8 arquivos (unitários, componentes, conteúdo, API, pipeline, dados publicados) | ✅ 95/95 |
-| Playwright — 28 rotas × desktop/celular sem erro de console e sem rolagem lateral | ✅ |
-| axe-core WCAG 2.1 AA — 9 páginas × 2 dispositivos, sem violações sérias/críticas | ✅ |
-| Fluxos de UX (busca Ctrl+K, modo Expert persistente, ⓘ, tema, logos, simulador, campo por teclado, ranking, Super Bowl, 404) | ✅ (1 ignorado por design: atalho de teclado no celular) |
-| cspell pt-BR + en — 107 arquivos | ✅ 0 ocorrências |
-| Paleta de gráficos (verificador de daltonismo) | ✅ escuro: todas passam · claro: passa com aviso de contraste compensado por legenda + tabela |
-| Qualidade de dados (pipeline) | ✅ 15 ok · 2 alertas · 0 falhas |
-| Carga parcial real via API (`POST /api/admin/sync`) | ✅ 1 arquivo baixado, 9,4 s, ingestão v3, API recarregou sozinha |
-| Build de produção + servidor (`npm start`) | ✅ SPA, `/data`, `/api` |
+| TypeScript (app + servidor + Worker), modo estrito | ✅ sem erros |
+| Vitest — 9 arquivos (unitários, componentes, conteúdo, API/admin, agendador/alertas, pipeline, dados publicados) | ✅ 107/107 |
+| Playwright com servidor (`npm run dev`) — 29 rotas × desktop/celular, fluxos de UX, admin, separação público × admin | ✅ 107 passaram · 1 ignorado por design (atalho de teclado no celular) |
+| Playwright contra o site publicado localmente (`build:static` + `wrangler dev`, `E2E_STATIC=1`) | ✅ 105 passaram · 3 ignorados por design (admin não existe no site estático) |
+| axe-core WCAG 2.1 AA — 12 páginas × 2 dispositivos, sem violações sérias/críticas | ✅ |
+| cspell pt-BR + en — 117 arquivos | ✅ 0 ocorrências |
+| Paleta de gráficos (verificador de daltonismo) contra o novo fundo `#0b1728` | ✅ todas as checagens passam |
+| Qualidade de dados (pipeline) | ✅ 18 ok · 0 alertas · 0 falhas |
+| CI em checkout limpo (só arquivos versionados): `npm ci`, `qa`, `build`, `npm audit` | ✅ 0 vulnerabilidades |
+| Produção (`end-zone-analytics.insanogamerj.workers.dev`) | ✅ `/data/*.json` em JSON, `/api/live/scoreboard` em JSON, rotas diretas, cabeçalhos CSP/HSTS, `/api/admin/*` → 404 |
 
 ## O que a revisão encontrou e corrigiu
 
@@ -39,7 +39,17 @@ node scripts/screenshots.mjs   # capturas de tela + detector de rolagem horizont
 | Rótulos das zonas cobertos pelos jogadores no playbook | UX | Rótulo no topo de cada zona |
 | Cabeçalhos de CSV sem acento; “blitzam”; “codigo” | Texto | Corrigidos |
 | BUF/CIN 2022 com 16 jogos | Dado real (jogo cancelado) | Exceção documentada na verificação |
-| nflverse: Brees 2011 com 5.535 jardas (oficial: 5.476) | Divergência entre fontes | Recorde oficial exibido; divergência visível em `/data` |
+| nflverse: Brees 2011 com 5.535 jardas (oficial: 5.476) | Divergência entre fontes | Recorde oficial exibido; divergência documentada na curadoria (`knownDivergences`), sem alerta repetido |
+| nflverse: 53 temporadas (2003–2008) com recepções > alvos (alvos = 1) | Dado inconsistente na fonte | Alvos viram “Não disponível” (sem aproveitamento calculado); verificação própria |
+| Carga parcial com a API do GitHub em HTTP 403 terminava como “sucesso” sem atualizar | Bug | Erro explícito com horário de liberação e ação recomendada; ETag; cache de versões renovado a cada execução |
+| `/api/admin/check` e `/api/admin/jobs` abertos ao público | Segurança | Todas as rotas admin autenticadas no servidor; sessão HttpOnly + anti-CSRF; acesso local só fora de produção |
+| Cada carga criava uma “versão” nova mesmo sem mudanças | UX/dados | Nova publicação só quando o conteúdo muda; histórico legível (“o que mudou”) |
+| Página do time quebrava no build de produção (ordem de hooks do React) | Bug | `useMemo` antes dos returns condicionais; varredura nas demais páginas |
+| Página 404 sem `<h1>` | Acessibilidade | Título “4th & 404” passou a ser `<h1>` |
+| Selo “Ao vivo” com contraste insuficiente; lista de números do hero com `dl` inválida; painel do admin sem `tabpanel` | Acessibilidade | Cor do selo, lista semântica e `TabPanel` |
+| `.gitignore` com `data/` ignorava `src/data/` e `tests/data/` (CI falhava com “Cannot find module”) | Build | Padrões ancorados na raiz (`/data/`) |
+| Site publicado pelo build automático da Cloudflare sem a pasta de dados | Publicação | Publicação feita só pelo GitHub Actions (gera os dados antes); guia documenta desligar o build da Cloudflare |
+| Placar ao vivo no formato Pages Functions não rodava no Worker | Publicação | `worker/index.ts` com `run_worker_first` só para `/api/*` |
 
 ## Itens que exigem atenção humana
 

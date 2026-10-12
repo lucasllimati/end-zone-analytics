@@ -1,6 +1,6 @@
 # End Zone Analytics — Guia completo
 
-Este guia explica o que o projeto faz, como está organizado, como os dados chegam até a tela e como operar, testar e evoluir a plataforma. Para começar em 3 comandos, veja o [README](../README.md).
+Este guia explica o que o projeto faz, como está organizado, como os dados chegam até a tela e como operar, testar e evoluir a plataforma. Para começar em 3 comandos, veja o [README](../README.md). Para publicar na internet, veja [PUBLICACAO.md](PUBLICACAO.md).
 
 **Sumário**
 
@@ -27,7 +27,7 @@ Uma enciclopédia interativa, banco de dados histórico e laboratório de analyt
 - **Iniciantes** — explicações simples em cada número (botão ⓘ), página “A NFL em 10 minutos”, simulador de down & distance, posições num campo interativo e playbook animado.
 - **Especialistas** — EPA, CPOE, percentis, ajuste de era, power ranking transparente, explorador de dados com exportação.
 
-O seletor **Iniciante / Expert** no topo muda o texto dos tooltips, das notas e das colunas avançadas em todo o site. O seletor de **temporada** (“viagem no tempo”) faz todas as páginas respeitarem o ano escolhido (1999–hoje).
+O seletor **Iniciante / Expert** no topo muda o texto dos tooltips, das notas e das colunas avançadas em todo o site. O seletor de **temporada** no cabeçalho faz todas as páginas respeitarem o ano escolhido (1999–hoje).
 
 ## 2. Arquitetura macro
 
@@ -50,7 +50,7 @@ flowchart LR
 
     subgraph Servidor["API Fastify (server/)"]
         API[REST /api/*<br/>OpenAPI]
-        ADM[Admin<br/>check · sync · jobs]
+        ADM[Admin protegido<br/>sessão · check · sync · jobs · eventos]
         LIVE[Proxy ao vivo<br/>cache 30–60 s]
         STA[Arquivos estáticos<br/>/data e SPA]
     end
@@ -68,14 +68,15 @@ flowchart LR
     STA --> UI
     API --> UI
     LIVE --> UI
-    UI -->|sem API: verifica direto| NV
 ```
+
+Em produção o site roda como **site estático + Cloudflare Worker** (placar ao vivo), atualizado pelo GitHub Actions a cada 6 h — ver [PUBLICACAO.md](PUBLICACAO.md). A API completa e o `/admin` existem na versão com servidor ([PUBLICACAO_SERVIDOR.md](PUBLICACAO_SERVIDOR.md)).
 
 **Decisões principais**
 
 | Decisão | Por quê |
 |---|---|
-| Dados publicados como **JSON estáticos versionados** (`data/`) em vez de banco relacional | Leitura 100% do tempo, poucos MB, cache simples e o site funciona até sem servidor (hospedagem estática). O contrato é tipado em `src/lib/types.ts`; migrar para PostgreSQL depois só muda a camada de publicação (ver roadmap). |
+| Dados publicados como **JSON estáticos versionados** (`data/`) em vez de banco relacional | Leitura 100% do tempo, poucos MB, cache simples e o site funciona sem servidor (é assim que está publicado). O contrato é tipado em `src/lib/types.ts`; adotar um banco depois só muda a camada de publicação (ver roadmap). |
 | **Lógica compartilhada** (`src/lib`) entre pipeline, API e frontend | Uma única implementação de classificação, passer rating, percentis, modelos e verificação de atualização — testada uma vez. |
 | **Formato colunar** (`{cols, rows}`) para arquivos grandes | ~70% menos bytes que lista de objetos. |
 | **Perfis de jogadores em 64 “buckets”** | O perfil de um jogador baixa ~200 KB em vez de todo o banco. |
@@ -92,7 +93,7 @@ flowchart TD
     AppProv --> TeamsProv[TeamsProvider<br/>cadastro de times]
     TeamsProv --> App[App.tsx<br/>rotas lazy + ErrorBoundary]
     App --> Layout[Layout<br/>header · menus · drawer mobile · footer]
-    Layout --> Banner[UpdateBanner<br/>dados novos → Atualizar]
+    Layout --> Banner[UpdateBanner<br/>dados novos → Atualizar<br/>só administradores]
     Layout --> Palette[SearchPalette<br/>Ctrl+K]
     Layout --> Pages[Páginas]
 
@@ -101,7 +102,7 @@ flowchart TD
     Pages --> Hist[SuperBowl · Records · Draft · HallOfFame · History]
     Pages --> Anl[Rankings · Explorer]
     Pages --> Edu[Learn · Rules · Positions · Playbook · Strategy · Glossary]
-    Pages --> Dados[DataCenter]
+    Pages --> Dados[DataCenter público · Admin protegido]
 
     subgraph DS["Design system (components/)"]
         InfoTip[InfoTip ⓘ]
@@ -115,7 +116,7 @@ flowchart TD
     subgraph DataLayer["Dados (data/)"]
         client[client.ts<br/>fetch /data + cache + unpack]
         hooks[hooks.ts<br/>useAsync · useSeason · useTeams]
-        upd[useUpdates.ts<br/>check + sync + polling]
+        upd[useUpdates.ts · admin.ts<br/>sessão · check · sync · polling]
         live[live.ts<br/>placar ao vivo]
     end
     Pages --> DataLayer
@@ -131,7 +132,11 @@ flowchart TD
     app --> helmet[helmet CSP] & rl[rate-limit] & comp[compress]
     app --> store[DataStore<br/>cache invalidado por manifest]
     app --> espn[services/espn.ts<br/>TtlCache]
+    app --> auth[services/auth.ts<br/>sessão HttpOnly · anti-CSRF]
+    app --> agenda[services/scheduler.ts<br/>cargas agendadas]
+    agenda --> jobs
     app --> jobs[services/jobs.ts<br/>single-flight]
+    jobs --> ops[services/ops.ts<br/>execuções · eventos · webhook]
     jobs --> pipe[etl/pipeline.ts]
     cli[etl/cli.ts<br/>full · partial · check · quality] --> pipe
     pipe --> fetcher[etl/fetcher.ts] --> gh[(GitHub API + Releases)]
@@ -145,25 +150,25 @@ flowchart TD
 
 ```mermaid
 sequenceDiagram
-    participant U as Usuário
-    participant W as Site (UpdateBanner)
+    participant U as Administrador
+    participant W as Site (UpdateBanner / admin)
     participant A as API
     participant G as GitHub (nflverse)
-    U->>W: abre qualquer página
-    W->>A: GET /api/admin/check (após 2,5 s)
+    U->>W: abre qualquer página (sessão de admin ativa)
+    W->>A: GET /api/admin/check (após 2,5 s, autenticado)
     A->>G: GET releases/tags/{tag} (6 chamadas, cache 10 min)
     G-->>A: updated_at de cada arquivo
     A-->>W: itens com hasUpdate + temporadas afetadas
     W-->>U: "Novos dados: Estatísticas (2026)" [Atualizar agora]
     U->>W: clica
-    W->>A: POST /api/admin/sync {mode: partial, datasets, seasons}
+    W->>A: POST /api/admin/sync {mode: partial, datasets, seasons} + X-EZA-Admin
     A->>A: job (baixa só o que mudou, recalcula derivados)
     W->>A: GET /api/admin/jobs/{id} (a cada 1,5 s)
     A-->>W: done
     W-->>U: "Dados atualizados" [Recarregar]
 ```
 
-Sem a API (site estático), o navegador consulta o GitHub diretamente e mostra o comando a rodar.
+Visitantes comuns nunca disparam essa verificação. No site publicado (estático), quem verifica e atualiza é o GitHub Actions, a cada 6 h.
 
 ## 4. Pipeline de dados
 
@@ -175,10 +180,10 @@ Camadas (cada uma testada isoladamente):
 | RAW | `server/etl/fetcher.ts` → `data-raw/` | Download com retry, escrita atômica, `.meta.json` com a versão remota |
 | NORMALIZED | `server/etl/transform.ts` | CSV → tipos do contrato; vazio/NA → `null` (nunca 0 em métricas) |
 | ANALYTICS | `server/etl/analytics.ts` | Temporadas por time, tendências da liga, Super Bowls (curadoria × nflverse), modelo de QBs, similaridade, recordes, estádios |
-| QUALITY | `server/etl/quality.ts` | 17 verificações (duplicidade, placares, times, jogos por temporada, formato de playoffs, estatísticas impossíveis, passer rating, nomes, draft, Super Bowls, recordes) |
+| QUALITY | `server/etl/quality.ts` | 18 verificações (duplicidade, placares, times, jogos por temporada, formato de playoffs, estatísticas impossíveis, alvos × recepções, passer rating, nomes, draft, Super Bowls, recordes — divergências conhecidas ficam documentadas na curadoria) |
 | PUBLISH | `server/etl/pipeline.ts` → `data/` | JSON (colunar quando grande), `manifest.json`, `quality.json`, `history/` |
 
-**Versionamento e imutabilidade histórica:** cada execução incrementa `ingestionVersion`; o manifest anterior é guardado em `data/history/manifest-N.json` (últimos 10) e `data/history/changes.json` registra modo, arquivos baixados e variação de linhas por conjunto. O job é idempotente: rodar duas vezes produz o mesmo resultado.
+**Publicações e histórico:** uma nova publicação só é criada quando o conteúdo muda (sha256 dos conjuntos ou resultado da qualidade). Nesse caso o manifest anterior vai para `data/history/manifest-N.json` (últimos 10) e `data/history/changes.json` registra o que mudou (conjuntos e variação de linhas). Sem mudanças, a publicação é mantida e só `lastCheckedAt` é atualizado. O job é idempotente. Se a lista de versões remotas não puder ser consultada (ex.: limite da API do GitHub), a carga parcial falha com erro explícito, em vez de reportar sucesso sem atualizar.
 
 **Arquivos publicados** (detalhes em [DATA_MODEL.md](DATA_MODEL.md)):
 
@@ -205,7 +210,7 @@ data/
 | Parcial (forçada) | `npm run data:partial -- --datasets games,playerStats --seasons 2026` | Força o download dos conjuntos/temporadas indicados. |
 | Completa | `npm run data:full` | Baixa e reprocessa tudo (~114 arquivos, ~40 MB, ~1 min). |
 
-Pelo site: página **Dados** → *Verificar dados novos* → escolha *Parcial* (com ou sem filtros) ou *Completa*. Pela API: `POST /api/admin/sync`.
+Com servidor: área **`/admin`** → *Fontes e cargas* (verificar, parcial com filtros ou completa com confirmação), ou `POST /api/admin/sync` autenticado; o agendador interno (`SYNC_*`) roda cargas sozinho. No site publicado: GitHub Actions a cada 6 h (ou *Run workflow*).
 
 Conjuntos (`--datasets`): `teams`, `games`, `players`, `playerStats`, `teamStats`, `draft`.
 
@@ -227,7 +232,8 @@ Conjuntos (`--datasets`): `teams`, `games`, `players`, `playerStats`, `teamStats
 | `/history`, `/stadiums` | Eras 1920–hoje, evolução do jogo em 10 métricas, comparação por década; estádios |
 | `/learn`, `/rules`, `/positions`, `/playbook`, `/strategy`, `/glossary` | Conteúdo educativo (básico → avançado) com campo interativo, animações e simulador |
 | `/explorer` | Monte rankings por período/posição/time/métrica; URL compartilhável; exportação |
-| `/data` | Fontes, licenças, versões, qualidade, verificação e carga completa/parcial, histórico de ingestões |
+| `/data` | Pública: fontes, licenças, cobertura, como os números chegam ao site, limitações conhecidas e qualidade |
+| `/admin` | Protegida (só na versão com servidor): saúde, última publicação × última tentativa, cargas, jobs, logs/alertas e histórico |
 
 **Busca global:** `Ctrl+K` ou `/` — jogadores, times, Super Bowls, termos, faltas, posições, jogadas, páginas.
 
@@ -259,10 +265,10 @@ Todo número calculado tem um ⓘ com “como é calculado?”. Nenhum ranking �
 
 ## 9. Design, UX e acessibilidade
 
-- **Identidade própria:** fundo grafite, dourado “troféu” como única cor de destaque, tipografia do sistema, muito espaço em branco. Escuro por padrão, claro selecionável. Ver [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md).
+- **Identidade própria:** azul-marinho profundo com azul elétrico como cor de identidade, símbolo da bola oval, títulos em Barlow Condensed (auto-hospedada), cartões discretos. Escuro por padrão, claro selecionável. Ver [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md).
 - **Gráficos:** paleta categórica validada para daltonismo nos dois temas; linhas de 2 px, barras ≤ 24 px com ponta arredondada; legenda + “ver dados em tabela” + exportação em todos; cores de time com contraste mínimo garantido (fallback automático).
-- **Acessibilidade:** HTML semântico, skip link, foco visível, `aria-sort` nas tabelas, abas com setas, tooltips com Esc, campo de posições navegável por Tab, `prefers-reduced-motion` respeitado, regiões roláveis focáveis. Auditado com axe (WCAG 2.1 AA) em 9 páginas × 2 dispositivos.
-- **Responsivo:** menus em gaveta no celular, tabelas com rolagem horizontal, nenhuma página com rolagem lateral (testado em 28 rotas × 2 dispositivos).
+- **Acessibilidade:** HTML semântico, skip link, foco visível, `aria-sort` nas tabelas, abas com setas, tooltips com Esc, campo de posições navegável por Tab, `prefers-reduced-motion` respeitado, regiões roláveis focáveis. Auditado com axe (WCAG 2.1 AA) em 12 páginas × 2 dispositivos.
+- **Responsivo:** menus em gaveta no celular, tabelas com rolagem horizontal, nenhuma página com rolagem lateral (testado em 29 rotas × 2 dispositivos).
 - **Performance:** cada página é um chunk carregado sob demanda (bundle inicial ≈ 96 KB gzip), dados em cache, logos redimensionados pela CDN (de 490 KB para ~4 KB), gzip/br no servidor e cache imutável dos assets.
 
 ## 10. Qualidade: testes, QA, UX e revisão de texto
@@ -272,10 +278,10 @@ Todo número calculado tem um ⓘ com “como é calculado?”. Nenhum ranking �
 | Unitários | Vitest | `tests/unit` — classificação, estatísticas, modelos, simulador, formatação, busca, exportação, verificação de atualização |
 | Componentes | Testing Library | `tests/unit/components.test.tsx` — ⓘ por modo, ordenação acessível, abas por teclado |
 | Integridade do conteúdo | Vitest | `tests/unit/content.test.ts` — glossário, posições, playbook, penalidades, rotas do menu |
-| API | Vitest + `fastify.inject` | `tests/api` — endpoints, validação, 404, segurança, admin com token |
+| API | Vitest + `fastify.inject` | `tests/api` — endpoints, validação, 404, segurança, login/sessão/anti-CSRF do admin, eventos, agendador e alertas |
 | Pipeline | Vitest | `tests/data/etl.test.ts` — transformação, curadoria × nflverse, qualidade |
 | Dados publicados | Vitest | `tests/data/published.test.ts` — Super Bowls, títulos, faixas plausíveis, cobertura |
-| E2E + UX | Playwright | `tests/e2e` — 28 rotas sem erros/sem rolagem lateral, busca, modo Expert, tema, logos, simulador |
+| E2E + UX | Playwright | `tests/e2e` — 29 rotas sem erros/sem rolagem lateral, busca, modo Expert, tema, logos, simulador, admin, separação público × admin; roda também contra o site estático (`E2E_STATIC=1`) |
 | Acessibilidade | axe-core | WCAG 2.1 AA, sem violações sérias/críticas |
 | Revisão ortográfica | cspell (pt-BR + en) | `npm run spell` |
 | Revisão visual | `scripts/screenshots.mjs` | Capturas desktop/mobile + detector de overflow |
@@ -286,9 +292,10 @@ Resultados da última execução estão em [TESTING.md](TESTING.md).
 
 - **Saúde:** `GET /health` (processo) e `GET /ready` (dados carregados, versão, qualidade, sync em andamento).
 - **Logs:** JSON estruturado (pino); cada resposta traz `Server-Timing` com a latência.
-- **Segurança:** CSP restritiva, rate limit, validação de entrada com zod, admin só local ou com `ADMIN_TOKEN` (comparação em tempo constante). Ver [SECURITY.md](SECURITY.md).
-- **Deploy:** Node (API + site), Docker ou site estático. Ver [DEPLOYMENT.md](DEPLOYMENT.md).
-- **Agendamento sugerido:** `npm run data:partial` a cada hora em dias de jogo (cron/agendador do sistema).
+- **Segurança:** CSP restritiva, rate limit, validação de entrada com zod; admin com sessão em cookie HttpOnly, anti-CSRF e `ADMIN_TOKEN` (acesso local sem token só fora de produção). Ver [SECURITY.md](SECURITY.md).
+- **Publicação:** Cloudflare Workers + GitHub Actions ([PUBLICACAO.md](PUBLICACAO.md), em uso) ou servidor próprio com Docker ([PUBLICACAO_SERVIDOR.md](PUBLICACAO_SERVIDOR.md)). Referência técnica: [DEPLOYMENT.md](DEPLOYMENT.md).
+- **Agendamento:** GitHub Actions (cron a cada 6 h) no site publicado; agendador interno (`SYNC_PARTIAL_EVERY_HOURS`, `SYNC_FULL_*`) na versão com servidor.
+- **Eventos e alertas:** resumo de cada execução no Actions; com servidor, `/admin` → *Logs e alertas* e webhook (ntfy, Discord, Slack).
 
 ## 12. Estrutura de diretórios
 
@@ -299,11 +306,16 @@ end-zone-analytics/
 ├── data-curated/             curadoria histórica versionada (Super Bowls, recordes)
 ├── data/                     dados publicados (gerado; ignorado pelo git)
 ├── data-raw/                 cache de downloads (gerado; ignorado pelo git)
+├── ops/                      log operacional privado: execuções, eventos, auditoria (gerado; ignorado pelo git)
+├── worker/                   Cloudflare Worker (placar ao vivo no site publicado)
+├── wrangler.jsonc            configuração da publicação no Cloudflare
+├── deploy/                   servidor próprio: Caddyfile, setup, update, backup
+├── .github/workflows/        publish (Cloudflare + cron), deploy-server, ci
 ├── server/
 │   ├── app.ts                API Fastify (rotas, segurança, estáticos)
 │   ├── index.ts              inicialização
 │   ├── openapi.ts            especificação OpenAPI 3.1
-│   ├── services/             dataStore, espn (ao vivo), jobs, ttlCache
+│   ├── services/             dataStore, espn (ao vivo), jobs, scheduler, ops, auth, ttlCache
 │   └── etl/                  cli, pipeline, fetcher, transform, analytics, quality
 ├── src/
 │   ├── lib/                  lógica pura compartilhada (tipos, classificação, estatísticas, modelos…)
@@ -314,7 +326,7 @@ end-zone-analytics/
 │   ├── pages/                uma página por rota
 │   └── styles/               tokens, base e componentes (CSS)
 ├── tests/                    unit, api, data, e2e
-└── scripts/                  screenshots, cópia de dados para build estático
+└── scripts/                  screenshots, cópia de dados + sitemap (build estático), resumo da publicação
 ```
 
 ## 13. Limitações conhecidas e roadmap
@@ -326,4 +338,4 @@ end-zone-analytics/
 - Público, capacidade de estádios e arbitragem dos Super Bowls antigos não estão na base.
 - Dados ao vivo dependem de uma API pública não oficial (ESPN).
 
-**Roadmap (ver [ROADMAP.md](ROADMAP.md)):** PostgreSQL + migrations como camada de publicação opcional, play-by-play (heatmaps de campo, success rate, EPA defensivo), simulador de playoffs (“what-if”) e probabilidades, prêmios (MVP, OPOY…) com fonte licenciada, consultas em linguagem natural no explorador, páginas de análise compartilháveis (`/analysis/:id`).
+**Roadmap (ver [ROADMAP.md](ROADMAP.md)):** SQLite/DuckDB (ou PostgreSQL com várias instâncias) como camada de publicação opcional, play-by-play (heatmaps de campo, success rate, EPA defensivo), simulador de playoffs (“what-if”) e probabilidades, prêmios (MVP, OPOY…) com fonte licenciada, consultas em linguagem natural no explorador, páginas de análise compartilháveis (`/analysis/:id`).

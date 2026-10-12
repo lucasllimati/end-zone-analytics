@@ -1,8 +1,8 @@
 # Deploy
 
-> **Para publicar na internet de graça (Oracle Cloud + HTTPS + cargas automáticas + alertas), siga o guia passo a passo: [PUBLICACAO.md](PUBLICACAO.md)** (Cloudflare Workers + GitHub Actions, sem servidor). Com servidor próprio e `/admin` online: [PUBLICACAO_SERVIDOR.md](PUBLICACAO_SERVIDOR.md). As opções abaixo são referências técnicas.
+> **Para publicar na internet de graça, siga o guia passo a passo: [PUBLICACAO.md](PUBLICACAO.md)** (Cloudflare Workers + GitHub Actions, sem servidor — em uso). Com servidor próprio e `/admin` online: [PUBLICACAO_SERVIDOR.md](PUBLICACAO_SERVIDOR.md). As opções abaixo são referências técnicas.
 
-## Opção 1 — Node (recomendada)
+## Opção 1 — Node
 
 ```bash
 npm ci
@@ -11,7 +11,9 @@ npm run build
 HOST=0.0.0.0 API_PORT=8787 ADMIN_TOKEN=um-token-longo npm start
 ```
 
-O processo serve o site (`dist/`), os dados (`/data`) e a API. Coloque atrás de um proxy reverso (nginx/Caddy) com HTTPS. Agende a atualização:
+O processo serve o site (`dist/`), os dados (`/data`) e a API. Coloque atrás de um proxy reverso (nginx/Caddy) com HTTPS.
+
+Atualização dos dados: prefira o **agendador interno** (`SYNC_PARTIAL_EVERY_HOURS=6`, `SYNC_FULL_WEEKDAY`, `SYNC_FULL_HOUR_UTC`), que registra cada execução no `/admin`. Se preferir o cron do sistema (as execuções pelo terminal também são registradas):
 
 ```cron
 # a cada hora (domingo, segunda e quinta durante a temporada)
@@ -22,22 +24,26 @@ O processo serve o site (`dist/`), os dados (`/data`) e a API. Coloque atrás de
 
 A API recarrega os dados automaticamente quando o manifest muda (sem reiniciar).
 
-## Opção 2 — Docker
+## Opção 2 — Docker Compose (Caddy + HTTPS)
 
 ```bash
-docker build -t end-zone-analytics .
-docker run -p 8787:8787 -e ADMIN_TOKEN=um-token-longo -v eza-data:/app/data end-zone-analytics
+cp .env.example .env   # preencha DOMAIN, ADMIN_TOKEN, GITHUB_TOKEN, SYNC_*, ALERT_*
+docker compose up -d --build
 ```
 
-Na primeira execução o contêiner roda a carga completa se `data/` estiver vazio.
+O contêiner roda como usuário sem privilégios, faz a carga completa na primeira execução (volume vazio) e o Caddy emite o certificado. Passo a passo completo: [PUBLICACAO_SERVIDOR.md](PUBLICACAO_SERVIDOR.md).
 
-## Opção 3 — Site estático (sem API)
+## Opção 3 — Site estático + Cloudflare Worker (em uso)
 
 ```bash
-npm run data:full && npm run build:static   # gera dist/ com dist/data
+npm run data:full && npm run build:static   # dist/ com dist/data, sem /admin (VITE_PUBLIC_STATIC=1)
+npx wrangler@4 dev --port 8788              # testa localmente exatamente o que vai ao ar
+npx wrangler@4 deploy                       # publica (normalmente feito pelo GitHub Actions)
 ```
 
-Publique `dist/` em qualquer hospedagem estática (configure fallback de SPA para `index.html`). Funciona tudo, exceto placar ao vivo, detalhes do Game Center e sincronização pelo navegador (a verificação de dados novos continua, consultando o GitHub direto). Reconstrua e republique para atualizar os dados.
+`wrangler.jsonc` serve `dist/` como *static assets* (com fallback de SPA e `public/_headers`) e executa `worker/index.ts` só em `/api/*` (placar ao vivo). O GitHub Actions (`publish.yml`) faz carga, portão de qualidade, build e deploy a cada 6 h e a cada push. Passo a passo: [PUBLICACAO.md](PUBLICACAO.md).
+
+Em outra hospedagem estática, publique `dist/` com fallback de SPA para `index.html`; funciona tudo, exceto placar ao vivo e detalhes do Game Center.
 
 ## Checklist
 
@@ -46,5 +52,5 @@ Publique `dist/` em qualquer hospedagem estática (configure fallback de SPA par
 - [ ] `ALERT_WEBHOOK_URL` definido (alertas de falha no celular)
 - [ ] HTTPS no proxy
 - [ ] `/ready` monitorado
-- [ ] Agendamento da carga parcial
+- [ ] Agendamento da carga parcial (interno, cron do sistema ou GitHub Actions)
 - [ ] `npm run qa` e `npm run test:e2e` verdes antes do deploy

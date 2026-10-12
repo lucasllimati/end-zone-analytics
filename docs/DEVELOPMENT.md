@@ -2,7 +2,7 @@
 
 ## Ambiente
 
-- Node.js 20+ (testado com 24) e npm.
+- Node.js 20+ (testado com 22 no CI e 24 localmente) e npm.
 - Copie `.env.example` para `.env` se quiser mudar porta, host ou definir `ADMIN_TOKEN`/`GITHUB_TOKEN`.
 
 ```bash
@@ -11,7 +11,17 @@ npm run data:full     # primeira vez
 npm run dev           # API (8787) + Vite (5173) juntos
 ```
 
-`npm run dev:web` sozinho também funciona: o Vite serve `/data` direto da pasta `data/` (sem placar ao vivo nem sincronização).
+`npm run dev:web` sozinho também funciona: o Vite serve `/data` direto da pasta `data/` (sem placar ao vivo nem área administrativa).
+
+Área administrativa local: <http://localhost:5173/admin> (em desenvolvimento, o acesso a partir do próprio computador dispensa token).
+
+Para ver **exatamente a versão publicada** (site estático + Worker):
+
+```bash
+npm run build:static
+npx wrangler@4 dev --port 8788    # http://localhost:8788
+E2E_STATIC=1 E2E_BASE_URL=http://localhost:8788 npm run test:e2e
+```
 
 ## Scripts
 
@@ -19,7 +29,7 @@ npm run dev           # API (8787) + Vite (5173) juntos
 |---|---|
 | `dev`, `dev:web`, `dev:api` | Desenvolvimento |
 | `build`, `start`, `preview` | Produção (API servindo o site) |
-| `build:static` | Site estático com os dados copiados para `dist/data` |
+| `build:static` | Site estático (sem `/admin`) com os dados em `dist/data`; gera `sitemap.xml` se `SITE_URL` estiver definido |
 | `data:full`, `data:partial`, `data:check`, `data:quality` | Pipeline |
 | `typecheck`, `test`, `test:watch`, `test:e2e`, `spell`, `qa` | Qualidade |
 

@@ -26,3 +26,13 @@ Não abra issue pública. Envie os detalhes ao mantenedor do projeto por canal p
 - Rode atrás de HTTPS.
 - Não exponha a porta da API diretamente se houver proxy.
 - `GITHUB_TOKEN`, se usado, deve ter **somente** permissão de leitura pública.
+
+## Site publicado (Cloudflare)
+
+| Item | Como |
+|---|---|
+| Superfície | Só arquivos estáticos + `worker/index.ts`, que responde apenas `/api/live/*` (GET); o resto de `/api/*` devolve 404. Não há `/admin` nem login no site público |
+| Cabeçalhos | `public/_headers`: CSP (`default-src 'self'`, imagens só da ESPN/NFL), HSTS, `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy` |
+| Segredos | `CLOUDFLARE_API_TOKEN` (modelo *Edit Cloudflare Workers*) e `CLOUDFLARE_ACCOUNT_ID` só em *GitHub → Secrets*. Token vazado → *Roll* na Cloudflare e atualize o segredo |
+| Publicação | Só o GitHub Actions publica (o build automático da Cloudflare deve ficar desligado); o portão de qualidade impede publicar dados reprovados |
+| Dados versionados | `.gitignore` ancorado na raiz (`/data/`, `/data-raw/`, `/ops/`) — código em `src/data/` e `tests/data/` vai para o git |

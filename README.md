@@ -1,23 +1,29 @@
 # 🏈 End Zone Analytics
 
+> 🌐 **Site no ar:** <https://end-zone-analytics.insanogamerj.workers.dev>
+> 🚀 **Publicar / atualizar o site (grátis, automático, sem servidor):** **[docs/PUBLICACAO.md](docs/PUBLICACAO.md)**
+> Alternativa com servidor próprio e painel `/admin` online: [docs/PUBLICACAO_SERVIDOR.md](docs/PUBLICACAO_SERVIDOR.md)
+
 Dados, história, estatísticas e educação sobre a NFL — para quem nunca viu um jogo e para especialistas.
 
-- **Liga:** classificação, calendário, placares ao vivo, playoffs, power ranking e força de tabela.
+- **Temporada:** classificação, calendário, placares ao vivo, playoffs, líderes, power ranking e força de tabela.
 - **Times e jogadores:** 32 franquias com logos, carreiras desde 1999, percentis, jogadores semelhantes e comparador.
 - **História:** todos os Super Bowls (I–LX), recordes, draft desde 1980, Hall of Fame e a evolução do jogo.
 - **Aprenda:** a NFL em 10 minutos, simulador de down & distance, regras e faltas, posições interativas, playbook animado, estratégia e glossário.
 - **Modo Iniciante / Expert** e o botão **ⓘ** em cada número, coluna e gráfico.
-- **Dados reais e rastreáveis** (nflverse, CC-BY 4.0). Dado ausente aparece como “Não disponível”, nunca como zero.
+- **Dados reais e rastreáveis** (nflverse, CC-BY 4.0). Dado ausente aparece como “Não disponível”, nunca como zero. Fontes, cobertura e qualidade em `/data`.
 
-## Início rápido
+## Início rápido (no seu computador)
 
-Requisitos: Node.js 20+.
+Requisitos: Node.js 20+ (CI usa 22).
 
 ```bash
 npm install
 npm run data:full      # baixa e processa os dados (~1 min, só na primeira vez)
-npm run dev            # abre http://localhost:5173
+npm run dev            # site em http://localhost:5173 (API em :8787)
 ```
+
+Área administrativa local: <http://localhost:5173/admin>. Em desenvolvimento, o acesso a partir do próprio computador é liberado sem token.
 
 ## Atualizar os dados
 
@@ -28,22 +34,29 @@ npm run dev            # abre http://localhost:5173
 | `npm run data:partial -- --datasets games,playerStats --seasons 2026` | Força conjuntos/temporadas específicos |
 | `npm run data:full` | Carga completa |
 
-O site também verifica sozinho: quando há dados novos, aparece um aviso com o botão **Atualizar agora**. A página **Dados** (`/data`) mostra fontes, versões, qualidade e permite carga completa ou parcial.
+- Uma nova publicação de dados só é criada quando o conteúdo muda; cargas sem mudança apenas registram a verificação.
+- **No site publicado**, as cargas são automáticas: GitHub Actions a cada 6 h. Veja [PUBLICACAO.md](docs/PUBLICACAO.md).
+- **Com servidor**, as cargas também são feitas pelo `/admin` (verificar, cargas parcial e completa, logs e alertas) e pelo agendador interno.
 
 ## Qualidade
 
 ```bash
 npm run qa         # tipos + testes unitários/API/dados + revisão ortográfica
-npm run test:e2e   # navegação, UX e acessibilidade (Playwright + axe)
+npm run test:e2e   # navegação, UX e acessibilidade (Playwright + axe), desktop e celular
 ```
 
-## Produção
+## Publicação
 
-```bash
-npm run build && npm start      # API + site em http://localhost:8787
-```
+| Caminho | Comando / guia |
+|---|---|
+| **Cloudflare + GitHub Actions (recomendado, em uso)** | [docs/PUBLICACAO.md](docs/PUBLICACAO.md) |
+| Servidor próprio (Docker + Caddy + `/admin`) | [docs/PUBLICACAO_SERVIDOR.md](docs/PUBLICACAO_SERVIDOR.md) |
+| Testar a versão publicada localmente | `npm run build:static && npx wrangler@4 dev --port 8788` |
+| API + site com Node | `npm run build && npm start` (em <http://localhost:8787>) |
 
-Mais detalhes: **[Guia completo](docs/GUIA_COMPLETO.md)** · [Arquitetura](docs/ARCHITECTURE.md) · [API](docs/API.md) · [Fontes de dados](docs/DATA_SOURCES.md)
+## Documentação
+
+[Especificação funcional](ESPECIFICACAO.md) · [Guia completo](docs/GUIA_COMPLETO.md) · [Arquitetura](docs/ARCHITECTURE.md) · [API](docs/API.md) · [Modelo de dados](docs/DATA_MODEL.md) · [Fontes de dados](docs/DATA_SOURCES.md) · [Design system](docs/DESIGN_SYSTEM.md) · [Segurança](docs/SECURITY.md) · [Testes](docs/TESTING.md) · [Desenvolvimento](docs/DEVELOPMENT.md) · [Deploy (referência técnica)](docs/DEPLOYMENT.md) · [Roadmap](docs/ROADMAP.md) · [Contribuindo](docs/CONTRIBUTING.md)
 
 ---
 Projeto independente, sem afiliação com a NFL. Nomes e logos dos times são marcas de seus detentores e aparecem apenas para identificação.
