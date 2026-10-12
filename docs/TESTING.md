@@ -22,7 +22,7 @@ node scripts/screenshots.mjs   # capturas de tela + detector de rolagem horizont
 | Paleta de gráficos (verificador de daltonismo) contra o novo fundo `#0b1728` | ✅ todas as checagens passam |
 | Qualidade de dados (pipeline) | ✅ 18 ok · 0 alertas · 0 falhas |
 | CI em checkout limpo (só arquivos versionados): `npm ci`, `qa`, `build`, `npm audit` | ✅ 0 vulnerabilidades |
-| Produção (`end-zone-analytics.insanogamerj.workers.dev`) | ✅ `/data/*.json` em JSON, `/api/live/scoreboard` em JSON, rotas diretas, cabeçalhos CSP/HSTS, `/api/admin/*` → 404 |
+| Produção (`end-zone-analytics.nfldata.workers.dev`) | ✅ `/data/*.json` em JSON, `/api/live/scoreboard` em JSON, rotas diretas, cabeçalhos CSP/HSTS, `/api/admin/*` → 404 |
 
 ## O que a revisão encontrou e corrigiu
 

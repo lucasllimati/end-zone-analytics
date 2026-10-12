@@ -1,7 +1,7 @@
 # End Zone Analytics — Especificação funcional
 
 Documento de referência de **todas as páginas, funcionalidades e dados** da plataforma.
-Reflete o estado atual do código (v1.1 — redesign azul-marinho, área administrativa protegida, publicação no Cloudflare). Site no ar: <https://end-zone-analytics.insanogamerj.workers.dev>. Itens marcados como **[Planejado]** ainda não existem.
+Reflete o estado atual do código (v1.1 — redesign azul-marinho, área administrativa protegida, publicação no Cloudflare). Site no ar: <https://end-zone-analytics.nfldata.workers.dev>. Itens marcados como **[Planejado]** ainda não existem.
 
 > Documentos técnicos complementares: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATA_MODEL.md](docs/DATA_MODEL.md), [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md), [docs/API.md](docs/API.md), [docs/SECURITY.md](docs/SECURITY.md), [docs/ROADMAP.md](docs/ROADMAP.md).
 
@@ -329,7 +329,7 @@ Scripts: `dev`, `dev:web`, `dev:api`, `build`, `build:static`, `start`, `preview
 | Item | Como funciona |
 |---|---|
 | Hospedagem | Cloudflare Workers: *static assets* (`dist/` + `dist/data`, CDN, HTTPS, `public/_headers`) e `worker/index.ts` só para `/api/live/*` |
-| Endereço | <https://end-zone-analytics.insanogamerj.workers.dev> (domínio próprio opcional) |
+| Endereço | <https://end-zone-analytics.nfldata.workers.dev> (domínio próprio opcional) |
 | Quem atualiza os dados | GitHub Actions `publish.yml`: cron a cada 6 h, a cada push e manual (`partial`/`full`) |
 | Portão de qualidade | `tests/data/published.test.ts`: dados reprovados não são publicados; o site segue com os anteriores |
 | Equivalente do `/admin` | Aba Actions (jobs, logs, resumo do que mudou), painel da Cloudflare (Deployments/rollback, Observability, Metrics), página pública `/data` |

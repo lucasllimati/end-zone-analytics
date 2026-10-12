@@ -2,7 +2,7 @@
 
 O End Zone Analytics roda **sem servidor tradicional**. O "servidor" é um **Cloudflare Worker**, que serve o site e os dados pela CDN e executa código só no placar ao vivo. Quem faz o trabalho de bastidor (cargas, validação, publicação, histórico e alertas) é o **GitHub Actions**.
 
-> **Site no ar:** <https://end-zone-analytics.insanogamerj.workers.dev>
+> **Site no ar:** <https://end-zone-analytics.nfldata.workers.dev>
 > **Configuração inicial (do zero):** [PUBLICACAO.md](PUBLICACAO.md). Este guia cobre o **dia a dia** depois que o site está no ar.
 
 ---
@@ -99,7 +99,7 @@ No Cloudflare não existe a página `/admin`, porque ela depende de um servidor 
 2. **Celular (ntfy):** crie o segredo `NTFY_URL` (ver [PUBLICACAO.md](PUBLICACAO.md), passo 8). Chega aviso sempre que uma execução falhar.
 3. **Site no ar (UptimeRobot, opcional):** em **uptimerobot.com**, crie um monitor:
    - **Tipo:** *HTTP(s) – Keyword*
-   - **URL:** `https://end-zone-analytics.insanogamerj.workers.dev/data/manifest.json`
+   - **URL:** `https://end-zone-analytics.nfldata.workers.dev/data/manifest.json`
    - **Palavra-chave:** `schemaVersion`
    - **Intervalo:** 5 min
 

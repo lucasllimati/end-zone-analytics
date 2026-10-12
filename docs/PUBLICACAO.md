@@ -2,7 +2,7 @@
 
 O site roda num **Cloudflare Worker**. Páginas e dados são arquivos servidos pela CDN da Cloudflare; o código só executa no placar ao vivo. Quem atualiza os dados e publica é o **GitHub Actions**: a cada 6 horas ele baixa os dados novos, confere a qualidade e republica. Não há servidor para manter nem pagar.
 
-> **Site no ar:** <https://end-zone-analytics.insanogamerj.workers.dev>
+> **Site no ar:** <https://end-zone-analytics.nfldata.workers.dev>
 > Tempo para configurar do zero: cerca de 20 minutos. Depois, nada a fazer.
 
 **Índice:**
@@ -145,8 +145,8 @@ Para disparar manualmente: **Actions → Atualizar dados e publicar → Run work
 ### No terminal (PowerShell ou Git Bash)
 
 ```bash
-curl -s -o /dev/null -w "%{http_code} %{content_type}\n" https://end-zone-analytics.insanogamerj.workers.dev/data/manifest.json
-curl -s -o /dev/null -w "%{http_code} %{content_type}\n" https://end-zone-analytics.insanogamerj.workers.dev/api/live/scoreboard
+curl -s -o /dev/null -w "%{http_code} %{content_type}\n" https://end-zone-analytics.nfldata.workers.dev/data/manifest.json
+curl -s -o /dev/null -w "%{http_code} %{content_type}\n" https://end-zone-analytics.nfldata.workers.dev/api/live/scoreboard
 ```
 
 | Endereço | Esperado | Se vier diferente |

@@ -1,6 +1,6 @@
 # 🏈 End Zone Analytics
 
-> 🌐 **Site no ar:** <https://end-zone-analytics.insanogamerj.workers.dev>
+> 🌐 **Site no ar:** <https://end-zone-analytics.nfldata.workers.dev>
 > 🚀 **Publicar / atualizar o site (grátis, automático, sem servidor):** **[docs/PUBLICACAO.md](docs/PUBLICACAO.md)**
 > 🛠️ **Operar o servidor no Cloudflare (jobs, logs, alertas, rollback):** [docs/PUBLICACAO_SERVIDOR.md](docs/PUBLICACAO_SERVIDOR.md)
 
