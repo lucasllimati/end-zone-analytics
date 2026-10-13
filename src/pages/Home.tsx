@@ -221,7 +221,7 @@ export default function Home() {
                     </>
                   )}
                 </dl>
-                <div className="row">
+                <div className="featured-actions">
                   <Link className="btn sm primary" to={`/games/${featured.id}`}>
                     Game Center
                   </Link>

@@ -118,9 +118,10 @@ export function GameTile({ g, live }: { g: Game; live?: LiveOverlay }) {
       <div className="game-tile-meta">
         {status === 'scheduled' ? <span className="badge">{STATUS_LABEL.scheduled}</span> : <StatusBadge status={status} detail={live?.detail} />}
         {!isLive && (
-          <span className="game-tile-when">
-            {dateBR(g.date, { weekday: 'short', day: '2-digit', month: 'short' })}
-            {status === 'scheduled' && <> · {local ?? 'horário a definir'}</>}
+          <span className="game-tile-when" title={local ? `${dateBR(g.date, { weekday: 'long', day: '2-digit', month: 'long' })}, ${local}` : undefined}>
+            {/* Formato curto para caber no card; data longa e fuso completo no title. */}
+            {dateBR(g.date, { weekday: 'short', day: '2-digit', month: '2-digit' })}
+            {status === 'scheduled' && <> · {local ? local.split(' ')[0] : 'a definir'}</>}
           </span>
         )}
       </div>

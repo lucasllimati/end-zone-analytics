@@ -482,7 +482,7 @@ kbd,
 /* Rodapé (estilo apple.com: texto pequeno, colunas discretas) */
 .site-footer {
   background: var(--surface-1);
-  padding: var(--space-7) 0 var(--space-5);
+  padding: var(--space-6) 0 var(--space-4);
   color: var(--muted);
   font-size: 0.75rem;
   letter-spacing: 0.005em;
@@ -493,11 +493,12 @@ kbd,
 }
 .footer-top {
   display: grid;
-  gap: var(--space-6);
+  gap: var(--space-5);
 }
 @media (min-width: 1000px) {
   .footer-top {
-    grid-template-columns: 280px 1fr;
+    grid-template-columns: 240px 1fr;
+    gap: var(--space-6);
   }
 }
 .footer-brand p {
@@ -510,9 +511,20 @@ kbd,
   font-size: 0.75rem !important;
 }
 .footer-cols {
+  /* Todas as seções numa linha no desktop (Aprenda ao lado de História); 3 e 2 colunas em telas menores. */
   display: grid;
-  gap: var(--space-5);
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-4) var(--space-4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (min-width: 640px) {
+  .footer-cols {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1000px) {
+  .footer-cols {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
 }
 .site-footer h4 {
   color: var(--text);
@@ -524,7 +536,7 @@ kbd,
 .site-footer a {
   color: var(--text-2);
   display: block;
-  padding: 3px 0;
+  padding: 2px 0;
   text-decoration: none;
 }
 .site-footer a:hover {
@@ -532,7 +544,7 @@ kbd,
   text-decoration: underline;
 }
 .footer-bottom {
-  margin-top: var(--space-6);
+  margin-top: var(--space-5);
   padding-top: var(--space-4);
   border-top: 1px solid var(--border);
 }

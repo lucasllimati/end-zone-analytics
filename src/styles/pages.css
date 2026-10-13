@@ -12,7 +12,7 @@
   position: relative;
   margin-top: calc(var(--space-7) * -1);
   margin-inline: calc(50% - 50vw);
-  padding: var(--space-8) calc(50vw - 50%) var(--space-6);
+  padding: var(--space-7) calc(50vw - 50%) var(--space-6);
   background: #000;
   text-align: center;
   overflow: hidden;
@@ -103,8 +103,9 @@
 }
 .hero-art-wrap {
   position: relative;
-  max-width: 980px;
-  margin: var(--space-5) auto 0;
+  /* Proporcional ao título: a bola acompanha o texto, não domina a primeira tela. */
+  max-width: min(600px, 88%);
+  margin: var(--space-4) auto 0;
   aspect-ratio: 720 / 400;
   /* A ilustração se dissolve no fundo (sem bordas retangulares visíveis). */
   -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 55%, transparent 100%);
@@ -118,7 +119,7 @@
 /* Números grandes, sem molduras: a tipografia faz a hierarquia. */
 .hero-stats {
   list-style: none;
-  margin: var(--space-4) auto 0;
+  margin: var(--space-2) auto 0;
   padding: 0;
   max-width: 980px;
   display: grid;
@@ -771,4 +772,45 @@ a.score-card:hover {
   .highlight-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+/* Cards de jogos: nada vaza do card (colunas do trilho podem encolher; textos longos recebem reticências). */
+.rail-track > * {
+  min-width: 0;
+}
+.game-tile {
+  min-width: 0;
+  overflow: hidden;
+}
+.game-tile-meta {
+  min-width: 0;
+}
+.game-tile-meta .badge {
+  flex: none;
+}
+.game-tile-when {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.game-tile-foot > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.game-tile-go {
+  flex: none;
+}
+
+/* Jogo em destaque: ações alinhadas à direita, com a mesma largura. */
+.featured-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin-left: auto;
+  width: min(100%, 320px);
+}
+.featured-actions .btn {
+  width: 100%;
 }
