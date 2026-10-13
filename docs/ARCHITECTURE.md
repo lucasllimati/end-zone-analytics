@@ -7,7 +7,7 @@ Resumo técnico. Os diagramas completos (macro, micro e sequência) estão no [G
 | Camada | Tecnologia | Motivo |
 |---|---|---|
 | Frontend | React 18 + TypeScript + Vite 6 + React Router 7 | SPA com divisão de código por rota, tipagem forte |
-| Estilo | CSS com design tokens (sem framework) + Barlow Condensed auto-hospedada | Identidade própria (azul-marinho/azul elétrico), tema escuro/claro por variáveis, zero runtime |
+| Estilo | CSS com design tokens (sem framework), fonte do sistema | Linguagem inspirada na Apple (cores de sistema, materiais translúcidos), tema escuro/claro por variáveis, zero runtime |
 | Gráficos | SVG próprio (`src/components/charts`) | Leve, acessível, exportável, sem dependências |
 | API | Fastify 5 + zod | Rápido, logs estruturados (pino), validação declarativa |
 | Pipeline | TypeScript (tsx) + csv-parse | Mesma linguagem e mesmos tipos do frontend |

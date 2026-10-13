@@ -14,34 +14,48 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
-  font-size: 15px;
-  line-height: 1.55;
+  /* Corpo: tamanho do usuário (rem), entrelinha confortável, tracking neutro/levemente negativo como no SF Text. */
+  font-size: 1rem;
+  line-height: 1.5;
+  letter-spacing: -0.006em;
+  font-optical-sizing: auto;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  /* Troca de tema suave, sem salto brusco de brilho. */
+  transition: background-color var(--dur) ease, color var(--dur) ease;
 }
 
+/* Hierarquia por peso + tamanho + entrelinha; tracking negativo cresce com o tamanho. */
 h1,
 h2,
 h3,
 h4 {
-  line-height: 1.2;
+  font-family: var(--font-display);
   margin: 0 0 var(--space-3);
-  letter-spacing: -0.015em;
-  font-weight: 650;
+  font-weight: 600;
+  color: var(--text);
 }
 h1 {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: clamp(2rem, 2.6vw + 1.2rem, 3.1rem);
-  line-height: 1.02;
-  letter-spacing: -0.005em;
+  font-size: clamp(2.125rem, 2.4vw + 1.35rem, 3.5rem);
+  line-height: 1.07;
+  letter-spacing: -0.028em;
+  font-weight: 700;
 }
 h2 {
-  font-size: 1.25rem;
-  letter-spacing: -0.02em;
+  font-size: clamp(1.375rem, 0.8vw + 1.1rem, 1.75rem);
+  line-height: 1.14;
+  letter-spacing: -0.021em;
 }
 h3 {
-  font-size: 1.05rem;
+  font-size: 1.1875rem;
+  line-height: 1.21;
+  letter-spacing: -0.016em;
+}
+h4 {
+  font-size: 1rem;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
 }
 p {
   margin: 0 0 var(--space-3);
@@ -55,11 +69,22 @@ a:hover {
   text-decoration-color: currentColor;
 }
 main a:not([class]) {
-  color: var(--accent-strong);
-  text-decoration-color: color-mix(in srgb, var(--accent-strong) 40%, transparent);
-}
-:root[data-theme='light'] main a:not([class]) {
   color: var(--accent);
+  text-decoration: none;
+}
+main a:not([class]):hover {
+  text-decoration: underline;
+}
+/* Links dentro de texto corrido precisam de mais que cor para se distinguir (WCAG 1.4.1): sublinhado fino. */
+main p a:not([class]),
+main td a:not([class]),
+main .lede a:not([class]),
+main .breadcrumb a:not([class]),
+main .hero-meta a:not([class]) {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
 }
 img {
   max-width: 100%;
@@ -70,11 +95,16 @@ select,
 textarea {
   font: inherit;
   color: inherit;
+  letter-spacing: inherit;
+}
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
 }
 :focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 ::selection {
   background: var(--accent-soft);
@@ -97,8 +127,8 @@ textarea {
   z-index: 100;
   background: var(--accent-fill);
   color: var(--accent-ink);
-  padding: 8px 14px;
-  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
   font-weight: 600;
   text-decoration: none;
 }
@@ -119,11 +149,14 @@ textarea {
 .text-2 {
   color: var(--text-2);
 }
+/* Texto pequeno: tracking levemente positivo (legibilidade em tamanhos baixos). */
 .small {
-  font-size: 0.85rem;
+  font-size: 0.875rem;
+  letter-spacing: -0.003em;
 }
 .xsmall {
-  font-size: 0.76rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.005em;
 }
 .nowrap {
   white-space: nowrap;
@@ -135,6 +168,7 @@ textarea {
   color: var(--critical-text);
 }
 
+/* Movimento reduzido: sem deslizamentos/escala; mudanças instantâneas. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -144,4 +178,10 @@ textarea {
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Texto secundário dentro de controles com fundo translúcido: tom mais claro para manter AA. */
+.chip .muted,
+.btn .muted {
+  color: var(--text-2);
 }

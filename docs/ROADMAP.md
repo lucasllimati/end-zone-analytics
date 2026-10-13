@@ -9,7 +9,7 @@
 | 5 — Educação | Regras, faltas, posições, glossário, estratégia, simulador de down | ✅ |
 | 6 — Playbook | Formações e 29 jogadas/coberturas animadas | ✅ |
 | 7 — Avançado | Rankings configuráveis e power ranking | ✅ parcial |
-| 8 — Produto e operação | Redesign (azul-marinho, bola oval), área `/admin` protegida, log operacional e alertas, agendador, publicação grátis no Cloudflare com cron e portão de qualidade | ✅ |
+| 8 — Produto e operação | Redesign (linguagem Apple: tipografia do sistema, materiais translúcidos, controles segmentados; símbolo da bola oval), área `/admin` protegida, log operacional e alertas, agendador, publicação grátis no Cloudflare com cron e portão de qualidade | ✅ |
 
 ## Próximos passos
 

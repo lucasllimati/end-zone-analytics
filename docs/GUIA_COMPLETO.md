@@ -265,7 +265,7 @@ Todo número calculado tem um ⓘ com “como é calculado?”. Nenhum ranking �
 
 ## 9. Design, UX e acessibilidade
 
-- **Identidade própria:** azul-marinho profundo com azul elétrico como cor de identidade, símbolo da bola oval, títulos em Barlow Condensed (auto-hospedada), cartões discretos. Escuro por padrão, claro selecionável. Ver [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md).
+- **Identidade própria:** linguagem visual inspirada na Apple — fonte do sistema com tracking por tamanho, cores de sistema (preto/`#1c1c1e` no escuro, `#f5f5f7`/branco no claro), azul de sistema como única cor de destaque, cabeçalho e menus translúcidos, botões em pílula e controles segmentados. Escuro por padrão, claro selecionável. Ver [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md).
 - **Gráficos:** paleta categórica validada para daltonismo nos dois temas; linhas de 2 px, barras ≤ 24 px com ponta arredondada; legenda + “ver dados em tabela” + exportação em todos; cores de time com contraste mínimo garantido (fallback automático).
 - **Acessibilidade:** HTML semântico, skip link, foco visível, `aria-sort` nas tabelas, abas com setas, tooltips com Esc, campo de posições navegável por Tab, `prefers-reduced-motion` respeitado, regiões roláveis focáveis. Auditado com axe (WCAG 2.1 AA) em 12 páginas × 2 dispositivos.
 - **Responsivo:** menus em gaveta no celular, tabelas com rolagem horizontal, nenhuma página com rolagem lateral (testado em 29 rotas × 2 dispositivos).

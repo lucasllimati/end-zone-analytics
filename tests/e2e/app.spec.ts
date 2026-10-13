@@ -157,6 +157,33 @@ test.describe('fluxos de UX', () => {
     await expect(page.getByText(/Critério: maior total de jardas corridas/)).toBeVisible();
   });
 
+  test('menus do cabeçalho: mouse chega até a subopção sem o menu sumir', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'menus suspensos são do desktop; no celular a navegação é pela gaveta');
+    await page.goto('/');
+    const trigger = page.locator('.nav-trigger', { hasText: 'Jogadores' });
+    const tb = (await trigger.boundingBox())!;
+    await page.mouse.move(tb.x + tb.width / 2, 2);
+    await page.mouse.move(tb.x + tb.width / 2, tb.y + tb.height / 2, { steps: 5 });
+    const link = page.locator('.nav-menu a', { hasText: 'Hall of Fame' });
+    const lb = (await link.boundingBox())!;
+    // Movimento contínuo atravessando o espaço entre o botão e o menu.
+    await page.mouse.move(lb.x + 24, lb.y + lb.height / 2, { steps: 30 });
+    await expect(link).toBeVisible();
+    await page.mouse.click(lb.x + 24, lb.y + lb.height / 2);
+    await expect(page).toHaveURL(/\/hall-of-fame/);
+  });
+
+  test('menus do cabeçalho: passar o mouse e clicar no botão não fecha o menu', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'menus suspensos são do desktop');
+    await page.goto('/');
+    const trigger = page.locator('.nav-trigger', { hasText: 'Temporada' });
+    await trigger.hover();
+    await trigger.click();
+    await expect(page.locator('.nav-menu')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.nav-menu')).toHaveCount(0);
+  });
+
   test('página inexistente mostra 404 amigável', async ({ page }) => {
     await page.goto('/nao-existe');
     await expect(page.getByText('4th & 404')).toBeVisible();

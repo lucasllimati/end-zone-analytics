@@ -1,7 +1,7 @@
 # End Zone Analytics — Especificação funcional
 
 Documento de referência de **todas as páginas, funcionalidades e dados** da plataforma.
-Reflete o estado atual do código (v1.1 — redesign azul-marinho, área administrativa protegida, publicação no Cloudflare). Site no ar: <https://end-zone-analytics.nfldata.workers.dev>. Itens marcados como **[Planejado]** ainda não existem.
+Reflete o estado atual do código (v1.2 — design inspirado na Apple, área administrativa protegida, publicação no Cloudflare). Site no ar: <https://end-zone-analytics.nfldata.workers.dev>. Itens marcados como **[Planejado]** ainda não existem.
 
 > Documentos técnicos complementares: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATA_MODEL.md](docs/DATA_MODEL.md), [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md), [docs/API.md](docs/API.md), [docs/SECURITY.md](docs/SECURITY.md), [docs/ROADMAP.md](docs/ROADMAP.md).
 

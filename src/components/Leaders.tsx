@@ -57,7 +57,7 @@ export function LeadersPanel({ lines, n = 5, compact = false }: { lines: PlayerS
           </button>
         ))}
       </div>
-      <div className={compact ? 'grid grid-2' : 'grid grid-3'}>
+      <div className={compact ? 'grid leaders-compact' : 'grid grid-3'}>
         {stats.map((s) => {
           const top = topBy(lines, s, n);
           const def = metric(s.key);

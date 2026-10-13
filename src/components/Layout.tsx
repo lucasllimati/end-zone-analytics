@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { NAV } from '../content/nav';
 import { useApp } from '../context/AppContext';
@@ -15,6 +15,10 @@ const SHORTCUT = IS_MAC ? '⌘ K' : 'Ctrl K';
 function NavDropdown({ group }: { group: (typeof NAV)[number] }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  // Tolerância ao movimento do mouse: o menu só fecha depois de um instante fora dele,
+  // então atravessar o espaço até as opções do menu (ou um desvio pequeno) não o derruba.
+  const closeTimer = useRef<number>();
+  const openedByHover = useRef(false);
   const loc = useLocation();
   const here = loc.pathname + loc.search;
   const active = group.items.some((i) => {
@@ -22,34 +26,60 @@ function NavDropdown({ group }: { group: (typeof NAV)[number] }) {
     if (path === '/season') return loc.pathname === '/season' && (query ? here.includes(query) : !loc.search.includes('tab=power'));
     return loc.pathname.startsWith(path);
   });
-  useEffect(() => setOpen(false), [loc.pathname, loc.search]);
+  const cancelClose = () => window.clearTimeout(closeTimer.current);
+  const close = useCallback(() => {
+    cancelClose();
+    openedByHover.current = false;
+    setOpen(false);
+  }, []);
+  useEffect(() => close(), [loc.pathname, loc.search, close]);
+  useEffect(() => cancelClose, []);
   useEffect(() => {
     if (!open) return;
-    const onDown = (e: PointerEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    const onDown = (e: PointerEvent) => !ref.current?.contains(e.target as Node) && close();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
     document.addEventListener('pointerdown', onDown);
     document.addEventListener('keydown', onKey);
     return () => {
       document.removeEventListener('pointerdown', onDown);
       document.removeEventListener('keydown', onKey);
     };
-  }, [open]);
+  }, [open, close]);
   return (
-    <div className="nav-group" ref={ref} onMouseLeave={() => setOpen(false)}>
+    <div
+      className="nav-group"
+      ref={ref}
+      onPointerEnter={(e) => {
+        if (e.pointerType !== 'mouse') return;
+        cancelClose();
+        if (!open) openedByHover.current = true;
+        setOpen(true);
+      }}
+      onPointerLeave={(e) => {
+        if (e.pointerType !== 'mouse') return;
+        cancelClose();
+        closeTimer.current = window.setTimeout(close, 250);
+      }}
+    >
       <button
         type="button"
         className={`nav-trigger${active ? ' active' : ''}`}
         aria-expanded={open}
         aria-controls={`menu-${group.id}`}
-        onClick={() => setOpen((o) => !o)}
-        onMouseEnter={() => setOpen(true)}
+        onClick={() => {
+          // Aberto pelo mouse: clicar mantém aberto (não fecha sob o cursor). Teclado e toque: alterna.
+          if (openedByHover.current) {
+            openedByHover.current = false;
+            setOpen(true);
+          } else setOpen((o) => !o);
+        }}
       >
         {group.label} <Chevron />
       </button>
       {open && (
         <div className="nav-menu" id={`menu-${group.id}`}>
           {group.items.map((it) => (
-            <Link key={it.to} to={it.to} onClick={() => setOpen(false)}>
+            <Link key={it.to} to={it.to} onClick={close}>
               {it.label}
               <span>{it.desc}</span>
             </Link>
@@ -117,9 +147,15 @@ function ModeToggle() {
 function Drawer({ onClose }: { onClose: () => void }) {
   const { setSearchOpen } = useApp();
   const closeRef = useRef<HTMLButtonElement>(null);
+  // Sai pelo mesmo caminho por onde entrou (direita); com movimento reduzido, fecha na hora.
+  const [closing, setClosing] = useState(false);
+  const close = useCallback(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) onClose();
+    else setClosing(true);
+  }, [onClose]);
   useEffect(() => {
     closeRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
     document.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -127,14 +163,20 @@ function Drawer({ onClose }: { onClose: () => void }) {
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = prev;
     };
-  }, [onClose]);
+  }, [close]);
   return (
     <>
-      <div className="drawer-backdrop" onClick={onClose} />
-      <nav className="drawer" aria-label="Menu" role="dialog" aria-modal="true">
+      <div className={`drawer-backdrop${closing ? ' closing' : ''}`} onClick={close} />
+      <nav
+        className={`drawer${closing ? ' closing' : ''}`}
+        aria-label="Menu"
+        role="dialog"
+        aria-modal="true"
+        onAnimationEnd={(e) => closing && e.target === e.currentTarget && onClose()}
+      >
         <div className="row between">
           <BrandLogo />
-          <button ref={closeRef} type="button" className="icon-btn" onClick={onClose} aria-label="Fechar menu">
+          <button ref={closeRef} type="button" className="icon-btn" onClick={close} aria-label="Fechar menu">
             <CloseIcon />
           </button>
         </div>
@@ -176,6 +218,14 @@ function Drawer({ onClose }: { onClose: () => void }) {
 export function Layout() {
   const { theme, toggleTheme, setSearchOpen } = useApp();
   const [drawer, setDrawer] = useState(false);
+  // Efeito de borda de rolagem: a sombra do cabeçalho só aparece com conteúdo passando por baixo.
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
   const loc = useLocation();
   const m = useManifest();
   useEffect(() => {
@@ -199,7 +249,7 @@ export function Layout() {
       <a href="#conteudo" className="skip-link">
         Pular para o conteúdo
       </a>
-      <header className="site-header">
+      <header className={`site-header${scrolled ? ' scrolled' : ''}`}>
         <div className="container header-inner">
           <Link to="/" className="brand" aria-label="End Zone Analytics — início">
             <BrandLogo />

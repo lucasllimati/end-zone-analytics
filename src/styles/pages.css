@@ -2,180 +2,162 @@
 
 /* ============================== Página inicial ============================== */
 .home > * + * {
-  margin-top: var(--space-7);
+  margin-top: var(--space-8);
 }
 .home > .hero + * {
-  margin-top: var(--space-6);
+  margin-top: var(--space-7);
 }
+/* Hero estilo página de produto: centralizado, título grande, ilustração abaixo. */
 .hero {
   position: relative;
-  margin-top: calc(var(--space-6) * -1);
+  margin-top: calc(var(--space-7) * -1);
   margin-inline: calc(50% - 50vw);
-  padding-inline: calc(50vw - 50%);
-  border-bottom: 1px solid var(--border);
-  background: radial-gradient(120% 90% at 75% 40%, #0a2142 0%, var(--bg) 62%);
+  padding: var(--space-8) calc(50vw - 50%) var(--space-6);
+  background: #000;
+  text-align: center;
   overflow: hidden;
-  isolation: isolate;
 }
 :root[data-theme='light'] .hero {
-  background: radial-gradient(120% 90% at 75% 40%, #dcebff 0%, var(--bg) 62%);
+  background: #fff;
+}
+.hero-copy {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+}
+.hero-eyebrow {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.016em;
+  color: var(--accent);
+  margin-bottom: var(--space-3);
+}
+.hero h1 {
+  margin-bottom: var(--space-4);
+}
+.hero-brand {
+  display: block;
+  font-size: clamp(1.25rem, 1vw + 1rem, 1.75rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--text);
+  margin-bottom: 0.25em;
+}
+/* Display grande: tracking bem negativo e entrelinha justa (tipografia por tamanho). */
+.hero-tagline {
+  display: block;
+  font-size: clamp(3rem, 5.5vw + 1rem, 6rem);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 1.02;
+  padding-bottom: 0.06em;
+  background: linear-gradient(180deg, #ffffff 35%, #8e8e93 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+:root[data-theme='light'] .hero-tagline {
+  background: linear-gradient(180deg, #1d1d1f 40%, #6e6e73 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+@media (prefers-contrast: more) {
+  .hero-tagline {
+    background: none;
+    color: var(--text);
+  }
+}
+.hero-lede {
+  color: var(--text-2);
+  font-size: clamp(1.1875rem, 0.5vw + 1rem, 1.5rem);
+  line-height: 1.38;
+  letter-spacing: -0.018em;
+  max-width: 34em;
+  margin: 0 auto;
+}
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-4) var(--space-6);
+  margin-top: var(--space-6);
+}
+.hero-learn {
+  display: inline-block;
+  text-wrap: balance;
+  margin-top: var(--space-4);
+  font-size: 0.9375rem;
+  color: var(--text-2);
+  text-decoration: none;
+}
+.hero-learn:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+.hero-learn svg,
+.link-more svg {
+  width: 14px;
+  height: 14px;
 }
 .hero-art-wrap {
-  position: absolute;
-  inset: 0 0 0 38%;
-  z-index: -1;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 22%, #000 88%, transparent 100%);
-  mask-image: linear-gradient(90deg, transparent 0%, #000 22%, #000 88%, transparent 100%);
+  position: relative;
+  max-width: 980px;
+  margin: var(--space-5) auto 0;
+  aspect-ratio: 720 / 400;
+  /* A ilustração se dissolve no fundo (sem bordas retangulares visíveis). */
+  -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 55%, transparent 100%);
+  mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 55%, transparent 100%);
 }
 .hero-art {
   width: 100%;
   height: 100%;
   display: block;
 }
-.hero-inner {
-  display: grid;
-  gap: var(--space-6);
-  padding: var(--space-7) 0 var(--space-6);
-  align-items: center;
-}
-@media (min-width: 1200px) {
-  .hero-inner {
-    grid-template-columns: minmax(0, 1fr) 230px;
-    min-height: 420px;
-  }
-}
-.hero-copy {
-  max-width: 640px;
-}
-.hero h1 {
-  margin-bottom: var(--space-4);
-  text-transform: uppercase;
-  line-height: 0.95;
-}
-.hero-brand {
-  display: block;
-  font-size: clamp(2.6rem, 4.6vw + 1rem, 4.6rem);
-  color: var(--text);
-}
-.hero-tagline {
-  display: block;
-  font-size: clamp(2.2rem, 3.8vw + 0.9rem, 3.9rem);
-  color: var(--accent);
-}
-.hero-lede {
-  color: var(--text-2);
-  font-size: 1.08rem;
-  max-width: 54ch;
-}
-.hero-lede strong {
-  color: var(--text);
-}
-.hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  margin-top: var(--space-5);
-}
-.hero-secondary {
-  background: color-mix(in srgb, var(--surface-1) 70%, transparent);
-}
-.hero-learn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: var(--space-4);
-  font-size: 0.9rem;
-  color: var(--text-2);
-  text-decoration: none;
-}
-.hero-learn:hover {
-  color: var(--text);
-}
-.hero-learn svg {
-  width: 15px;
-  height: 15px;
-}
+/* Números grandes, sem molduras: a tipografia faz a hierarquia. */
 .hero-stats {
   list-style: none;
+  margin: var(--space-4) auto 0;
   padding: 0;
+  max-width: 980px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1px;
-  margin: 0;
-  background: var(--border);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  backdrop-filter: blur(6px);
+  gap: var(--space-6) var(--space-4);
 }
-@media (min-width: 1200px) {
+@media (min-width: 820px) {
   .hero-stats {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 .hero-stat {
-  display: flex;
-  gap: 14px;
-  align-items: center;
-  padding: 16px 18px;
-  background: color-mix(in srgb, var(--surface-1) 88%, transparent);
-}
-.hero-stat-icon {
-  color: var(--accent);
   display: grid;
-}
-.hero-stat-icon svg {
-  width: 26px;
-  height: 26px;
+  gap: 6px;
+  justify-items: center;
 }
 .hero-stat-value {
-  display: block;
-  font-size: 1.7rem;
+  font-family: var(--font-display);
+  font-size: clamp(2.25rem, 2.5vw + 1.25rem, 3.5rem);
   font-weight: 700;
-  line-height: 1.1;
+  letter-spacing: -0.035em;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
+  color: var(--text);
 }
 .hero-stat-label {
-  display: block;
-  font-size: 0.8rem;
+  font-size: 0.9375rem;
   color: var(--text-2);
+  max-width: 16ch;
+  line-height: 1.3;
 }
 .hero-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 24px;
-  padding: 0 0 var(--space-5);
-  font-size: 0.82rem;
-  color: var(--text-2);
-}
-.hero-meta > * {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.hero-meta svg {
-  width: 15px;
-  height: 15px;
+  margin: var(--space-6) auto 0;
+  font-size: 0.8125rem;
   color: var(--muted);
+  max-width: 60ch;
 }
 .hero-meta a {
-  color: var(--text-2);
-  text-decoration: none;
-}
-.hero-meta a:hover {
-  color: var(--text);
-  text-decoration: underline;
-}
-@media (max-width: 899px) {
-  .hero-art-wrap {
-    inset: 0;
-    opacity: 0.35;
-    -webkit-mask-image: none;
-    mask-image: none;
-  }
-  .hero-inner {
-    padding-top: var(--space-6);
-  }
+  color: var(--accent);
 }
 
 /* Trilho de jogos */
@@ -213,10 +195,12 @@
   top: 50%;
   transform: translateY(-50%);
   z-index: 2;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: var(--surface-2);
+  background: var(--material-thick);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
   box-shadow: var(--shadow);
 }
 .rail-btn.prev {
@@ -234,19 +218,20 @@
   display: grid;
   gap: 12px;
   height: 100%;
-  padding: 14px 16px;
+  padding: 16px 18px;
   border-radius: var(--radius-lg);
   background: var(--surface-1);
-  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  border: 0;
   text-decoration: none;
-  transition: border-color 0.15s, background 0.15s;
+  transition: background-color var(--dur-fast) ease, transform var(--dur) var(--ease-out);
 }
 .game-tile:hover {
-  border-color: var(--accent);
   background: var(--surface-2);
+  transform: translateY(-2px);
 }
 .game-tile.is-live {
-  border-color: color-mix(in srgb, var(--critical) 60%, var(--border));
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--critical) 70%, transparent);
 }
 .game-tile-meta {
   display: flex;
@@ -294,8 +279,9 @@
   align-items: center;
   gap: 6px;
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: 2rem;
+  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
@@ -312,7 +298,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   color: var(--muted);
   border-top: 1px solid var(--border);
   padding-top: 10px;
@@ -321,15 +307,15 @@
   margin-left: auto;
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  border: 1px solid var(--border);
+  background: var(--fill);
   color: var(--text-2);
 }
 .game-tile:hover .game-tile-go {
-  border-color: var(--accent);
-  color: var(--accent);
+  background: var(--accent-fill);
+  color: #fff;
 }
 
 /* Painéis da home */
@@ -370,7 +356,26 @@ table.standings-mini th {
 .home-split {
   display: grid;
   gap: var(--space-4);
-  align-items: start;
+  align-items: stretch; /* cartões da mesma linha com a mesma altura */
+}
+.home-split > .card {
+  display: flex;
+  flex-direction: column;
+  container-type: inline-size;
+}
+/* Líderes: duas listas lado a lado quando o cartão é largo o bastante. */
+.leaders-compact {
+  grid-template-columns: minmax(0, 1fr);
+}
+@container (min-width: 560px) {
+  .leaders-compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--space-6);
+  }
+}
+/* Último Super Bowl: conteúdo centralizado na altura do par. */
+.sb-card .sb-result {
+  margin: auto 0;
 }
 @media (min-width: 1000px) {
   .home-split {
@@ -392,12 +397,13 @@ table.standings-mini th {
   align-items: center;
   padding: 14px;
   border-radius: var(--radius);
-  background: linear-gradient(120deg, var(--accent-soft), transparent 70%), var(--surface-2);
-  border: 1px solid var(--border);
+  background: var(--surface-2);
+  border: 0;
   text-decoration: none;
+  transition: background-color var(--dur-fast) ease;
 }
 .highlight-head:hover {
-  border-color: var(--accent);
+  background: var(--surface-3);
 }
 .highlight-photo {
   flex: none;
@@ -408,7 +414,6 @@ table.standings-mini th {
   background: var(--surface-3);
   display: grid;
   place-items: center;
-  border: 2px solid var(--border-strong);
 }
 .highlight-photo img {
   width: 100%;
@@ -429,13 +434,15 @@ table.standings-mini th {
 }
 .highlight-id strong {
   font-family: var(--font-display);
-  font-size: 1.7rem;
-  font-weight: 800;
-  line-height: 1;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
 }
 .highlight-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  /* 4 números por linha (2 linhas completas no modo Expert): grade regular, sem item órfão. */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   margin: 0;
 }
@@ -443,13 +450,13 @@ table.standings-mini th {
   display: flex;
   flex-direction: column-reverse;
   text-align: center;
-  padding: 8px 4px;
+  padding: 10px 4px;
   border-radius: var(--radius-sm);
   background: var(--surface-2);
 }
 .highlight-stats dd {
   margin: 0;
-  font-size: 1.45rem;
+  font-size: clamp(1.05rem, 1.6cqi + 0.7rem, 1.45rem);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -525,10 +532,9 @@ table.standings-mini th {
   color: var(--text-2);
 }
 .explain-tag {
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0;
   color: var(--accent);
 }
 
@@ -561,9 +567,10 @@ table.standings-mini th {
 }
 .sb-score {
   font-family: var(--font-display);
-  font-size: 1.6rem;
-  font-weight: 800;
-  line-height: 1.1;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
 }
 .explore-grid {
   display: grid;
@@ -579,9 +586,9 @@ table.standings-mini th {
 .explore-icon {
   display: inline-grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   background: var(--accent-soft);
   color: var(--accent);
 }
@@ -595,7 +602,7 @@ table.standings-mini th {
   border-radius: var(--radius);
 }
 a.score-card:hover {
-  border-color: var(--accent);
+  background: var(--surface-2);
 }
 
 /* ============================ Dados e administração ============================ */
@@ -612,11 +619,11 @@ a.score-card:hover {
   counter-increment: step;
   display: grid;
   gap: 4px;
-  padding: 14px;
+  padding: 16px;
   border-radius: var(--radius);
   background: var(--surface-2);
-  border: 1px solid var(--border);
-  font-size: 0.86rem;
+  border: 0;
+  font-size: 0.875rem;
   color: var(--text-2);
 }
 .flow-steps li strong {
@@ -657,7 +664,8 @@ a.score-card:hover {
   margin: 0;
 }
 .admin-fieldset {
-  border: 1px solid var(--border);
+  border: 0;
+  background: var(--surface-2);
   border-radius: var(--radius);
   padding: 16px;
   margin: 0;
@@ -668,21 +676,21 @@ a.score-card:hover {
 .code-block {
   display: block;
   font-family: var(--font-mono);
-  font-size: 0.82rem;
+  font-size: 0.8125rem;
   padding: 10px 12px;
   background: var(--surface-2);
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius-sm);
   overflow-x: auto;
   white-space: pre;
 }
 .log-box {
   font-family: var(--font-mono);
-  font-size: 0.76rem;
+  font-size: 0.75rem;
   max-height: 240px;
   overflow: auto;
-  background: var(--bg);
-  border: 1px solid var(--border);
+  background: var(--surface-2);
+  border: 0;
   padding: 10px 12px;
   border-radius: var(--radius-sm);
   white-space: pre-wrap;
@@ -699,11 +707,12 @@ a.score-card:hover {
   gap: var(--space-2);
 }
 .event {
-  padding: 12px 14px;
+  padding: 14px 16px;
   border-radius: var(--radius);
-  border: 1px solid var(--border);
+  border: 0;
   border-left: 3px solid var(--border-strong);
   background: var(--surface-1);
+  box-shadow: var(--shadow-card);
   display: grid;
   gap: 4px;
 }
@@ -738,4 +747,28 @@ a.score-card:hover {
 .search-btn .label,
 .search-btn kbd {
   white-space: nowrap;
+}
+.rail-btn:active {
+  transform: translateY(-50%) scale(0.94);
+}
+/* Tema claro: a ilustração mantém só a bola e uma luz suave (feixes e campo são do "estádio à noite"). */
+:root[data-theme='light'] .hero-art .ha-stadium {
+  display: none;
+}
+:root[data-theme='light'] .hero-art .ha-glow {
+  opacity: 0.35;
+}
+
+.hero-learn svg {
+  vertical-align: -2px;
+  margin-left: 2px;
+}
+
+.panel-highlight {
+  container-type: inline-size;
+}
+@container (max-width: 300px) {
+  .highlight-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }

@@ -9,7 +9,7 @@ import { TeamChip, TeamLogo, TeamName } from '../components/TeamLogo';
 import { BarList } from '../components/charts/BarList';
 import { InfoTip } from '../components/InfoTip';
 import {
-  ArrowRight, BallIcon, BookIcon, CalendarIcon, ChartIcon, ChevronLeft, ChevronRight, ClockIcon, ShieldIcon, StarIcon, TrophyIcon,
+  BallIcon, BookIcon, ChartIcon, ChevronLeft, ChevronRight, ShieldIcon, StarIcon, TrophyIcon,
 } from '../components/Icons';
 import { api } from '../data/client';
 import { useAsync, useManifest, useSeason, useTeams } from '../data/hooks';
@@ -65,56 +65,46 @@ export default function Home() {
       <Seo title="" description="Estatísticas, classificação, jogos, Super Bowls, recordes e explicações da NFL para iniciantes e especialistas." />
 
       <section className="hero" aria-labelledby="h-hero">
+        <div className="hero-copy">
+          <p className="hero-eyebrow">
+            {season ? `Temporada ${season}` : 'NFL'}
+            {week ? ` · Semana ${week}` : ''}
+          </p>
+          <h1 id="h-hero">
+            <span className="hero-brand">End Zone Analytics</span>
+            <span className="hero-tagline">O jogo em números.</span>
+          </h1>
+          <p className="hero-lede">
+            Classificações, jogos, jogadores, Super Bowls e recordes — com análises que ajudam você a entender cada jogada, do primeiro snap ao EPA.
+          </p>
+          <div className="hero-actions">
+            <Link to="/season" className="btn primary lg">
+              Ver a temporada
+            </Link>
+            <Link to="/season?tab=schedule" className="link-more">
+              Calendário completo <ChevronRight />
+            </Link>
+          </div>
+          <Link to="/learn" className="hero-learn">
+            Nunca viu um jogo? Comece aqui em 10 minutos <ChevronRight />
+          </Link>
+        </div>
         <div className="hero-art-wrap">
           <HeroArt />
         </div>
-        <div className="hero-inner">
-          <div className="hero-copy">
-            <div className="eyebrow">
-              {season ? `Temporada ${season}` : 'NFL'}
-              {week ? ` · Semana ${week}` : ''}
-            </div>
-            <h1 id="h-hero">
-              <span className="hero-brand">End Zone Analytics</span>
-              <span className="hero-tagline">O jogo em números.</span>
-            </h1>
-            <p className="hero-lede">
-              Classificações, jogos, jogadores, Super Bowls e recordes — com análises que ajudam você a entender cada jogada. Use o modo <strong>Iniciante</strong> para
-              aprender o jogo ou o <strong>Expert</strong> para métricas avançadas.
-            </p>
-            <div className="hero-actions">
-              <Link to="/season" className="btn primary lg">
-                Ver a temporada <ArrowRight />
-              </Link>
-              <Link to="/season?tab=schedule" className="btn lg hero-secondary">
-                <CalendarIcon /> Calendário completo
-              </Link>
-            </div>
-            <Link to="/learn" className="hero-learn">
-              Nunca viu um jogo? Comece aqui em 10 minutos <ArrowRight />
-            </Link>
-          </div>
-          {manifest.data && (
-            <ul className="hero-stats" aria-label="A base em números">
-              <HeroStat icon={<ShieldIcon />} value={teams.data.filter((t) => t.active).length || '—'} label="Times" />
-              <HeroStat icon={<BallIcon />} value={regGames ? num(regGames) : '—'} label={`Jogos na temporada regular ${season ?? ''}`} />
-              <HeroStat icon={<TrophyIcon />} value={sbs.data ? sbs.data.length : '—'} label="Super Bowls na base" />
-              <HeroStat icon={<ChartIcon />} value={q ? `${q.pass}/${q.pass + q.warn + q.fail}` : '—'} label="Verificações de qualidade aprovadas" />
-            </ul>
-          )}
-        </div>
         {manifest.data && (
-          <div className="hero-meta">
-            <span>
-              <ClockIcon /> Dados atualizados {relativeTime(manifest.data.generatedAt)}
-            </span>
-            <span>
-              <CalendarIcon /> Último jogo registrado em {dateBR(manifest.data.coverage.lastCompletedGame)}
-            </span>
-            <Link to="/data">
-              <ShieldIcon /> Fontes abertas e verificáveis
-            </Link>
-          </div>
+          <>
+            <ul className="hero-stats" aria-label="A base em números">
+              <HeroStat value={teams.data.filter((t) => t.active).length || '—'} label="times" />
+              <HeroStat value={regGames ? num(regGames) : '—'} label={`jogos na temporada regular ${season ?? ''}`} />
+              <HeroStat value={sbs.data ? sbs.data.length : '—'} label="Super Bowls na base" />
+              <HeroStat value={q ? `${q.pass}/${q.pass + q.warn + q.fail}` : '—'} label="verificações de qualidade aprovadas" />
+            </ul>
+            <p className="hero-meta">
+              Dados atualizados {relativeTime(manifest.data.generatedAt)} · último jogo registrado em {dateBR(manifest.data.coverage.lastCompletedGame)} ·{' '}
+              <Link to="/data">fontes abertas e verificáveis</Link>
+            </p>
+          </>
         )}
       </section>
 
@@ -161,6 +151,31 @@ export default function Home() {
               </li>
             ))}
           </ul>
+        </section>
+      </div>
+
+      {/* Linhas pareadas por altura semelhante: cartões da mesma linha têm a mesma altura. */}
+      <div className="home-split">
+        <section className="card" aria-labelledby="h-lideres">
+          <div className="card-title">
+            <h2 id="h-lideres">
+              <ChartIcon /> Líderes da temporada
+            </h2>
+            <Link to="/season?tab=leaders">Todos →</Link>
+          </div>
+          {stats.loading ? <Loading /> : regLines.length ? <LeadersPanel lines={regLines} compact /> : <Unavailable />}
+        </section>
+        <section className="card" aria-labelledby="h-titulos">
+          <div className="card-title">
+            <h2 id="h-titulos">
+              <TrophyIcon /> Mais títulos de Super Bowl
+            </h2>
+            <Link to="/super-bowl">Todos →</Link>
+          </div>
+          <BarList
+            ariaLabel="Franquias com mais Super Bowls"
+            items={sbCounts.map(([t, n]) => ({ key: t, value: n, display: `${n}`, label: <TeamChip abbr={t} size={20} /> }))}
+          />
         </section>
       </div>
 
@@ -218,18 +233,6 @@ export default function Home() {
             </div>
           </section>
         )}
-        <section className="card" aria-labelledby="h-lideres">
-          <div className="card-title">
-            <h2 id="h-lideres">
-              <ChartIcon /> Líderes da temporada
-            </h2>
-            <Link to="/season?tab=leaders">Todos →</Link>
-          </div>
-          {stats.loading ? <Loading /> : regLines.length ? <LeadersPanel lines={regLines} compact /> : <Unavailable />}
-        </section>
-      </div>
-
-      <div className="home-split even">
         {lastSb && (
           <section className="card sb-card" aria-labelledby="h-sb">
             <div className="card-title">
@@ -254,18 +257,6 @@ export default function Home() {
             </div>
           </section>
         )}
-        <section className="card" aria-labelledby="h-titulos">
-          <div className="card-title">
-            <h2 id="h-titulos">
-              <TrophyIcon /> Mais títulos de Super Bowl
-            </h2>
-            <Link to="/super-bowl">Todos →</Link>
-          </div>
-          <BarList
-            ariaLabel="Franquias com mais Super Bowls"
-            items={sbCounts.map(([t, n]) => ({ key: t, value: n, display: `${n}`, label: <TeamChip abbr={t} size={20} /> }))}
-          />
-        </section>
       </div>
 
       <section aria-labelledby="h-explore" className="home-section">
@@ -293,16 +284,11 @@ export default function Home() {
   );
 }
 
-function HeroStat({ icon, value, label }: { icon: ReactNode; value: ReactNode; label: string }) {
+function HeroStat({ value, label }: { value: ReactNode; label: string }) {
   return (
     <li className="hero-stat">
-      <span className="hero-stat-icon" aria-hidden="true">
-        {icon}
-      </span>
-      <span>
-        <strong className="hero-stat-value">{value}</strong>
-        <span className="hero-stat-label">{label}</span>
-      </span>
+      <strong className="hero-stat-value">{value}</strong>
+      <span className="hero-stat-label">{label}</span>
     </li>
   );
 }

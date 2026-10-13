@@ -19,7 +19,7 @@ node scripts/screenshots.mjs   # capturas de tela + detector de rolagem horizont
 | Playwright contra o site publicado localmente (`build:static` + `wrangler dev`, `E2E_STATIC=1`) | ✅ 105 passaram · 3 ignorados por design (admin não existe no site estático) |
 | axe-core WCAG 2.1 AA — 12 páginas × 2 dispositivos, sem violações sérias/críticas | ✅ |
 | cspell pt-BR + en — 117 arquivos | ✅ 0 ocorrências |
-| Paleta de gráficos (verificador de daltonismo) contra o novo fundo `#0b1728` | ✅ todas as checagens passam |
+| Paleta de gráficos (verificador de daltonismo) contra `#1c1c1e` (escuro) e `#ffffff` (claro) | ✅ escuro: todas passam · claro: aviso de contraste compensado por legenda + tabela |
 | Qualidade de dados (pipeline) | ✅ 18 ok · 0 alertas · 0 falhas |
 | CI em checkout limpo (só arquivos versionados): `npm ci`, `qa`, `build`, `npm audit` | ✅ 0 vulnerabilidades |
 | Produção (`end-zone-analytics.nfldata.workers.dev`) | ✅ `/data/*.json` em JSON, `/api/live/scoreboard` em JSON, rotas diretas, cabeçalhos CSP/HSTS, `/api/admin/*` → 404 |

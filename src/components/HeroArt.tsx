@@ -7,9 +7,9 @@ export function HeroArt() {
     <svg className="hero-art" viewBox="0 0 720 460" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
       <defs>
         <radialGradient id="ha-glow" cx="58%" cy="52%" r="55%">
-          <stop offset="0" stopColor="#078bff" stopOpacity="0.42" />
-          <stop offset="0.45" stopColor="#0a3d78" stopOpacity="0.28" />
-          <stop offset="1" stopColor="#050b16" stopOpacity="0" />
+          <stop offset="0" stopColor="#2997ff" stopOpacity="0.32" />
+          <stop offset="0.45" stopColor="#0a2a4f" stopOpacity="0.2" />
+          <stop offset="1" stopColor="#000000" stopOpacity="0" />
         </radialGradient>
         <linearGradient id="ha-beam" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#bfe3ff" stopOpacity="0.22" />
@@ -42,15 +42,15 @@ export function HeroArt() {
         </clipPath>
       </defs>
 
-      <rect width="720" height="460" fill="url(#ha-glow)" />
+      <rect className="ha-glow" width="720" height="460" fill="url(#ha-glow)" />
 
-      {/* Refletores e feixes de luz */}
-      <g opacity="0.9">
+      {/* Refletores e feixes de luz (só no tema escuro) */}
+      <g className="ha-stadium" opacity="0.9">
         <polygon points="455,0 520,0 380,330 300,330" fill="url(#ha-beam)" />
         <polygon points="610,0 660,0 560,330 500,330" fill="url(#ha-beam)" opacity="0.7" />
         <polygon points="250,0 285,0 230,300 180,300" fill="url(#ha-beam)" opacity="0.45" />
       </g>
-      <g fill="#dff1ff" filter="url(#ha-soft)" opacity="0.75">
+      <g className="ha-stadium" fill="#dff1ff" filter="url(#ha-soft)" opacity="0.75">
         {[0, 1, 2, 3, 4, 5].map((i) => (
           <circle key={`a${i}`} cx={470 + i * 14} cy={22 + (i % 2) * 4} r="4.5" />
         ))}
@@ -62,11 +62,13 @@ export function HeroArt() {
         ))}
       </g>
 
-      {/* Campo em perspectiva */}
+      {/* Campo em perspectiva (só no tema escuro) */}
+      <g className="ha-stadium">
       <rect y="300" width="720" height="160" fill="url(#ha-field)" />
       <g stroke="#2a5c92" strokeOpacity="0.45" strokeWidth="1.5">
         <path d="M0 360H720M0 395H720M0 438H720" />
         <path d="M360 300L120 460M430 300L330 460M500 300L540 460M570 300L750 460" />
+      </g>
       </g>
 
       {/* Bola */}
@@ -84,7 +86,7 @@ export function HeroArt() {
         {[-52, -31, -10, 11, 32, 53].map((x) => (
           <path key={x} d={`M${x} -56V-30`} stroke="#f4f7fc" strokeWidth="5.5" strokeLinecap="round" />
         ))}
-        <text x="-6" y="26" textAnchor="middle" fontFamily="'Barlow Condensed','Arial Narrow',sans-serif" fontWeight="800" fontSize="38" letterSpacing="2" fill="#0d0402" opacity="0.38">
+        <text x="-6" y="26" textAnchor="middle" fontFamily="-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif" fontWeight="700" fontSize="34" letterSpacing="1" fill="#0d0402" opacity="0.38">
           END ZONE
         </text>
         <text x="-6" y="50" textAnchor="middle" fontFamily="system-ui,sans-serif" fontWeight="600" fontSize="13" letterSpacing="7" fill="#0d0402" opacity="0.35">
@@ -92,11 +94,6 @@ export function HeroArt() {
         </text>
       </g>
 
-      {/* Detalhe da marca: cortes diagonais */}
-      <g fill="#078bff">
-        <polygon points="640,460 668,460 720,404 720,374" opacity="0.9" />
-        <polygon points="684,460 702,460 720,442 720,422" opacity="0.6" />
-      </g>
     </svg>
   );
 }

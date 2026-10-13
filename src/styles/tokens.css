@@ -1,51 +1,61 @@
 /*
- * Design tokens — End Zone Analytics
- * Identidade: azul-marinho profundo + azul elétrico. Escuro é o padrão; o claro é selecionado (não invertido).
- * Azul é a cor de identidade (ações, estados ativos, dados em destaque) — não a cor de tudo.
- * Verde/âmbar/vermelho são reservados a significado (sucesso, atenção, erro).
+ * Design tokens — End Zone Analytics (linguagem visual inspirada na Apple / HIG)
+ * - Cores de sistema (labels, fills, separators) com variantes escura e clara; azul de sistema como única cor de destaque.
+ * - Tipografia do sistema (SF Pro no Apple, Segoe UI Variable no Windows) com tracking por tamanho.
+ * - Materiais translúcidos para a camada de navegação; superfícies sólidas para o conteúdo.
+ * Escuro é o padrão; o claro é selecionado (não invertido automaticamente).
  * Cores de séries de gráfico vêm da paleta validada (CVD) — ver docs/DESIGN_SYSTEM.md.
  */
 :root {
   color-scheme: dark;
-  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-display: 'Barlow Condensed', 'Arial Narrow', var(--font-sans);
+
+  /* Tipografia */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable Text', 'Segoe UI', system-ui, Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI Variable Display', 'Segoe UI', system-ui, Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace;
 
-  /* Superfícies */
-  --bg: #050b16;
-  --bg-2: #081426;
-  --surface-1: #0b1728;
-  --surface-2: #101f34;
-  --surface-3: #172a45;
-  --border: #1b3553;
-  --border-soft: rgba(27, 53, 83, 0.6);
-  --border-strong: #2a4d75;
+  /* Superfícies (sistema escuro) */
+  --bg: #000000;
+  --bg-2: #000000;
+  --surface-1: #1c1c1e; /* secondarySystemBackground */
+  --surface-2: #2c2c2e; /* tertiary */
+  --surface-3: #3a3a3c;
+  --border: #2c2c2e; /* separador fino sobre superfícies */
+  --border-soft: rgba(84, 84, 88, 0.36);
+  --border-strong: #48484a;
+  --fill: rgba(118, 118, 128, 0.24); /* trilho de controles segmentados */
+  --fill-thumb: #636366; /* botão selecionado do segmentado */
+
+  /* Materiais (camada de navegação translúcida) */
+  --material: rgba(22, 22, 23, 0.72);
+  --material-thick: rgba(30, 30, 32, 0.86);
+  --material-edge: rgba(255, 255, 255, 0.08);
 
   /* Texto */
-  --text: #f4f7fc;
-  --text-2: #a7b6cc;
-  --muted: #8396b1;
+  --text: #f5f5f7;
+  --text-2: #aeaeb2;
+  --muted: #98989d; /* secondaryLabel: ≥ 4,5:1 também sobre superfícies elevadas */
 
-  /* Identidade */
-  --accent: #078bff; /* ativo, indicadores, texto de destaque */
-  --accent-strong: #35b6ff; /* dados em destaque, hover */
-  --accent-fill: #0a6fd8; /* fundo de botão primário (contraste AA com texto branco) */
-  --accent-fill-hover: #0862c4;
+  /* Destaque (systemBlue) */
+  --accent: #2997ff;
+  --accent-strong: #2997ff;
+  --accent-fill: #0071e3;
+  --accent-fill-hover: #0077ed;
   --accent-ink: #ffffff;
-  --accent-soft: rgba(7, 139, 255, 0.14);
-  --accent-glow: rgba(7, 139, 255, 0.35);
-  --focus: #5cc2ff;
+  --accent-soft: rgba(41, 151, 255, 0.16);
+  --accent-glow: rgba(41, 151, 255, 0.3);
+  --focus: #2997ff;
 
   /* Semânticas (reservadas) */
-  --good: #24c78a;
-  --good-text: #3ddc9b;
-  --good-soft: rgba(36, 199, 138, 0.14);
-  --warning: #f5b942;
-  --warning-text: #f5b942;
-  --warning-soft: rgba(245, 185, 66, 0.14);
-  --critical: #ff5c69;
-  --critical-text: #ff7a85;
-  --critical-soft: rgba(255, 92, 105, 0.15);
+  --good: #30d158;
+  --good-text: #30d158;
+  --good-soft: rgba(48, 209, 88, 0.16);
+  --warning: #ff9f0a;
+  --warning-text: #ffb340;
+  --warning-soft: rgba(255, 159, 10, 0.16);
+  --critical: #ff453a;
+  --critical-text: #ff6961;
+  --critical-soft: rgba(255, 69, 58, 0.16);
 
   /* Gráficos */
   --series-1: #3987e5;
@@ -59,8 +69,8 @@
   --seq-100: #cde2fb;
   --seq-400: #3987e5;
   --seq-700: #0d366b;
-  --grid: #142843;
-  --axis: #25466c;
+  --grid: #2c2c2e;
+  --axis: #48484a;
 
   /* Campo (diagramas) */
   --turf: #1c5232;
@@ -68,48 +78,64 @@
   --turf-line: rgba(255, 255, 255, 0.55);
   --endzone: #143d25;
 
-  /* Forma e espaço */
-  --radius-sm: 8px;
-  --radius: 12px;
-  --radius-lg: 14px;
-  --shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 32px;
-  --space-7: 48px;
-  --space-8: 64px;
-  --header-h: 68px;
-  --maxw: 1400px;
+  /* Forma e profundidade */
+  --radius-sm: 10px;
+  --radius: 14px;
+  --radius-lg: 20px;
+  --radius-pill: 980px;
+  --shadow: 0 10px 40px rgba(0, 0, 0, 0.55);
+  --shadow-card: none;
+
+  /* Espaço (rem: acompanha o tamanho de texto do usuário) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+  --header-h: 56px;
+  --maxw: 1280px;
+
+  /* Movimento: resposta rápida, sem overshoot (curvas de saída suaves, criticamente amortecidas) */
+  --ease-out: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-in: cubic-bezier(0.5, 0, 0.75, 0);
+  --dur-press: 100ms;
+  --dur-fast: 180ms;
+  --dur: 280ms;
 }
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme='dark']) {
     color-scheme: light;
-    --bg: #f4f7fc;
-    --bg-2: #ffffff;
+    --bg: #f5f5f7;
+    --bg-2: #f5f5f7;
     --surface-1: #ffffff;
-    --surface-2: #eef3fa;
-    --surface-3: #e1e9f4;
-    --border: #d6e0ee;
-    --border-soft: rgba(214, 224, 238, 0.7);
-    --border-strong: #b6c7dd;
-    --text: #0a1628;
-    --text-2: #3a4a63;
-    --muted: #586a85;
-    --accent: #0a6fd8;
-    --accent-strong: #0858b0;
-    --accent-fill: #0a6fd8;
-    --accent-fill-hover: #0858b0;
+    --surface-2: #f5f5f7;
+    --surface-3: #e8e8ed;
+    --border: #e5e5ea;
+    --border-soft: rgba(60, 60, 67, 0.12);
+    --border-strong: #d2d2d7;
+    --fill: rgba(118, 118, 128, 0.12);
+    --fill-thumb: #ffffff;
+    --material: rgba(245, 245, 247, 0.74);
+    --material-thick: rgba(255, 255, 255, 0.86);
+    --material-edge: rgba(255, 255, 255, 0.6);
+    --text: #1d1d1f;
+    --text-2: #424245;
+    --muted: #6e6e73;
+    --accent: #0066cc;
+    --accent-strong: #0066cc;
+    --accent-fill: #0071e3;
+    --accent-fill-hover: #0077ed;
     --accent-ink: #ffffff;
-    --accent-soft: rgba(10, 111, 216, 0.1);
-    --accent-glow: rgba(10, 111, 216, 0.18);
-    --focus: #0a6fd8;
-    --good-text: #0b7a50;
-    --warning-text: #8a5a00;
-    --critical-text: #c42634;
+    --accent-soft: rgba(0, 113, 227, 0.1);
+    --accent-glow: rgba(0, 113, 227, 0.18);
+    --focus: #0071e3;
+    --good-text: #248a3d;
+    --warning-text: #b25000;
+    --critical-text: #d70015;
     --series-1: #2a78d6;
     --series-2: #eb6834;
     --series-3: #1baf7a;
@@ -118,40 +144,46 @@
     --series-6: #008300;
     --series-7: #4a3aa7;
     --series-8: #e34948;
-    --grid: #e3e9f2;
-    --axis: #b9c7da;
+    --grid: #e8e8ed;
+    --axis: #d2d2d7;
     --turf: #2f7d4a;
     --turf-2: #2a7243;
     --turf-line: rgba(255, 255, 255, 0.75);
     --endzone: #24633b;
-    --shadow: 0 1px 2px rgba(10, 22, 40, 0.05), 0 12px 28px rgba(10, 22, 40, 0.08);
+    --shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+    --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.05);
   }
 }
 
 :root[data-theme='light'] {
   color-scheme: light;
-  --bg: #f4f7fc;
-  --bg-2: #ffffff;
+  --bg: #f5f5f7;
+  --bg-2: #f5f5f7;
   --surface-1: #ffffff;
-  --surface-2: #eef3fa;
-  --surface-3: #e1e9f4;
-  --border: #d6e0ee;
-  --border-soft: rgba(214, 224, 238, 0.7);
-  --border-strong: #b6c7dd;
-  --text: #0a1628;
-  --text-2: #3a4a63;
-  --muted: #586a85;
-  --accent: #0a6fd8;
-  --accent-strong: #0858b0;
-  --accent-fill: #0a6fd8;
-  --accent-fill-hover: #0858b0;
+  --surface-2: #f5f5f7;
+  --surface-3: #e8e8ed;
+  --border: #e5e5ea;
+  --border-soft: rgba(60, 60, 67, 0.12);
+  --border-strong: #d2d2d7;
+  --fill: rgba(118, 118, 128, 0.12);
+  --fill-thumb: #ffffff;
+  --material: rgba(245, 245, 247, 0.74);
+  --material-thick: rgba(255, 255, 255, 0.86);
+  --material-edge: rgba(255, 255, 255, 0.6);
+  --text: #1d1d1f;
+  --text-2: #424245;
+  --muted: #6e6e73;
+  --accent: #0066cc;
+  --accent-strong: #0066cc;
+  --accent-fill: #0071e3;
+  --accent-fill-hover: #0077ed;
   --accent-ink: #ffffff;
-  --accent-soft: rgba(10, 111, 216, 0.1);
-  --accent-glow: rgba(10, 111, 216, 0.18);
-  --focus: #0a6fd8;
-  --good-text: #0b7a50;
-  --warning-text: #8a5a00;
-  --critical-text: #c42634;
+  --accent-soft: rgba(0, 113, 227, 0.1);
+  --accent-glow: rgba(0, 113, 227, 0.18);
+  --focus: #0071e3;
+  --good-text: #248a3d;
+  --warning-text: #b25000;
+  --critical-text: #d70015;
   --series-1: #2a78d6;
   --series-2: #eb6834;
   --series-3: #1baf7a;
@@ -160,11 +192,23 @@
   --series-6: #008300;
   --series-7: #4a3aa7;
   --series-8: #e34948;
-  --grid: #e3e9f2;
-  --axis: #b9c7da;
+  --grid: #e8e8ed;
+  --axis: #d2d2d7;
   --turf: #2f7d4a;
   --turf-2: #2a7243;
   --turf-line: rgba(255, 255, 255, 0.75);
   --endzone: #24633b;
-  --shadow: 0 1px 2px rgba(10, 22, 40, 0.05), 0 12px 28px rgba(10, 22, 40, 0.08);
+  --shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Mais contraste: superfícies sólidas e bordas definidas (HIG — Increase Contrast). */
+@media (prefers-contrast: more) {
+  :root {
+    --border: #636366;
+    --border-strong: #8e8e93;
+    --material: var(--surface-1);
+    --material-thick: var(--surface-1);
+    --text-2: var(--text);
+  }
 }

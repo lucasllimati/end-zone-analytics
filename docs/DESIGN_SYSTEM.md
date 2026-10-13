@@ -1,29 +1,43 @@
 # Design system
 
-Minimalista, esportivo e orientado a dados: interface escura azul-marinho, azul elétrico como identidade, cartões discretos e tipografia condensada marcante.
+Linguagem visual inspirada na Apple (Human Interface Guidelines e *Designing Fluid Interfaces*): tipografia do sistema, cores de sistema que se adaptam ao escuro/claro, materiais translúcidos na camada de navegação, contenção visual e feedback imediato. Os dados são o conteúdo; a interface recua.
+
+## Princípios aplicados
+
+| Princípio | Como aparece no site |
+|---|---|
+| **Tipografia do sistema** | `-apple-system`/SF Pro (Apple), Segoe UI Variable (Windows). Sem fonte externa. Tracking por tamanho: display `-0.045em`, títulos `-0.02em` a `-0.028em`, corpo `-0.006em`, textos pequenos levemente positivos. Entrelinha inversa ao tamanho (display `1.02`, corpo `1.5`). Tamanhos em `rem` |
+| **Hierarquia por peso + tamanho** | Títulos 600–700, números de destaque 700 com algarismos tabulares; ícones decorativos removidos dos títulos de seção |
+| **Cores de sistema** | Escuro: `#000` / `#1c1c1e` / `#2c2c2e`; claro: `#f5f5f7` / `#ffffff`. Azul de sistema como **única** cor de destaque (ações, links, estado ativo). Verde/laranja/vermelho só com significado |
+| **Materiais** | Cabeçalho, menus, gaveta, busca, tooltips e menus de exportação são translúcidos (`backdrop-filter: saturate(180%) blur()`); o conteúdo é sólido |
+| **Borda de rolagem** | O cabeçalho não tem linha fixa; a sombra só aparece quando há conteúdo passando por baixo (`.site-header.scrolled`) |
+| **Resposta imediata** | Botões, chips, cards e jogos reagem ao **pressionar** (`:active` → `scale(0.97)`, 100 ms) |
+| **Consistência espacial** | Menus nascem do gatilho (`transform-origin`); a gaveta entra **e sai** pela direita; a busca cresce a partir do topo |
+| **Controles familiares** | Botões em pílula; controle segmentado estilo iOS (Iniciante/Expert, recortes de classificação); abas em pílula como navegação local; links de ação "Saiba mais ›" |
+| **Contenção** | Cartões sem borda (sombra suave só no claro), cantos 14–20 px, espaços generosos entre seções, sem gradientes decorativos (exceto o título do hero) |
+| **Acessibilidade** | `prefers-reduced-motion` (sem animação), `prefers-reduced-transparency` (materiais sólidos), `prefers-contrast: more` (bordas definidas, texto sólido); links em texto corrido sublinhados; contraste AA verificado com axe |
 
 ## Identidade
 
-- **Marca:** End Zone Analytics. Símbolo = bola oval minimalista com costura e um corte de trajetória (`BrandMark`); logotipo horizontal = símbolo + “END ZONE / ANALYTICS” (`BrandLogo`). Versões: colorida, monocromática (`mono`, usa a cor do texto) e arquivos em `public/logo.svg`, `logo-light.svg`, `logo-mono.svg`, `favicon.svg`; imagem de compartilhamento `public/og-image.png` (1200×630).
-- **Cores:** azul-marinho profundo + azul elétrico. O azul marca ação, estado ativo e dado em destaque — não é cor de fundo de tudo. Verde/âmbar/vermelho só com significado (sucesso, atenção, erro), sempre com texto ou ícone.
-- **Tipografia:** texto em fonte do sistema; títulos de página e números de destaque em **Barlow Condensed 700/800** (auto-hospedada via `@fontsource`, só o subconjunto latino, `font-display: swap`). Números com algarismos tabulares.
+- **Marca:** End Zone Analytics. Símbolo = bola oval minimalista com costura (`BrandMark`); logotipo = símbolo + "**End Zone** Analytics" em fonte do sistema (`BrandLogo`). Arquivos: `public/logo.svg`, `logo-light.svg`, `logo-mono.svg`, `favicon.svg`.
+- **Hero:** estilo página de produto — título grande centralizado com gradiente sutil, ilustração da bola abaixo (com feixes de estádio só no escuro), faixa de números grandes sem molduras.
 
 ## Tokens (`src/styles/tokens.css`)
 
 | Token | Escuro (padrão) | Claro | Uso |
 |---|---|---|---|
-| `--bg` / `--bg-2` | `#050b16` / `#081426` | `#f4f7fc` / `#ffffff` | Fundo da página / cabeçalho e rodapé |
-| `--surface-1` / `-2` / `-3` | `#0b1728` / `#101f34` / `#172a45` | `#ffffff` / `#eef3fa` / `#e1e9f4` | Cartões, hover/menus, elevação |
-| `--border` / `--border-strong` | `#1b3553` / `#2a4d75` | `#d6e0ee` / `#b6c7dd` | Separadores |
-| `--text` / `--text-2` / `--muted` | `#f4f7fc` / `#a7b6cc` / `#8396b1` | `#0a1628` / `#3a4a63` / `#586a85` | Hierarquia de texto |
-| `--accent` | `#078bff` | `#0a6fd8` | Indicador ativo, eyebrow, ícones |
-| `--accent-strong` | `#35b6ff` | `#0858b0` | Links e dados em destaque |
-| `--accent-fill` | `#0a6fd8` | `#0a6fd8` | Fundo do botão primário (branco sobre ele passa AA: 4,9:1) |
-| `--good` / `--warning` / `--critical` | `#24c78a` / `#f5b942` / `#ff5c69` | idem (texto em versões escuras) | Estados semânticos |
-| `--series-1…8` | paleta categórica validada | idem | Séries de gráficos (validada contra `#0b1728`: todas as checagens passam) |
-| `--turf`, `--endzone` | verdes | verdes | Diagramas de campo |
+| `--bg` | `#000000` | `#f5f5f7` | Fundo da página |
+| `--surface-1` / `-2` / `-3` | `#1c1c1e` / `#2c2c2e` / `#3a3a3c` | `#ffffff` / `#f5f5f7` / `#e8e8ed` | Cartões, elementos internos, hover |
+| `--fill` / `--fill-thumb` | `rgba(118,118,128,.24)` / `#636366` | `rgba(118,118,128,.12)` / `#fff` | Trilho e botão selecionado dos controles segmentados; fundo de botões secundários |
+| `--material` / `--material-thick` | `rgba(22,22,23,.72)` / `rgba(30,30,32,.86)` | `rgba(245,245,247,.74)` / `rgba(255,255,255,.86)` | Camada de navegação translúcida |
+| `--text` / `--text-2` / `--muted` | `#f5f5f7` / `#aeaeb2` / `#98989d` | `#1d1d1f` / `#424245` / `#6e6e73` | Hierarquia de texto |
+| `--accent` | `#2997ff` | `#0066cc` | Links, eyebrow, estado ativo |
+| `--accent-fill` | `#0071e3` | `#0071e3` | Botão primário (branco sobre ele: AA) |
+| `--good` / `--warning` / `--critical` | `#30d158` / `#ff9f0a` / `#ff453a` | versões escuras para texto | Estados semânticos |
+| `--series-1…8` | paleta categórica validada | idem | Gráficos — validada contra `#1c1c1e` (todas as checagens passam) e `#ffffff` (aviso de contraste compensado por legenda + tabela) |
+| `--ease-out`, `--dur-press`, `--dur-fast`, `--dur` | `cubic-bezier(.25,1,.5,1)`, 100/180/280 ms | idem | Movimento sem overshoot (criticamente amortecido) |
 
-Espaçamento em escala de 4 px (`--space-1…8`), raios 8/12/14 px, container de até 1.400 px, cabeçalho de 68 px.
+Raios 10/14/20 px e pílula (`980px`); espaços em `rem` (`--space-1…8`); container de até 1.280 px; cabeçalho de 56 px.
 
 ## Componentes
 
