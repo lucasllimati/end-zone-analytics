@@ -17,8 +17,9 @@ import { DIVISIONS_CURRENT, franchiseOf } from '../lib/teams';
 import { dateBR, num, pct3, signed } from '../lib/format';
 import { RIVALRIES } from '../content/rivalries';
 import type { Game, TeamSeason } from '../lib/types';
+import { DivisionTable, DraftSection, FranchiseHistory, FranchiseRecords, Matchups, PointsChart, RecentForm } from './team/TeamSections';
 
-type Tab = 'overview' | 'schedule' | 'players' | 'history' | 'similar';
+type Tab = 'overview' | 'schedule' | 'players' | 'records' | 'history' | 'matchups' | 'draft' | 'similar';
 
 function playoffResult(s: TeamSeason): string {
   if (s.sbWin) return 'Campeão do Super Bowl';
@@ -38,6 +39,7 @@ export default function TeamPage() {
   const games = useAsync(() => (season ? api.seasonGames(season) : Promise.resolve([] as Game[])), [season]);
   const sbs = useAsync(() => api.superBowls(), []);
   const stats = useAsync(() => (season ? api.playerStats(season).catch(() => []) : Promise.resolve([])), [season]);
+  const profile = useAsync(() => api.teamProfile(code).catch(() => null), [code]);
   const chartRef = useRef<SVGSVGElement>(null);
   const teamColor = useTeamColor();
 
@@ -82,6 +84,9 @@ export default function TeamPage() {
   const rivals = RIVALRIES.filter((r) => r.a === code || r.b === code);
   const divMates = Object.entries(DIVISIONS_CURRENT).filter(([t, d]) => d === team.division && t !== code).map(([t]) => t);
   const teamPlayers = (stats.data ?? []).filter((l) => l.st === 'REG' && franchiseOf(l.team) === code);
+  // Técnico atual = o do jogo mais recente já disputado (mostra interinos durante a temporada).
+  const lastPlayed = [...myGames].reverse().find((g) => g.homeScore !== null);
+  const currentCoach = lastPlayed ? (franchiseOf(lastPlayed.home) === code ? lastPlayed.homeCoach : lastPlayed.awayCoach) : cur?.coach;
 
 
   return (
@@ -102,7 +107,7 @@ export default function TeamPage() {
                 Temporada {season}: <strong>{st ? fmtRecord(st) : '0-0'}</strong>
                 {divRank ? ` · ${divRank}º na divisão` : ''}
               </span>
-              {cur?.coach && <span>Técnico: {cur.coach}</span>}
+              {currentCoach && <span>Técnico: {currentCoach}</span>}
               {cur?.qb && <span>QB titular: {cur.qb}</span>}
             </div>
             <div className="row" style={{ marginTop: 10, gap: 6 }}>
@@ -124,14 +129,21 @@ export default function TeamPage() {
         tabs={[
           { id: 'overview', label: 'Visão geral' },
           { id: 'schedule', label: `Jogos ${season ?? ''}` },
-          { id: 'players', label: 'Destaques do elenco' },
+          { id: 'players', label: 'Elenco' },
+          { id: 'records', label: 'Recordes' },
           { id: 'history', label: 'História' },
+          { id: 'matchups', label: 'Confrontos' },
+          { id: 'draft', label: 'Draft' },
           { id: 'similar', label: 'Times semelhantes' },
         ]}
       />
       <TabPanel id={tab}>
         {tab === 'overview' && (
           <div className="stack">
+            <div className="team-overview-top">
+              <RecentForm code={code} games={games.data ?? []} />
+              {st && <DivisionTable code={code} rows={standings} division={st.division} />}
+            </div>
             {cur && gp > 0 ? (
               <div className="tiles">
                 <StatTile label="Pontos por jogo" value={num(cur.pf / gp, 1)} metric="ppg" />
@@ -170,6 +182,7 @@ export default function TeamPage() {
                 />
               </ChartFrame>
             </div>
+            {history.length > 1 && <PointsChart history={history} name={team.name} />}
             <div className="tiles">
               <StatTile label={`Campanha desde ${history[0]?.season ?? 1999}`} value={fmtRecord(totals)} note={`${pct3((totals.w + totals.t / 2) / Math.max(1, totals.w + totals.l + totals.t))} de aproveitamento`} />
               <StatTile label="Playoffs disputados" value={totals.po} note={`${totals.pw}-${totals.pl} em jogos de playoffs`} />
@@ -211,8 +224,12 @@ export default function TeamPage() {
             })}
           </div>
         )}
+        {tab === 'records' && (profile.loading ? <Loading /> : profile.data ? <FranchiseRecords profile={profile.data} /> : <Unavailable>Recordes da franquia indisponíveis.</Unavailable>)}
+        {tab === 'matchups' && (profile.loading ? <Loading /> : profile.data ? <Matchups profile={profile.data} code={code} /> : <Unavailable>Confrontos indisponíveis.</Unavailable>)}
+        {tab === 'draft' && (profile.loading ? <Loading /> : profile.data ? <DraftSection profile={profile.data} code={code} /> : <Unavailable>Draft indisponível.</Unavailable>)}
         {tab === 'history' && (
           <div className="stack">
+            {profile.data && <FranchiseHistory profile={profile.data} code={code} />}
             {apps.length > 0 && (
               <section>
                 <h2>Super Bowls</h2>

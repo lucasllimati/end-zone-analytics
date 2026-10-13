@@ -44,6 +44,7 @@ erDiagram
 | `records-curated.json` | `CuratedRecord[]` | Recordes oficiais de todos os tempos |
 | `records-computed.json` | — | Top 10 por estatística (temporada, carreira, playoffs), times e jogos (1999+) |
 | `draft.json` | `DraftPick[]` | 1980+, AV, Pro Bowls, All-Pro, HOF |
+| `teams/{CODE}.json` | `TeamProfile` | Perfil de cada franquia ativa: identidades, estádios, técnicos, QBs titulares, desempenho por situação, retrospecto por adversário, momentos marcantes, líderes da franquia e draft (calculado no pipeline) |
 | `stadiums.json` | `Stadium[]` | Teto, gramado, jogos, Super Bowls |
 | `models/qb-model.json` | `QbModelEntry[]` | Componentes brutos do ranking de QBs |
 | `history/` | — | Manifests anteriores e log de ingestões |

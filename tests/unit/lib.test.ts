@@ -10,6 +10,7 @@ import { checkForUpdates } from '../../src/lib/updates';
 import { DEFAULT_QB_WEIGHTS, powerRankings, rankQbs } from '../../src/lib/models';
 import { computeStandings } from '../../src/lib/standings';
 import { score } from '../../src/components/SearchPalette';
+import { draftFranchise } from '../../src/lib/teams';
 import type { Manifest, QbModelEntry } from '../../src/lib/types';
 import { SEASON_GAMES, game } from '../fixtures';
 
@@ -211,5 +212,20 @@ describe('kickoff (fuso do Leste dos EUA → local)', () => {
     expect(kickoffLocal('2026-10-11', '13:00', 'America/Sao_Paulo')).toMatch(/^14:00 /);
     expect(kickoffInstant('2026-10-11', null)).toBeNull();
     expect(kickoffLocal(null, '13:00')).toBeNull();
+  });
+});
+
+describe('draftFranchise', () => {
+  it('mapeia códigos do Pro Football Reference para a franquia atual', () => {
+    expect(draftFranchise('GNB', 2020)).toBe('GB');
+    expect(draftFranchise('RAI', 1990)).toBe('LV');
+    expect(draftFranchise('STL', 1985)).toBe('ARI');
+    expect(draftFranchise('STL', 2000)).toBe('LA');
+    expect(draftFranchise('HOU', 1990)).toBe('TEN');
+    expect(draftFranchise('HOU', 2005)).toBe('HOU');
+    expect(draftFranchise('BAL', 1982)).toBe('IND');
+    expect(draftFranchise('BAL', 2000)).toBe('BAL');
+    expect(draftFranchise('BUF', 1985)).toBe('BUF');
+    expect(draftFranchise('XYZ', 1985)).toBeNull();
   });
 });

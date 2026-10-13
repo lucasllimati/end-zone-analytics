@@ -44,6 +44,28 @@ test.describe('acessibilidade (axe, WCAG 2.1 AA)', () => {
   }
 });
 
+test.describe('página do time', () => {
+  test('abas novas carregam o perfil da franquia sem violações de acessibilidade', async ({ page }) => {
+    // Sem transições: o axe não deve medir contraste no meio da animação da aba anterior.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/teams/buf');
+    const tabs = page.getByRole('tablist').first();
+    const expectations: [string, RegExp][] = [
+      ['Recordes', /Jardas de passe/],
+      ['História', /Ficha da franquia/],
+      ['Confrontos', /Retrospecto contra cada adversário/],
+      ['Draft', /Hall of Fame draftados pelo time/],
+    ];
+    for (const [tab, text] of expectations) {
+      await tabs.getByRole('tab', { name: tab }).click();
+      await expect(page.getByText(text).first()).toBeVisible();
+      const res = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+      const serious = res.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+      expect(serious.map((v) => `${tab} ${v.id}: ${v.nodes.slice(0, 3).map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
+    }
+  });
+});
+
 test.describe('fluxos de UX', () => {
   test('busca global por teclado leva ao jogador', async ({ page, isMobile }) => {
     test.skip(isMobile, 'atalho de teclado é para desktop');

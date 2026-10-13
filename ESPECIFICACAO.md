@@ -116,11 +116,15 @@ Observação: a classificação usa critério de desempate **simplificado** (inf
 ### 4.3 Times (`/teams`) e Perfil do time (`/teams/:abbr`)
 - Lista: 32 franquias ativas por conferência/divisão, com logo, cores e campanha da temporada selecionada.
 - Perfil — abas:
-  - **Visão geral:** campanha, cores (primária/secundária), gráfico “Vitórias por temporada”, Super Bowls, rivais, times semelhantes (similaridade).
-  - **Temporada a temporada:** campanha, PF, PA, DIFF, playoffs, resultado, técnico, QB com mais jogos.
-  - **Calendário** da temporada selecionada.
-  - **Destaques do elenco.**
-  - **História** da franquia (inclui nomes/cidades anteriores, ex.: OAK → LV).
+  - **Visão geral:** últimos 5 resultados, próximo jogo, tabela da divisão (time destacado), gráfico de pontos marcados/sofridos por jogo, “Vitórias por temporada”, Super Bowls, rivais.
+  - **Jogos** da temporada selecionada.
+  - **Elenco:** destaques da temporada.
+  - **Recordes:** líderes da franquia na temporada regular (carreira no time ou uma temporada), 10 estatísticas, top 5.
+  - **História:** ficha (nomes/cidades, ex.: OAK → LV; estádios com nomes de patrocínio), momentos marcantes (melhor/pior temporada, maiores sequências, maiores vitórias e derrotas), técnicos (campanha jogo a jogo, inclusive interinos), QBs titulares, Super Bowls e temporada a temporada.
+  - **Confrontos:** desempenho por situação (casa, fora, divisão, até 8 pontos, prorrogação, coberto/ao ar livre, playoffs) e retrospecto contra cada adversário com link para o histórico.
+  - **Draft:** escolhas desde 1980, Hall of Fame draftados, melhores escolhas por AV e a classe mais recente (códigos antigos, ex.: Oilers → TEN, mapeados para a franquia atual).
+  - **Times semelhantes** (similaridade).
+  - Dados das abas Recordes/História/Confrontos/Draft: `data/teams/{CODE}.json`.
 
 ### 4.4 Jogadores (`/players`) e Perfil (`/players/:id`)
 - Busca sem acento/maiúsculas, filtro por posição (QB, RB, WR, TE, OL, DL, LB, DB, K, P), colunas primeira/última temporada e último time; filtros na URL.
@@ -263,6 +267,7 @@ Verificações de qualidade atuais (18): 32 franquias ativas; IDs de jogos únic
 | `trends.json` | Médias da liga por temporada (pontos, mandante, margem, prorrogação, passe/corrida, sacks, turnovers, FG%, XP%) |
 | `superbowls.json` | Número, romano, temporada, data, estádio, cidade, campeão/vice, placar, prorrogação, MVP, técnicos, QBs, `gameId`, fonte |
 | `records-curated.json` / `records-computed.json` | Recordes oficiais / top 10 calculados (1999+) |
+| `teams/{CODE}.json` | Perfil da franquia: identidades, estádios, técnicos, QBs, splits, retrospecto, momentos, líderes, draft |
 | `draft.json` | Temporada, rodada, pick, time, jogador, posição, universidade, idade, AV, Pro Bowls, All-Pro, HOF, jogos |
 | `stadiums.json` | Estádio, times, teto, gramado, jogos, primeiro/último, Super Bowls |
 | `models/qb-model.json` | Componentes brutos do ranking de QBs |

@@ -28,6 +28,8 @@ import {
   buildQbModel, buildRecords, buildSimilarity, buildStadiums, buildSuperBowls, buildTeamSeasons, buildTrends, type CuratedSb,
 } from './analytics';
 import { runQuality } from './quality';
+import { buildTeamProfile } from './teamProfiles';
+import { ACTIVE_TEAMS } from '../../src/lib/teams';
 
 export interface PipelineOptions {
   mode: 'full' | 'partial';
@@ -166,6 +168,8 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineResult
   await writeJson('team-seasons.json', pack(teamSeasons, [...TEAM_SEASON_COLS]));
   await writeJson('trends.json', trends);
   await writeJson('draft.json', pack(draft, [...DRAFT_COLS]));
+  // Perfil de cada franquia (página do time): um arquivo pequeno por time.
+  for (const code of ACTIVE_TEAMS) await writeJson(`teams/${code}.json`, buildTeamProfile(code, games, teamSeasons, lines, draft));
   await writeJson('superbowls.json', superBowls);
   await writeJson('records-curated.json', { source: recCurated.source, asOf: recCurated.asOf, records: curatedRecords });
   await writeJson('records-computed.json', records);

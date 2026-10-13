@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { isPacked, unpack } from '../../src/lib/pack';
-import type { Manifest, QbModelEntry, SuperBowl, Team, LeagueTrend, QualityCheck } from '../../src/lib/types';
+import type { Manifest, QbModelEntry, SuperBowl, Team, LeagueTrend, QualityCheck, TeamProfile } from '../../src/lib/types';
 
 const DATA = path.resolve(__dirname, '../../data');
 const has = fs.existsSync(path.join(DATA, 'manifest.json'));
@@ -80,5 +80,16 @@ describe.skipIf(!has)('dados publicados', () => {
       expect(fs.existsSync(path.join(DATA, `games/${s}.json`)), String(s)).toBe(true);
       expect(fs.existsSync(path.join(DATA, `stats/players-${s}.json`)), String(s)).toBe(true);
     }
+  });
+  it('perfis de franquia batem com fatos conhecidos', () => {
+    for (const t of read<Team[]>('teams.json').filter((x) => x.active)) {
+      expect(fs.existsSync(path.join(DATA, `teams/${t.abbr}.json`)), t.abbr).toBe(true);
+    }
+    const buf = read<TeamProfile>('teams/BUF.json');
+    expect(buf.draft.hof.map((p) => p.name)).toEqual(expect.arrayContaining(['Jim Kelly', 'Bruce Smith', 'Andre Reed', 'Thurman Thomas']));
+    expect(buf.coaches.find((c) => c.name === 'Rex Ryan')).toMatchObject({ from: 2015, to: 2016 });
+    const lv = read<TeamProfile>('teams/LV.json');
+    expect(lv.identities.map((i) => i.abbr)).toEqual(expect.arrayContaining(['OAK', 'LV']));
+    expect(new Set(lv.stadiums.map((st) => st.name)).size).toBe(lv.stadiums.length);
   });
 });

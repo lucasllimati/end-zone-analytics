@@ -395,3 +395,57 @@ export interface StandingRow {
   last5: string;
   gamesPlayed: number;
 }
+
+/** Vitórias, derrotas e empates. */
+export type WLT = [number, number, number];
+
+export interface TeamGameRef {
+  id: string;
+  season: number;
+  date: string;
+  type: string;
+  opp: string;
+  home: boolean;
+  pf: number;
+  pa: number;
+}
+
+export interface TeamDraftRef {
+  season: number;
+  round: number;
+  pick: number;
+  name: string;
+  id: string | null;
+  pos: string;
+  college: string | null;
+  drAv: number | null;
+  proBowls: number;
+  allPro: number;
+  hof: boolean;
+}
+
+/** Perfil completo de uma franquia (data/teams/{CODE}.json), calculado no pipeline a partir dos dados publicados. */
+export interface TeamProfile {
+  team: string;
+  coverage: { first: number; last: number };
+  identities: { abbr: string; from: number; to: number }[];
+  /** Nome mais recente; `names` = outros nomes usados (patrocínio). */
+  stadiums: { name: string; names: string[]; from: number; to: number; games: number }[];
+  coaches: { name: string; from: number; to: number; seasons: number; record: WLT; playoff: [number, number] }[];
+  qbs: { name: string; from: number; to: number; starts: number; record: WLT }[];
+  splits: { label: string; record: WLT; note?: string }[];
+  h2h: { opp: string; record: WLT; pf: number; pa: number; games: number; last: string }[];
+  extremes: {
+    best: { season: number; record: WLT } | null;
+    worst: { season: number; record: WLT } | null;
+    biggestWins: TeamGameRef[];
+    worstLosses: TeamGameRef[];
+    winStreak: { length: number; from: string; to: string } | null;
+    lossStreak: { length: number; from: string; to: string } | null;
+  };
+  leaders: {
+    career: { stat: string; entries: { id: string; name: string; value: number; from: number; to: number }[] }[];
+    season: { stat: string; entries: { id: string; name: string; value: number; season: number }[] }[];
+  };
+  draft: { picks: number; firstRound: number; proBowlers: number; hof: TeamDraftRef[]; best: TeamDraftRef[]; recent: TeamDraftRef[] };
+}

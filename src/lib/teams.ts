@@ -76,3 +76,27 @@ export const GAME_TYPE_LABEL: Record<string, string> = {
 export function teamSlug(abbr: string): string {
   return abbr.toLowerCase();
 }
+
+/**
+ * Franquia atual de uma escolha de draft. O draft (Pro Football Reference via nflverse) usa códigos próprios,
+ * e alguns mudam de franquia conforme a época: STL (Cardinals até 1987, Rams desde 1995), HOU (Oilers até 1996,
+ * Texans desde 2002) e BAL (Colts até 1983, Ravens desde 1996).
+ */
+export function draftFranchise(code: string, season: number): string | null {
+  switch (code) {
+    case 'GNB': return 'GB';
+    case 'KAN': return 'KC';
+    case 'NOR': return 'NO';
+    case 'NWE': return 'NE';
+    case 'SFO': return 'SF';
+    case 'TAM': return 'TB';
+    case 'SDG': return 'LAC';
+    case 'OAK': case 'RAI': case 'LVR': return 'LV';
+    case 'PHO': return 'ARI';
+    case 'RAM': case 'LAR': return 'LA';
+    case 'STL': return season <= 1987 ? 'ARI' : 'LA';
+    case 'HOU': return season <= 1996 ? 'TEN' : 'HOU';
+    case 'BAL': return season <= 1983 ? 'IND' : 'BAL';
+    default: return (ACTIVE_TEAMS as readonly string[]).includes(code) ? code : null;
+  }
+}

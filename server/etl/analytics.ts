@@ -93,7 +93,8 @@ export function buildTeamSeasons(games: Game[], teamLines: TeamSeasonLine[]): Te
       row.giveaways = s.int + s.fumLost;
       row.penaltyYds = s.penaltyYds;
     }
-    row.coach = row.coaches.at(-1) ?? null;
+    // Técnico da temporada = quem dirigiu mais jogos (um interino no último jogo não leva a temporada inteira).
+    row.coach = mode(row.coaches);
     row.qb = mode(row.qbs);
     const { coaches: _c, qbs: _q, ...clean } = row;
     void _c;
