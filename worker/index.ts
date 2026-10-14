@@ -8,6 +8,31 @@ import { gameDetail, scoreboard } from '../server/services/espn';
 interface Env {
   ASSETS: { fetch(request: Request): Promise<Response> };
 }
+interface Ctx {
+  waitUntil(p: Promise<unknown>): void;
+}
+
+/** Cache da borda da Cloudflare (Cache API). Ausente fora do runtime de Workers (ex.: testes). */
+const edgeCache = (): Cache | null => (globalThis as unknown as { caches?: { default?: Cache } }).caches?.default ?? null;
+
+/**
+ * Responde do cache da borda quando possível: uma rajada de visitantes (ou um abuso) vira uma única
+ * chamada à ESPN por janela de cache, em vez de uma por requisição. A chave ignora a query string.
+ */
+async function cached(request: Request, ctx: Ctx | undefined, produce: () => Promise<Response>): Promise<Response> {
+  const cache = edgeCache();
+  const url = new URL(request.url);
+  const key = new Request(`${url.origin}${url.pathname}`, { method: 'GET' });
+  const hit = cache ? await cache.match(key) : undefined;
+  if (hit) return hit;
+  const res = await produce();
+  if (cache && res.status === 200) {
+    const put = cache.put(key, res.clone());
+    if (ctx) ctx.waitUntil(put);
+    else await put;
+  }
+  return res;
+}
 
 function json(body: unknown, maxAgeSeconds: number, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -22,26 +47,30 @@ function json(body: unknown, maxAgeSeconds: number, status = 200): Response {
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx?: Ctx): Promise<Response> {
     const { pathname } = new URL(request.url);
     if (request.method !== 'GET' && request.method !== 'HEAD') return json({ error: 'method_not_allowed' }, 0, 405);
 
     if (pathname === '/api/live/scoreboard') {
-      try {
-        return json(await scoreboard(), 30);
-      } catch {
-        return json({ error: 'upstream_unavailable', message: 'Placar ao vivo indisponível no momento.' }, 0, 502);
-      }
+      return cached(request, ctx, async () => {
+        try {
+          return json(await scoreboard(), 30);
+        } catch {
+          return json({ error: 'upstream_unavailable', message: 'Placar ao vivo indisponível no momento.' }, 0, 502);
+        }
+      });
     }
 
     const game = pathname.match(/^\/api\/live\/game\/([^/]+)$/);
     if (game) {
       if (!/^\d{6,12}$/.test(game[1])) return json({ error: 'bad_request' }, 0, 400);
-      try {
-        return json(await gameDetail(game[1]), 60);
-      } catch {
-        return json({ error: 'upstream_unavailable', message: 'Detalhes do jogo indisponíveis no momento.' }, 0, 502);
-      }
+      return cached(request, ctx, async () => {
+        try {
+          return json(await gameDetail(game[1]), 60);
+        } catch {
+          return json({ error: 'upstream_unavailable', message: 'Detalhes do jogo indisponíveis no momento.' }, 0, 502);
+        }
+      });
     }
 
     // Demais rotas /api/* (API REST completa e /admin) só existem na versão com servidor.

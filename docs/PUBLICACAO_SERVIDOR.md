@@ -82,14 +82,14 @@ No Cloudflare não existe a página `/admin`, porque ela depende de um servidor 
 | Forçar atualização agora | **Actions → Atualizar dados e publicar → Run workflow → `partial`** |
 | Recarregar tudo do zero | **Run workflow → `full`** |
 | Publicar uma mudança de código | `git push` na `main` |
-| Voltar à versão anterior do site (rollback) | Cloudflare → **Workers & Pages → end-zone-analytics → Deployments** → versão anterior → **Rollback**. Ou, no terminal: `npx wrangler@4 rollback` |
-| Ver o placar ao vivo em tempo real (logs) | Cloudflare → Worker → **Observability**. Ou, no terminal: `npx wrangler@4 login` e depois `npx wrangler@4 tail` |
+| Voltar à versão anterior do site (rollback) | Cloudflare → **Workers & Pages → end-zone-analytics → Deployments** → versão anterior → **Rollback**. Ou, no terminal: `npx wrangler@4.144.0 rollback` |
+| Ver o placar ao vivo em tempo real (logs) | Cloudflare → Worker → **Observability**. Ou, no terminal: `npx wrangler@4.144.0 login` e depois `npx wrangler@4.144.0 tail` |
 | Pausar as atualizações automáticas | **Actions → Atualizar dados e publicar → ⋯ → Disable workflow** (o site continua no ar) |
 | Mudar a frequência | Edite `cron` em `.github/workflows/publish.yml` (horário UTC). Exemplo para dias de jogo: `- cron: '47 * * * 0,1,2,4,5'` |
 | Trocar o token da Cloudflare | Cloudflare → **My Profile → API Tokens → ⋯ → Roll** → atualize `CLOUDFLARE_API_TOKEN` no GitHub |
 | Domínio próprio | Worker → **Settings → Domains & Routes → Add → Custom domain**; atualize a variável `SITE_URL` |
 | Ver uso e limites | Cloudflare → Worker → **Metrics**; GitHub → *Settings → Billing → Usage* (minutos do Actions) |
-| Testar localmente a versão publicada | `npm run build:static` e `npx wrangler@4 dev --port 8788` |
+| Testar localmente a versão publicada | `npm run build:static` e `npx wrangler@4.144.0 dev --port 8788` |
 
 ---
 

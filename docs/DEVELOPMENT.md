@@ -19,7 +19,7 @@ Para ver **exatamente a versão publicada** (site estático + Worker):
 
 ```bash
 npm run build:static
-npx wrangler@4 dev --port 8788    # http://localhost:8788
+npx wrangler@4.144.0 dev --port 8788    # http://localhost:8788
 E2E_STATIC=1 E2E_BASE_URL=http://localhost:8788 npm run test:e2e
 ```
 

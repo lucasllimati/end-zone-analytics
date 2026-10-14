@@ -31,6 +31,38 @@ export function parseCookies(header: string | undefined): Record<string, string>
   return out;
 }
 
+/**
+ * Trava global de login: após `max` falhas dentro de `windowMs` (de qualquer IP), recusa novas tentativas
+ * por `lockMs`. Complementa o limite por IP contra ataques distribuídos.
+ */
+export class LoginThrottle {
+  private failures: number[] = [];
+  private lockedUntil = 0;
+  constructor(private max = 20, private windowMs = 15 * 60_000, private lockMs = 15 * 60_000, private now = () => Date.now()) {}
+
+  /** Milissegundos restantes de bloqueio (0 = liberado). */
+  blockedFor() {
+    return Math.max(0, this.lockedUntil - this.now());
+  }
+
+  /** Registra uma falha; retorna true se ela disparou o bloqueio. */
+  fail() {
+    const t = this.now();
+    this.failures = this.failures.filter((f) => t - f < this.windowMs);
+    this.failures.push(t);
+    if (this.failures.length >= this.max) {
+      this.lockedUntil = t + this.lockMs;
+      this.failures = [];
+      return true;
+    }
+    return false;
+  }
+
+  reset() {
+    this.failures = [];
+  }
+}
+
 export class AdminAuth {
   private sessions = new Map<string, number>();
   constructor(private token: string, private allowLocal: boolean, private secureCookie: boolean) {}

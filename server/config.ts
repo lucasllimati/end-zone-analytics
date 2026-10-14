@@ -15,6 +15,12 @@ export const config = {
   port: Number(process.env.API_PORT ?? 8787),
   host: process.env.HOST ?? '127.0.0.1',
   adminToken: process.env.ADMIN_TOKEN ?? '',
+  /**
+   * Quantos proxies à frente da API são confiáveis para ler o IP real em X-Forwarded-For.
+   * 0 (padrão) = ignora o cabeçalho: exposta diretamente, a API não pode confiar nele (qualquer cliente
+   * forjaria o IP e burlaria o limite de tentativas de login). Atrás do Caddy do docker-compose: 1.
+   */
+  trustProxyHops: Math.max(0, Number(process.env.TRUST_PROXY ?? 0) || 0),
   githubToken: process.env.GITHUB_TOKEN ?? '',
   firstSeason: Number(process.env.FIRST_SEASON ?? 1999),
   isProd: process.env.NODE_ENV === 'production',

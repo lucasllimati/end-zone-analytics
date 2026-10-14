@@ -51,7 +51,7 @@ npm run test:e2e   # navegação, UX e acessibilidade (Playwright + axe), deskto
 |---|---|
 | **Configurar a publicação (Cloudflare + GitHub Actions)** | [docs/PUBLICACAO.md](docs/PUBLICACAO.md) |
 | **Operar o servidor no Cloudflare** (jobs, logs, alertas, rollback, limites) | [docs/PUBLICACAO_SERVIDOR.md](docs/PUBLICACAO_SERVIDOR.md) |
-| Testar a versão publicada localmente | `npm run build:static && npx wrangler@4 dev --port 8788` |
+| Testar a versão publicada localmente | `npm run build:static && npx wrangler@4.144.0 dev --port 8788` |
 | API completa + `/admin` com Node (local ou hospedagem própria) | `npm run build && npm start` (em <http://localhost:8787>) · [DEPLOYMENT.md](docs/DEPLOYMENT.md) |
 
 ## Documentação

@@ -15,7 +15,7 @@ import { DataStore } from './services/dataStore';
 import { TtlCache } from './services/ttlCache';
 import { gameDetail, scoreboard } from './services/espn';
 import { currentJob, getJob, listJobs, startSync, type Runner } from './services/jobs';
-import { AdminAuth } from './services/auth';
+import { AdminAuth, LoginThrottle } from './services/auth';
 import { OpsLog, recommendedAction, type Notifier } from './services/ops';
 import { Scheduler, type ScheduleConfig } from './services/scheduler';
 import { fetchJson } from './etl/fetcher';
@@ -37,6 +37,8 @@ export interface AppOptions {
   opsDir?: string;
   /** Libera o admin sem token para requisições de localhost (padrão: somente fora de produção). */
   allowLocalAdmin?: boolean;
+  /** Proxies confiáveis à frente da API (padrão: TRUST_PROXY, 0 = nenhum). */
+  trustProxyHops?: number;
   /** Agendamento das cargas; padrão vem das variáveis SYNC_* (desligado se não configurado). false desliga. */
   schedule?: ScheduleConfig | false;
   /** Webhook de alertas; padrão vem de ALERT_WEBHOOK_URL. */
@@ -44,16 +46,25 @@ export interface AppOptions {
 }
 
 const seasonQ = z.coerce.number().int().min(1920).max(2100);
+/** Tamanho mínimo do ADMIN_TOKEN em produção (≈ 144 bits em base64). */
+export const MIN_TOKEN_LENGTH = 24;
 
 export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> {
+  const proxyHops = opts.trustProxyHops ?? config.trustProxyHops;
   const app = Fastify({
     logger: opts.logger ?? true,
-    trustProxy: true,
+    // Só confia em X-Forwarded-For quando há proxy configurado (senão o IP do limite de login seria forjável).
+    trustProxy: proxyHops > 0 ? (_addr: string, hop: number) => hop < proxyHops : false,
     bodyLimit: 32 * 1024,
   });
   const store = new DataStore(opts.dataDir ?? DATA_DIR);
   const checkCache = new TtlCache<UpdateCheckResult>();
-  const auth = new AdminAuth(opts.adminToken ?? config.adminToken, opts.allowLocalAdmin ?? !config.isProd, config.isProd);
+  const adminToken = opts.adminToken ?? config.adminToken;
+  // Em produção, token curto = adivinhável: o login fica desligado até ser trocado por um forte.
+  const weakToken = config.isProd && adminToken.length > 0 && adminToken.length < MIN_TOKEN_LENGTH;
+  const auth = new AdminAuth(weakToken ? '' : adminToken, opts.allowLocalAdmin ?? !config.isProd, config.isProd);
+  if (weakToken) app.log.error(`ADMIN_TOKEN tem menos de ${MIN_TOKEN_LENGTH} caracteres: login administrativo desativado. Gere um com: openssl rand -base64 32`);
+  const loginGuard = new LoginThrottle();
   const ops = new OpsLog(opts.opsDir ?? OPS_DIR, opts.notifier ?? { url: config.alertWebhook, format: config.alertFormat, minSeverity: config.alertMinSeverity });
   const afterSync = () => {
     store.invalidate();
@@ -252,11 +263,21 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
   app.post('/api/admin/login', { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (req, reply) => {
     const body = z.object({ token: z.string().min(1).max(512) }).safeParse(req.body ?? {});
     if (!body.success) return reply.code(400).send({ error: 'bad_request' });
-    if (!auth.tokenConfigured) return reply.code(503).send({ error: 'not_configured', message: 'Defina ADMIN_TOKEN no servidor para habilitar o login.' });
+    if (!auth.tokenConfigured) return reply.code(503).send({ error: 'not_configured', message: 'Defina ADMIN_TOKEN no servidor (24+ caracteres) para habilitar o login.' });
+    // Trava global (todos os IPs somados): segura força bruta distribuída, que o limite por IP não pega.
+    const wait = loginGuard.blockedFor();
+    if (wait > 0) {
+      reply.header('Retry-After', String(Math.ceil(wait / 1000)));
+      return reply.code(429).send({ error: 'too_many_attempts', message: 'Muitas tentativas recusadas. Tente novamente mais tarde.' });
+    }
     if (!auth.login(body.data.token, reply)) {
-      void ops.event({ severity: 'warning', component: 'auth', message: 'Tentativa de login administrativo recusada', detail: `IP ${ip(req)}` }).catch(() => {});
+      const locked = loginGuard.fail();
+      void ops
+        .event({ severity: locked ? 'error' : 'warning', component: 'auth', message: locked ? 'Login administrativo bloqueado por excesso de tentativas' : 'Tentativa de login administrativo recusada', detail: `IP ${ip(req)}` })
+        .catch(() => {});
       return reply.code(401).send({ error: 'unauthorized', message: 'Token inválido.' });
     }
+    loginGuard.reset();
     void ops.event({ severity: 'info', component: 'auth', message: 'Login administrativo', detail: `IP ${ip(req)}` }).catch(() => {});
     return { authenticated: true };
   });

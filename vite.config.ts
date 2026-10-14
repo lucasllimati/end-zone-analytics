@@ -36,7 +36,8 @@ export default defineConfig({
   },
   build: {
     target: 'es2022',
-    sourcemap: true,
+    // Source maps só fora do build público: publicados, entregariam o código-fonte inteiro (o repositório é privado).
+    sourcemap: process.env.VITE_PUBLIC_STATIC !== '1',
     rollupOptions: {
       output: {
         manualChunks: {

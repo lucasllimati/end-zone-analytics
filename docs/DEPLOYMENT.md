@@ -7,8 +7,8 @@
 
 ```bash
 npm run data:full && npm run build:static   # dist/ com dist/data, sem /admin (VITE_PUBLIC_STATIC=1)
-npx wrangler@4 dev --port 8788              # testa localmente exatamente o que vai ao ar
-npx wrangler@4 deploy                       # publica (normalmente feito pelo GitHub Actions)
+npx wrangler@4.144.0 dev --port 8788              # testa localmente exatamente o que vai ao ar
+npx wrangler@4.144.0 deploy                       # publica (normalmente feito pelo GitHub Actions)
 ```
 
 `wrangler.jsonc` serve `dist/` como *static assets* (com fallback de SPA e `public/_headers`) e executa `worker/index.ts` só em `/api/*` (placar ao vivo). O GitHub Actions (`publish.yml`) faz carga, portão de qualidade, build e deploy a cada 6 h e a cada push. Passo a passo: [PUBLICACAO.md](PUBLICACAO.md).
@@ -25,7 +25,7 @@ Necessária só para ter a API REST completa e o `/admin` online (servidor Node.
 npm ci
 npm run data:full
 npm run build
-HOST=0.0.0.0 API_PORT=8787 ADMIN_TOKEN=um-token-longo npm start
+HOST=0.0.0.0 API_PORT=8787 ADMIN_TOKEN="$(openssl rand -base64 32)" npm start   # token com 24+ caracteres
 ```
 
 O processo serve o site (`dist/`), os dados (`/data`) e a API. Coloque atrás de um proxy reverso (nginx/Caddy) com HTTPS.

@@ -8,6 +8,8 @@ services:
     env_file: .env
     environment:
       NODE_ENV: production
+      # Exatamente um proxy (Caddy) à frente: o IP real vem de X-Forwarded-For.
+      TRUST_PROXY: '1'
       HOST: 0.0.0.0
       API_PORT: 8787
     # Sem "ports": a API só é acessível pelo Caddy, na rede interna do Docker.

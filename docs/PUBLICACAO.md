@@ -67,7 +67,7 @@ O Worker e o endereço `*.workers.dev` continuam existindo. Só deixa de haver u
 ```powershell
 npm run qa
 npm run build:static
-npx wrangler@4 dev --port 8788
+npx wrangler@4.144.0 dev --port 8788
 ```
 
 Abra `http://localhost:8788`: deve aparecer o site completo, com dados e placar. Esse é exatamente o que vai para a Cloudflare. Feche com `Ctrl+C`.
