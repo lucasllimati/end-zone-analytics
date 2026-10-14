@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { metric } from '../content/metrics';
-import { useApp } from '../context/AppContext';
+import { useApp, useModeRelevant } from '../context/AppContext';
 
 interface Props {
   /** Chave do dicionário de métricas (src/content/metrics.ts). */
@@ -24,6 +24,8 @@ export function InfoTip(props: Props) {
   const expert = props.expert ?? def?.expert ?? '';
   const formula = props.formula ?? def?.formula;
   const { mode } = useApp();
+  // Sem seletor na página (nada muda com o modo), não faz sentido sugerir a troca.
+  const modeRelevant = useModeRelevant();
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const btn = useRef<HTMLButtonElement>(null);
@@ -114,7 +116,7 @@ export function InfoTip(props: Props) {
               </div>
             )}
             {formula && <div className="formula">{formula}</div>}
-            <span className="mode-tag">Modo {mode === 'expert' ? 'Expert' : 'Iniciante'} · troque no topo da página</span>
+            {modeRelevant && <span className="mode-tag">Modo {mode === 'expert' ? 'Expert' : 'Iniciante'} · troque no topo da página</span>}
           </div>,
           document.body,
         )}

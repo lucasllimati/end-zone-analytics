@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { NAV } from '../content/nav';
-import { useApp } from '../context/AppContext';
+import { useApp, useModeRelevant } from '../context/AppContext';
 import { useManifest } from '../data/hooks';
 import { BrandLogo, Chevron, CloseIcon, MenuIcon, MoonIcon, SearchIcon, SunIcon } from './Icons';
 import { SearchPalette } from './SearchPalette';
@@ -132,6 +132,8 @@ function SeasonSelect({ variant }: { variant: 'header' | 'drawer' }) {
 
 function ModeToggle() {
   const { mode, setMode } = useApp();
+  // Só aparece nas páginas em que trocar o modo muda algo visível.
+  if (!useModeRelevant()) return null;
   return (
     <div className="mode-toggle" role="group" aria-label="Nível das explicações">
       <button type="button" aria-pressed={mode === 'beginner'} onClick={() => setMode('beginner')} title="Explicações simples, sem jargão">

@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from 'react';
 import { InfoTip } from './InfoTip';
-import { useApp } from '../context/AppContext';
+import { useApp, useModeSensitive } from '../context/AppContext';
 
 /** Título, descrição e metadados de SEO/OpenGraph por página. */
 export function Seo({ title, description }: { title: string; description?: string }) {
@@ -59,6 +59,7 @@ export function StatTile({ label, value, note, metric }: { label: string; value:
 /** Caixa que só aparece no modo indicado (ou com estilo diferente em cada modo). */
 export function ModeNote({ beginner, expert }: { beginner?: ReactNode; expert?: ReactNode }) {
   const { mode } = useApp();
+  useModeSensitive(Boolean(beginner || expert));
   if (mode === 'beginner' && beginner)
     return (
       <div className="callout info">

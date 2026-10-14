@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { HorizontalField } from './Field';
 import { adviseDown, type DownInput } from '../lib/downs';
-import { useApp } from '../context/AppContext';
+import { useApp, useModeSensitive } from '../context/AppContext';
 
 const PRESETS: (DownInput & { label: string })[] = [
   { label: '1st & 10', down: 1, distance: 10, yardsToGoal: 75 },
@@ -15,6 +15,7 @@ const PRESETS: (DownInput & { label: string })[] = [
 /** Simulador interativo: o usuário define down, distância e posição; o sistema explica objetivo, opções e risco. */
 export function DownSimulator() {
   const { mode } = useApp();
+  useModeSensitive();
   const [s, setS] = useState<DownInput>({ down: 3, distance: 7, yardsToGoal: 70 });
   const a = adviseDown(s);
   const fieldLabel = s.yardsToGoal > 50 ? `Própria ${100 - s.yardsToGoal}` : s.yardsToGoal === 50 ? 'Meio de campo' : `Adversária ${s.yardsToGoal}`;

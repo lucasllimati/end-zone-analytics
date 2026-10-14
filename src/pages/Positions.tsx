@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { ModeNote, PageHeader, Seo } from '../components/Bits';
 import { DiagramField } from '../components/Field';
 import { FORMATIONS, POSITIONS, type Unit } from '../content/positions';
-import { useApp } from '../context/AppContext';
+import { useApp, useModeSensitive } from '../context/AppContext';
 
 const UNITS: { id: Unit; label: string }[] = [
   { id: 'offense', label: 'Ataque' },
@@ -18,6 +18,7 @@ export default function Positions() {
   const [unit, setUnit] = useState<Unit>(initialUnit);
   const [sel, setSel] = useState<string>(initialPos ?? 'QB');
   const { mode } = useApp();
+  useModeSensitive();
   const f = FORMATIONS[unit];
   const pos = POSITIONS.find((p) => p.id === sel) ?? POSITIONS[0];
   const choose = (id: string) => {

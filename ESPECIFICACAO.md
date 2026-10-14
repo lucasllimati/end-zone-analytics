@@ -44,7 +44,7 @@ flowchart LR
 | Cabeçalho | Logotipo (bola oval), Início + 6 menus (Temporada, Times, Jogadores, Estatísticas, História, Aprenda). Fontes e qualidade ficam no rodapé e no menu móvel |
 | Busca global | `Ctrl K` (ou `⌘ K` no macOS) abre paleta de busca por páginas, times e jogadores |
 | Seletor de temporada | Mostra “2026 · atual”; muda a temporada usada em todas as páginas |
-| Modo Iniciante / Expert | Iniciante: explicações simples, sem jargão. Expert: colunas e métricas avançadas (EPA, CPOE…) e notas técnicas. Persistido no navegador |
+| Modo Iniciante / Expert | Iniciante: explicações simples, sem jargão. Expert: colunas e métricas avançadas (EPA, CPOE…) e notas técnicas. Persistido no navegador. **O seletor só aparece nas páginas em que a troca muda algo visível** (caixas de explicação, colunas exclusivas do Expert, textos alternativos); nas demais fica oculto e o ⓘ deixa de sugerir a troca |
 | Tema claro/escuro | Botão sol/lua; persistido no navegador; logos com versão para fundo escuro |
 | Aviso de atualização | Só para administradores autenticados: faixa quando há dados novos, com atualização em um clique |
 | Tooltips ⓘ | Explicação de métricas e colunas, adaptada ao modo |

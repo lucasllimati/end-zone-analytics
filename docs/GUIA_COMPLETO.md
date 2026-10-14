@@ -27,7 +27,7 @@ Uma enciclopédia interativa, banco de dados histórico e laboratório de analyt
 - **Iniciantes** — explicações simples em cada número (botão ⓘ), página “A NFL em 10 minutos”, simulador de down & distance, posições num campo interativo e playbook animado.
 - **Especialistas** — EPA, CPOE, percentis, ajuste de era, power ranking transparente, explorador de dados com exportação.
 
-O seletor **Iniciante / Expert** no topo muda o texto dos tooltips, das notas e das colunas avançadas em todo o site. O seletor de **temporada** no cabeçalho faz todas as páginas respeitarem o ano escolhido (1999–hoje).
+O seletor **Iniciante / Expert** no topo muda as notas explicativas, as colunas avançadas e os textos alternativos; ele só aparece nas páginas em que a troca muda algo visível. O seletor de **temporada** no cabeçalho faz todas as páginas respeitarem o ano escolhido (1999–hoje).
 
 ## 2. Arquitetura macro
 

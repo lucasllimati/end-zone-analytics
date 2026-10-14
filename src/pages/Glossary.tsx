@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { PageHeader, Seo } from '../components/Bits';
 import { GLOSSARY, glossaryById } from '../content/glossary';
 import { norm } from '../components/SearchPalette';
-import { useApp } from '../context/AppContext';
+import { useApp, useModeSensitive } from '../context/AppContext';
 
 const CATS = ['Todos', 'Jogo', 'Ataque', 'Defesa', 'Times especiais', 'Regras', 'Analytics'] as const;
 
@@ -11,6 +11,7 @@ export default function Glossary() {
   const [q, setQ] = useState('');
   const [cat, setCat] = useState<(typeof CATS)[number]>('Todos');
   const { mode } = useApp();
+  useModeSensitive();
   const loc = useLocation();
   useEffect(() => {
     if (loc.hash) setTimeout(() => document.getElementById(loc.hash.slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);

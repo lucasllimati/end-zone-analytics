@@ -17,6 +17,13 @@ interface AppState {
 
 const Ctx = createContext<AppState | null>(null);
 
+/**
+ * Quantos componentes da página atual mudam de conteúdo com o modo Iniciante/Expert.
+ * O seletor de modo só aparece quando há pelo menos um (fica separado do AppState para que
+ * montar/desmontar componentes não re-renderize o app inteiro).
+ */
+const ModeUsageCtx = createContext<{ count: number; register: () => () => void }>({ count: 0, register: () => () => {} });
+
 const read = (k: string): string | null => {
   try {
     return localStorage.getItem(k);
@@ -40,6 +47,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState] = useState<Mode>(() => (read('eza-mode') === 'expert' ? 'expert' : 'beginner'));
   const [theme, setTheme] = useState<Theme>(() => (document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'));
   const [searchOpen, setSearchOpen] = useState(false);
+  const [modeUsers, setModeUsers] = useState(0);
+  const register = useCallback(() => {
+    setModeUsers((n) => n + 1);
+    return () => setModeUsers((n) => n - 1);
+  }, []);
+  const usage = useMemo(() => ({ count: modeUsers, register }), [modeUsers, register]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -58,8 +71,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     () => ({ season, setSeason, mode, setMode, theme, toggleTheme, searchOpen, setSearchOpen }),
     [season, setSeason, mode, setMode, theme, toggleTheme, searchOpen],
   );
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={value}>
+      <ModeUsageCtx.Provider value={usage}>{children}</ModeUsageCtx.Provider>
+    </Ctx.Provider>
+  );
 }
+
+/** Marca o componente como dependente do modo enquanto estiver na tela (`active` = de fato muda algo). */
+export function useModeSensitive(active = true) {
+  const { register } = useContext(ModeUsageCtx);
+  useEffect(() => (active ? register() : undefined), [active, register]);
+}
+
+/** true quando a página atual tem algo que muda com o modo (controla a exibição do seletor). */
+export const useModeRelevant = () => useContext(ModeUsageCtx).count > 0;
 
 export function useApp(): AppState {
   const c = useContext(Ctx);

@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { InfoTip } from './InfoTip';
 import { ExportMenu } from './ExportMenu';
 import { metric as metricDef } from '../content/metrics';
+import { useModeSensitive } from '../context/AppContext';
 
 export interface Column<T> {
   key: string;
@@ -37,8 +38,10 @@ interface Props<T> {
  * Tabela de dados: ordenação acessível (aria-sort), ⓘ em cada coluna, exportação CSV/JSON
  * e paginação progressiva ("mostrar mais") para listas longas.
  */
-export function DataTable<T>({ rows, columns, rowKey, caption, initialSort, exportName, pageSize = 50, rank, rowClass, expert = true, bare }: Props<T>) {
-  const cols = columns.filter((c) => expert || !c.expertOnly);
+export function DataTable<T>({ rows, columns, rowKey, caption, initialSort, exportName, pageSize = 50, rank, rowClass, expert, bare }: Props<T>) {
+  // Tabela controlada pelo modo (recebe `expert`) e com colunas só do Expert: troca de modo muda o que aparece.
+  useModeSensitive(expert !== undefined && columns.some((c) => c.expertOnly));
+  const cols = columns.filter((c) => (expert ?? true) || !c.expertOnly);
   const [sort, setSort] = useState(initialSort ?? null);
   const [limit, setLimit] = useState(pageSize);
 

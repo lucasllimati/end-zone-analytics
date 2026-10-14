@@ -19,13 +19,14 @@ import { currentWeek, headToHead } from '../lib/games';
 import { dateBR, num, pct3, relativeTime, signed } from '../lib/format';
 import { passerRating } from '../lib/stats';
 import { franchiseOf } from '../lib/teams';
-import { useApp } from '../context/AppContext';
+import { useApp, useModeSensitive } from '../context/AppContext';
 import type { Game, PlayerSeasonLine, StandingRow } from '../lib/types';
 
 export default function Home() {
   const { season } = useSeason();
   const manifest = useManifest();
   const { mode } = useApp();
+  useModeSensitive();
   const teams = useTeams();
   const live = useLiveScores();
   const games = useAsync(() => (season ? api.seasonGames(season) : Promise.resolve([])), [season]);

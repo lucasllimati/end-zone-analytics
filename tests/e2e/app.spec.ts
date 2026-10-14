@@ -104,6 +104,22 @@ test.describe('dados por jogo e expectativa do mercado', () => {
   });
 });
 
+test.describe('seletor Iniciante/Expert', () => {
+  test('aparece só nas páginas em que o modo muda algo', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'no mobile o seletor fica no menu lateral');
+    const toggle = page.locator('header .mode-toggle');
+    for (const url of ['/teams', '/compare', '/hall-of-fame']) {
+      await page.goto(url);
+      await page.waitForLoadState('networkidle');
+      await expect(toggle, url).toHaveCount(0);
+    }
+    for (const url of ['/glossary', '/players/00-0034857', '/season']) {
+      await page.goto(url);
+      await expect(toggle, url).toBeVisible();
+    }
+  });
+});
+
 test.describe('fluxos de UX', () => {
   test('busca global por teclado leva ao jogador', async ({ page, isMobile }) => {
     test.skip(isMobile, 'atalho de teclado é para desktop');

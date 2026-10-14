@@ -18,7 +18,7 @@ import { currentWeek, playoffBracket } from '../lib/games';
 import { POWER_WEIGHTS, powerRankings, strengthOfSchedule } from '../lib/models';
 import { DIVISION_ORDER, franchiseOf } from '../lib/teams';
 import { dateBR, num, pct3, signed } from '../lib/format';
-import { useApp } from '../context/AppContext';
+import { useApp, useModeSensitive } from '../context/AppContext';
 import type { Game, StandingRow } from '../lib/types';
 import { EfficiencyView, MarketView } from './season/SeasonInsights';
 
@@ -99,6 +99,7 @@ function StandingsView({ rows }: { rows: StandingRow[] }) {
   const [view, setView] = useState<'div' | 'conf' | 'league'>('div');
   const [conf, setConf] = useState<'all' | 'AFC' | 'NFC'>('all');
   const { mode } = useApp();
+  useModeSensitive();
   const cols = standingColumns(true);
   const filtered = conf === 'all' ? rows : rows.filter((r) => r.conf === conf);
   const divs = groupByDivision(filtered);

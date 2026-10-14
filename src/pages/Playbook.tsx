@@ -2,11 +2,12 @@ import { useSearchParams } from 'react-router-dom';
 import { ModeNote, PageHeader, Seo } from '../components/Bits';
 import { PlayAnimator } from '../components/PlayAnimator';
 import { PLAYS, PLAY_CATEGORIES } from '../content/playbook';
-import { useApp } from '../context/AppContext';
+import { useApp, useModeSensitive } from '../context/AppContext';
 
 export default function Playbook() {
   const [params, setParams] = useSearchParams();
   const { mode } = useApp();
+  useModeSensitive();
   const play = PLAYS.find((p) => p.id === params.get('play')) ?? PLAYS[0];
   return (
     <div className="stack">

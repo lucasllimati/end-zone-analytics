@@ -3,10 +3,11 @@ import { useLocation } from 'react-router-dom';
 import { PageHeader, Seo } from '../components/Bits';
 import { DownSimulator } from '../components/DownSimulator';
 import { STRATEGY } from '../content/strategy';
-import { useApp } from '../context/AppContext';
+import { useApp, useModeSensitive } from '../context/AppContext';
 
 export default function Strategy() {
   const { mode } = useApp();
+  useModeSensitive();
   const loc = useLocation();
   useEffect(() => {
     if (loc.hash) setTimeout(() => document.getElementById(loc.hash.slice(1))?.scrollIntoView({ behavior: 'smooth' }), 100);
