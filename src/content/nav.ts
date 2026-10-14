@@ -21,6 +21,8 @@ export const NAV: NavGroup[] = [
       { to: '/season?tab=playoffs', label: 'Playoffs', desc: 'Chave interativa de cada temporada' },
       { to: '/season?tab=leaders', label: 'Líderes', desc: 'Passe, corrida, recepção e defesa' },
       { to: '/season?tab=sos', label: 'Força de tabela', desc: 'Quem teve o caminho mais difícil' },
+      { to: '/season?tab=efficiency', label: 'Eficiência dos times', desc: 'Ataque, defesa e times especiais com ranking' },
+      { to: '/season?tab=market', label: 'Zebras e expectativa', desc: 'Quem superou o previsto pelo mercado' },
     ],
   },
   {
@@ -50,6 +52,7 @@ export const NAV: NavGroup[] = [
       { to: '/season?tab=power', label: 'Power ranking', desc: 'Modelo transparente da temporada' },
       { to: '/explorer', label: 'Explorador de dados', desc: 'Monte rankings, tabelas e gráficos' },
       { to: '/history#evolucao', label: 'Evolução do jogo', desc: 'Pontos, passes e corridas por temporada' },
+      { to: '/referees', label: 'Árbitros', desc: 'Quem apita e o perfil dos jogos' },
     ],
   },
   {

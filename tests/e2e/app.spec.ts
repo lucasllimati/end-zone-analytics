@@ -33,7 +33,7 @@ test.describe('todas as páginas', () => {
 });
 
 test.describe('acessibilidade (axe, WCAG 2.1 AA)', () => {
-  for (const url of ['/', '/season', '/teams/kc', '/players/00-0033873', '/learn', '/rules', '/positions', '/glossary', '/data', '/admin', '/compare', '/games/2025_22_SEA_NE']) {
+  for (const url of ['/', '/season', '/teams/kc', '/players/00-0033873', '/learn', '/rules', '/positions', '/glossary', '/data', '/admin', '/compare', '/games/2025_22_SEA_NE', '/referees', '/season?tab=efficiency', '/season?tab=market', '/stadiums']) {
     test(`sem violações sérias ou críticas: ${url}`, async ({ page }) => {
       await page.goto(url);
       await page.waitForLoadState('networkidle');
@@ -63,6 +63,44 @@ test.describe('página do time', () => {
       const serious = res.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
       expect(serious.map((v) => `${tab} ${v.id}: ${v.nodes.slice(0, 3).map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
     }
+  });
+});
+
+test.describe('dados por jogo e expectativa do mercado', () => {
+  test('Game Center mostra linha de aposta, árbitro e box score', async ({ page }) => {
+    await page.goto('/games/2018_03_BUF_MIN');
+    await expect(page.getByRole('heading', { name: 'Expectativa do mercado' })).toBeVisible();
+    await expect(page.getByText('O azarão venceu')).toBeVisible();
+    await expect(page.getByRole('heading', { name: /^Árbitro:/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Box score' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Josh Allen' }).first()).toBeVisible();
+  });
+
+  test('perfil do jogador tem jogo a jogo e valor de draft', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/players/00-0034857');
+    await expect(page.getByRole('heading', { name: 'Valor de draft' })).toBeVisible();
+    await page.getByRole('tab', { name: 'Jogo a jogo' }).click();
+    await expect(page.getByRole('heading', { name: 'Melhores jogos da carreira' })).toBeVisible();
+    const res = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+    expect(res.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical').map((v) => v.id)).toEqual([]);
+  });
+
+  test('aba Eficiência do time mostra ranking na liga', async ({ page }) => {
+    await page.goto('/teams/buf');
+    await page.getByRole('tab', { name: 'Eficiência' }).click();
+    await expect(page.getByRole('heading', { name: 'Times especiais' })).toBeVisible();
+    await expect(page.locator('.rank-tag').first()).toHaveText(/\d+º/);
+  });
+
+  test('elenco completo e situações do play-by-play', async ({ page }) => {
+    await page.goto('/teams/buf');
+    await page.getByRole('tab', { name: 'Elenco' }).click();
+    await expect(page.getByRole('heading', { name: 'Elenco completo' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Josh Allen' }).first()).toBeVisible();
+    await page.goto('/season?tab=efficiency');
+    await page.getByRole('button', { name: 'Situações' }).click();
+    await expect(page.getByRole('columnheader', { name: /3ª descida/ }).first()).toBeVisible();
   });
 });
 

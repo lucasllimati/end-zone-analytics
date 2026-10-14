@@ -4,7 +4,7 @@
  */
 import { parse } from 'csv-parse/sync';
 import type {
-  DraftPick, Game, GameType, PlayerBio, PlayerSeasonLine, SeasonType, Team, TeamSeasonLine,
+  DraftPick, Game, GameType, PlayerBio, PlayerGameLine, PlayerSeasonLine, RosterEntry, SeasonType, Team, TeamGameLine, TeamSeasonLine,
 } from '../../src/lib/types';
 import { ACTIVE_TEAMS, franchiseOf } from '../../src/lib/teams';
 
@@ -26,6 +26,38 @@ export const str = (v: string | undefined): string | null => {
   return t === '' || t === 'NA' ? null : t;
 };
 const round = (v: number | null, d = 3) => (v === null ? null : Math.round(v * 10 ** d) / 10 ** d);
+
+const FG_BUCKETS = ['0_19', '20_29', '30_39', '40_49', '50_59', '60_'] as const;
+/** FGs por faixa de distância; null quando não houve tentativa (economiza espaço nas linhas de quem não chuta). */
+const fgSplits = (r: Row) => {
+  if (!cnt(r.fg_att)) return { fgMade: null, fgMiss: null };
+  return {
+    fgMade: FG_BUCKETS.map((b) => cnt(r[`fg_made_${b}`])),
+    fgMiss: FG_BUCKETS.map((b) => cnt(r[`fg_missed_${b}`])),
+  };
+};
+/** Colunas comuns a jogadores e times (first downs, jogadas longas, times especiais). */
+const extras = (r: Row) => ({
+  passFd: cnt(r.passing_first_downs),
+  rushFd: cnt(r.rushing_first_downs),
+  pass20: cnt(r.passing_20),
+  pass40: cnt(r.passing_40),
+  rush20: cnt(r.rushing_20),
+  rush40: cnt(r.rushing_40),
+  ...fgSplits(r),
+  gwfgm: cnt(r.gwfg_made),
+  gwfga: cnt(r.gwfg_att),
+  ptIn20: cnt(r.pt_inside_20),
+  ptTb: cnt(r.pt_touchback),
+  ptNet: cnt(r.pt_net_yards),
+  prYds: cnt(r.punt_return_yards),
+  krYds: cnt(r.kickoff_return_yards),
+});
+/** Participação (0–1); 0 na fonte significa "não se aplica". */
+const share = (v: string | undefined) => {
+  const n = num(v);
+  return n === null || n === 0 ? null : round(n, 3);
+};
 
 export function toTeams(rows: Row[]): Team[] {
   const active = new Set<string>(ACTIVE_TEAMS);
@@ -78,6 +110,12 @@ export function toGames(rows: Row[], firstSeason: number): Game[] {
       stadium: str(r.stadium),
       stadiumId: str(r.stadium_id),
       espn: str(r.espn),
+      spread: num(r.spread_line),
+      total: num(r.total_line),
+      homeMl: num(r.home_moneyline),
+      awayMl: num(r.away_moneyline),
+      homeRest: num(r.home_rest),
+      awayRest: num(r.away_rest),
     }));
 }
 
@@ -145,6 +183,84 @@ export function toPlayerLines(rows: Row[], st: SeasonType): PlayerSeasonLine[] {
       fumLost: cnt(r.fumbles_lost_total),
       fpts: round(cnt(r.fantasy_points), 1) ?? 0,
       fptsPpr: round(cnt(r.fantasy_points_ppr), 1) ?? 0,
+      ...extras(r),
+      recFd: cnt(r.receiving_first_downs),
+      rec20: cnt(r.receiving_20),
+      rec40: cnt(r.receiving_40),
+      tgtShare: share(r.target_share),
+      airShare: share(r.air_yards_share),
+      wopr: share(r.wopr),
+      pr: cnt(r.punt_returns),
+      kr: cnt(r.kickoff_returns),
+      stTd: cnt(r.special_teams_tds),
+    }));
+}
+
+/** Linhas por jogo (stats_player_week_{season}.csv): base do jogo a jogo e do box score. */
+export function toPlayerGameLines(rows: Row[]): PlayerGameLine[] {
+  return rows
+    .filter((r) => r.player_id && r.player_id !== '0' && r.game_id && (r.player_display_name || r.player_name))
+    .map((r) => ({
+      id: r.player_id,
+      name: r.player_display_name || r.player_name,
+      pos: r.position || r.position_group || '—',
+      season: Number(r.season),
+      week: Number(r.week),
+      st: (r.season_type === 'POST' ? 'POST' : 'REG') as SeasonType,
+      game: r.game_id,
+      team: r.team,
+      opp: r.opponent_team,
+      cmp: cnt(r.completions),
+      att: cnt(r.attempts),
+      passYds: cnt(r.passing_yards),
+      passTd: cnt(r.passing_tds),
+      int: cnt(r.passing_interceptions),
+      sacked: cnt(r.sacks_suffered),
+      passEpa: round(num(r.passing_epa), 2),
+      carries: cnt(r.carries),
+      rushYds: cnt(r.rushing_yards),
+      rushTd: cnt(r.rushing_tds),
+      rushEpa: round(num(r.rushing_epa), 2),
+      rec: cnt(r.receptions),
+      tgt: cnt(r.targets),
+      recYds: cnt(r.receiving_yards),
+      recTd: cnt(r.receiving_tds),
+      recEpa: round(num(r.receiving_epa), 2),
+      tackles: cnt(r.def_tackles_solo) + cnt(r.def_tackle_assists),
+      sacks: cnt(r.def_sacks),
+      qbHits: cnt(r.def_qb_hits),
+      defInt: cnt(r.def_interceptions),
+      pd: cnt(r.def_pass_defended),
+      ff: cnt(r.def_fumbles_forced),
+      fgm: cnt(r.fg_made),
+      fga: cnt(r.fg_att),
+      fgLong: num(r.fg_long) || null,
+      xpm: cnt(r.pat_made),
+      xpa: cnt(r.pat_att),
+      punts: cnt(r.pt_att),
+      puntYds: cnt(r.pt_yards),
+      prYds: cnt(r.punt_return_yards),
+      krYds: cnt(r.kickoff_return_yards),
+      fumLost: cnt(r.fumbles_lost_total),
+      fptsPpr: round(cnt(r.fantasy_points_ppr), 1) ?? 0,
+    }));
+}
+
+/** Ataque de cada time por jogo (stats_team_week_{season}.csv). */
+export function toTeamGameLines(rows: Row[]): TeamGameLine[] {
+  return rows
+    .filter((r) => r.team && r.opponent_team && r.game_id)
+    .map((r) => ({
+      team: r.team,
+      opp: r.opponent_team,
+      season: Number(r.season),
+      week: Number(r.week),
+      st: (r.season_type === 'POST' ? 'POST' : 'REG') as SeasonType,
+      game: r.game_id,
+      passYds: cnt(r.passing_yards),
+      rushYds: cnt(r.rushing_yards),
+      passEpa: round(num(r.passing_epa), 2),
+      rushEpa: round(num(r.rushing_epa), 2),
     }));
 }
 
@@ -178,6 +294,16 @@ export function toTeamLines(rows: Row[], st: SeasonType): TeamSeasonLine[] {
     punts: cnt(r.pt_att),
     puntYds: cnt(r.pt_yards),
     stTd: cnt(r.special_teams_tds),
+    ...extras(r),
+    tfl: cnt(r.def_tackles_for_loss),
+    qbHits: cnt(r.def_qb_hits),
+    pd: cnt(r.def_pass_defended),
+    fgLong: num(r.fg_long) || null,
+    // Preenchidos no pipeline a partir das linhas por jogo dos adversários.
+    passYdsAllowed: null,
+    rushYdsAllowed: null,
+    passEpaAllowed: null,
+    rushEpaAllowed: null,
   }));
 }
 
@@ -205,6 +331,7 @@ export function toBios(rows: Row[]): Map<string, PlayerBio> {
       jersey: num(r.jersey_number) || null,
       status: str(r.status),
       espnId: str(r.espn_id),
+      yearsExp: num(r.years_of_experience),
     });
   }
   return m;
@@ -225,9 +352,47 @@ export function toDraft(rows: Row[]): DraftPick[] {
     allPro: cnt(r.allpro),
     proBowls: cnt(r.probowls),
     starts: cnt(r.seasons_started),
-    carAv: num(r.car_av),
+    // car_av passou a vir vazio na fonte; w_av (AV de carreira ponderado do PFR) é a medida equivalente.
+    carAv: num(r.car_av) ?? num(r.w_av),
     drAv: num(r.dr_av),
     games: num(r.games),
     hof: r.hof === 'TRUE',
   }));
+}
+
+/** Altura da fonte de elencos: "6-2" (pés-polegadas) ou polegadas. */
+const inches = (v: string | undefined): number | null => {
+  const t = str(v);
+  if (!t) return null;
+  const m = t.match(/^(\d+)-(\d+)$/);
+  return m ? Number(m[1]) * 12 + Number(m[2]) : num(t);
+};
+
+/**
+ * Elenco da temporada (roster_{ano}.csv). A fonte traz uma linha por jogador com o status mais recente;
+ * se houver repetição (troca de time), fica a última linha de cada jogador/time.
+ */
+export function toRoster(rows: Row[]): RosterEntry[] {
+  const m = new Map<string, RosterEntry>();
+  for (const r of rows) {
+    const name = str(r.full_name);
+    if (!name || !r.team) continue;
+    const id = str(r.gsis_id);
+    m.set(`${id ?? name}|${r.team}`, {
+      id,
+      name,
+      team: r.team,
+      pos: r.position || '—',
+      depth: str(r.depth_chart_position),
+      jersey: num(r.jersey_number),
+      status: str(r.status),
+      birth: str(r.birth_date),
+      height: inches(r.height),
+      weight: num(r.weight),
+      college: str(r.college),
+      exp: num(r.years_exp),
+      draftPick: num(r.draft_number),
+    });
+  }
+  return [...m.values()];
 }

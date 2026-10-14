@@ -21,6 +21,7 @@ const Draft = lazy(() => import('./pages/Draft'));
 const HallOfFame = lazy(() => import('./pages/HallOfFame'));
 const History = lazy(() => import('./pages/History'));
 const Stadiums = lazy(() => import('./pages/Stadiums'));
+const Referees = lazy(() => import('./pages/Referees'));
 const Learn = lazy(() => import('./pages/Learn'));
 const Rules = lazy(() => import('./pages/Rules'));
 const Positions = lazy(() => import('./pages/Positions'));
@@ -82,6 +83,7 @@ export function App() {
         <Route path="hall-of-fame" element={page(<HallOfFame />)} />
         <Route path="history" element={page(<History />)} />
         <Route path="stadiums" element={page(<Stadiums />)} />
+        <Route path="referees" element={page(<Referees />)} />
         <Route path="learn" element={page(<Learn />)} />
         <Route path="rules" element={page(<Rules />)} />
         <Route path="positions" element={page(<Positions />)} />

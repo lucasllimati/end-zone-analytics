@@ -12,7 +12,20 @@ import { metric } from '../content/metrics';
 import { num } from '../lib/format';
 import type { LeaderEntryShape } from '../data/shapes';
 
-type Tab = 'official' | 'season' | 'career' | 'post' | 'team' | 'game';
+type Tab = 'official' | 'season' | 'career' | 'post' | 'team' | 'game' | 'st';
+
+/** Recordes de times especiais (carreira na temporada regular, exceto o FG mais longo). */
+const ST_RECORDS: { k: string; t: string; metric?: string; digits?: number; season?: boolean; note?: string }[] = [
+  { k: 'fgMade', t: 'Mais field goals', metric: 'fgm' },
+  { k: 'fg50', t: 'Mais FGs de 50+ jardas', metric: 'fg50' },
+  { k: 'gwfg', t: 'Mais FGs da vitória', metric: 'gwfgm' },
+  { k: 'fgPct', t: 'Melhor aproveitamento de FG (%)', metric: 'fgPct', digits: 1, note: 'mínimo de 150 tentativas' },
+  { k: 'longestFg', t: 'Field goals mais longos (jardas)', metric: 'fgLong', season: true },
+  { k: 'puntNet', t: 'Melhor média líquida de punt', metric: 'puntNet', digits: 1, note: 'mínimo de 250 punts' },
+  { k: 'puntIn20', t: 'Mais punts dentro da 20', metric: 'ptIn20' },
+  { k: 'returnYds', t: 'Mais jardas em retornos (punt + kickoff)' },
+  { k: 'stTd', t: 'Mais TDs de times especiais', metric: 'stTd' },
+];
 const STATS = ['passYds', 'passTd', 'rushYds', 'rushTd', 'rec', 'recYds', 'recTd', 'sacks', 'defInt', 'tackles', 'ff', 'fgm'];
 
 function LeaderList({ items, showSeason = true, digits = 0 }: { items: LeaderEntryShape[]; showSeason?: boolean; digits?: number }) {
@@ -84,6 +97,7 @@ export default function Records() {
           { id: 'post', label: 'Playoffs (1999+)' },
           { id: 'team', label: 'Times' },
           { id: 'game', label: 'Jogos' },
+          { id: 'st', label: 'Times especiais' },
         ]}
       />
       <TabPanel id={tab}>
@@ -168,6 +182,38 @@ export default function Records() {
                 <LeaderList items={c.games[k] ?? []} />
               </div>
             ))}
+            {c.games.upsets?.length ? (
+              <div className="card span-all">
+                <h3 className="row" style={{ gap: 6 }}>
+                  Maiores zebras (pontos de linha){' '}
+                  <InfoTip title="Zebra" simple="Jogos em que o azarão venceu. O número é por quantos pontos o perdedor era favorito antes do jogo, segundo o mercado (linha de fechamento)." />
+                </h3>
+                <LeaderList items={c.games.upsets} digits={1} />
+              </div>
+            ) : null}
+          </div>
+        )}
+        {tab === 'st' && (
+          <div className="stack">
+            <ModeNote
+              beginner={<>Times especiais são os chutes (field goals, pontos extras, punts) e os retornos. Desde 1999, temporada regular.</>}
+              expert={<>Carreira na temporada regular desde 1999 (nflverse); “FG mais longo” é por temporada. FGs da vitória seguem a definição da nflverse (game-winning FG).</>}
+            />
+            {c.specialTeams ? (
+              <div className="grid grid-3">
+                {ST_RECORDS.map(({ k, t, metric: mk, digits, season, note }) => (
+                  <div className="card" key={k}>
+                    <h3 className="row" style={{ gap: 6 }}>
+                      {t} {mk && <InfoTip metric={mk} />}
+                    </h3>
+                    <LeaderList items={c.specialTeams![k] ?? []} showSeason={Boolean(season)} digits={digits ?? 0} />
+                    {note && <p className="xsmall muted" style={{ marginTop: 8 }}>{note}</p>}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="small muted">Recordes de times especiais ainda não gerados.</p>
+            )}
           </div>
         )}
       </TabPanel>

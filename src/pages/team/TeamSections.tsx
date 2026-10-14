@@ -11,6 +11,7 @@ import { BarList } from '../../components/charts/BarList';
 import { ChartFrame, MiniTable } from '../../components/charts/ChartFrame';
 import { LineChart } from '../../components/charts/LineChart';
 import { StatTile } from '../../components/Bits';
+import { InfoTip } from '../../components/InfoTip';
 import { dateBR, num, pct3, signed } from '../../lib/format';
 import { fmtRecord } from '../../lib/standings';
 import { franchiseOf, GAME_TYPE_LABEL } from '../../lib/teams';
@@ -228,7 +229,7 @@ export function FranchiseRecords({ profile }: { profile: TeamProfile }) {
 
 /* ----------------------------- História da franquia ----------------------------- */
 
-function GameRefList({ title, rows }: { title: string; rows: TeamGameRef[] }) {
+function GameRefList<T extends TeamGameRef>({ title, rows, note }: { title: string; rows: T[]; note?: (g: T) => string }) {
   return (
     <section className="card">
       <div className="card-title">
@@ -247,6 +248,7 @@ function GameRefList({ title, rows }: { title: string; rows: TeamGameRef[] }) {
               <span className="xsmall muted">
                 {g.season}
                 {g.type !== 'REG' ? ` · ${GAME_TYPE_LABEL[g.type] ?? g.type}` : ''}
+                {note ? ` · ${note(g)}` : ''}
               </span>
             </Link>
           </li>
@@ -394,6 +396,7 @@ export function Matchups({ profile, code }: { profile: TeamProfile; code: string
         </div>
         <p className="xsmall muted">Temporada regular desde {profile.coverage.first}, exceto “Playoffs”.</p>
       </section>
+      {profile.betting?.games > 0 && <MarketSection profile={profile} />}
       <section>
         <div className="section-title">
           <h2>Retrospecto contra cada adversário</h2>
@@ -424,6 +427,55 @@ export function Matchups({ profile, code }: { profile: TeamProfile; code: string
         />
       </section>
     </div>
+  );
+}
+
+/* ------------------------- Expectativa do mercado ------------------------- */
+
+const coverPct = (r: WLT) => (r[0] + r[1] ? r[0] / (r[0] + r[1]) : null);
+
+function MarketSection({ profile }: { profile: TeamProfile }) {
+  const b = profile.betting;
+  return (
+    <section className="stack">
+      <div className="section-title">
+        <h2 className="row" style={{ gap: 6 }}>
+          Contra a expectativa do mercado{' '}
+          <InfoTip
+            title="Linhas de fechamento"
+            simple="Antes de cada jogo, o mercado estima quem é favorito e por quantos pontos. “Cobriu a linha” = venceu por mais (ou perdeu por menos) do que o previsto. É uma medida de surpresa, não recomendação de aposta."
+            expert="Linhas de fechamento (nflverse/schedules), temporada regular e playoffs. Pushes fora do %."
+          />
+        </h2>
+      </div>
+      <div className="tiles">
+        <StatTile label="Contra a linha (ATS)" value={rec(b.ats)} note={`cobriu ${pct3(coverPct(b.ats))} dos jogos`} metric="ats" />
+        <StatTile label="Como favorito" value={rec(b.favored)} note={`${pct3(pctOf(b.favored))} de vitórias`} />
+        <StatTile label="Como azarão" value={rec(b.underdog)} note={`${pct3(pctOf(b.underdog))} de vitórias`} />
+        <StatTile label="Over-Under" value={`${b.ou[0]}-${b.ou[1]}${b.ou[2] ? `-${b.ou[2]}` : ''}`} note="jogos acima × abaixo do total esperado" metric="overPct" />
+      </div>
+      <div className="two-col">
+        <DataTable
+          rows={b.bySeason}
+          rowKey={(r) => String(r.season)}
+          caption="Contra a linha por temporada"
+          exportName={`${profile.team}-mercado`}
+          pageSize={12}
+          columns={[
+            { key: 'season', label: 'Temporada', render: (r) => r.season, value: (r) => r.season },
+            { key: 'ats', label: 'ATS', num: true, metric: 'ats', render: (r) => rec(r.ats), value: (r) => coverPct(r.ats) },
+            { key: 'fav', label: 'Favorito', num: true, render: (r) => rec(r.favored), value: (r) => r.favored[0] },
+            { key: 'dog', label: 'Azarão', num: true, render: (r) => rec(r.underdog), value: (r) => r.underdog[0] },
+            { key: 'ou', label: 'O-U', num: true, metric: 'overPct', render: (r) => `${r.ou[0]}-${r.ou[1]}${r.ou[2] ? `-${r.ou[2]}` : ''}`, value: (r) => r.ou[0] },
+          ]}
+        />
+        {b.upsets.length ? (
+          <GameRefList title="Maiores zebras a favor" rows={b.upsets} note={(g) => `azarão por ${num(g.line, 1)}`} />
+        ) : (
+          <p className="small muted">Nenhuma vitória como azarão.</p>
+        )}
+      </div>
+    </section>
   );
 }
 

@@ -98,6 +98,10 @@ export function runQuality(q: QualityInput): QualityCheck[] {
     picks.add(k);
   }
   out.push(check('draft-unique', 'draft', 'Número de escolha único por draft', dupPicks, true));
+  // Valor de carreira (AV) alimenta as análises de draft: se a coluna sumir da fonte, as páginas ficam vazias.
+  const matureDraft = q.draft.filter((d) => d.season <= q.currentSeason - 10);
+  const withAv = matureDraft.filter((d) => d.carAv !== null).length;
+  out.push(check('draft-av', 'draft', 'AV de carreira presente em drafts com 10+ anos', matureDraft.length && withAv / matureDraft.length < 0.6 ? [`só ${withAv} de ${matureDraft.length} escolhas com AV`] : []));
 
   const nums = q.superBowls.map((s) => s.number);
   const gaps = nums.filter((n, i) => n !== i + 1).map(String);

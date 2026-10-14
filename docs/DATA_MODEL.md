@@ -45,7 +45,12 @@ erDiagram
 | `records-computed.json` | — | Top 10 por estatística (temporada, carreira, playoffs), times e jogos (1999+) |
 | `draft.json` | `DraftPick[]` | 1980+, AV, Pro Bowls, All-Pro, HOF |
 | `teams/{CODE}.json` | `TeamProfile` | Perfil de cada franquia ativa: identidades, estádios, técnicos, QBs titulares, desempenho por situação, retrospecto por adversário, momentos marcantes, líderes da franquia e draft (calculado no pipeline) |
-| `stadiums.json` | `Stadium[]` | Teto, gramado, jogos, Super Bowls |
+| `stats/teams-{ano}.json` (campos situacionais) | `TeamSeasonLine` | Do play-by-play: `thirdAtt/thirdConv`, `fourthOpp/fourthAtt/fourthConv`, `rzTrips/rzTd`, `plays/epa/success` e os equivalentes cedidos pela defesa (prefixo `d`) |
+| `stadiums.json` | `Stadium[]` | Teto, gramado, jogos, Super Bowls, pontos por jogo, vitórias do mandante, clima médio, FG% |
+| `rosters/{ano}.json` | `RosterEntry[]` (colunar) | Elenco de cada time na temporada: número, posição, idade, altura, peso, experiência, universidade, draft, situação |
+| `referees.json` | `RefereeSummary[]` | Árbitros principais (16+ jogos): jogos, playoffs, pontos por jogo, mandante, % acima do total |
+| `players/gamelogs/NN.json` | `{ [id]: PlayerGameLine[] }` (colunar) | Jogo a jogo de cada jogador; mesmos 64 buckets dos perfis |
+| `boxscores/{ano}/{semana}.json` | `PlayerGameLine[]` (colunar) | Box score de todos os jogos da rodada |
 | `models/qb-model.json` | `QbModelEntry[]` | Componentes brutos do ranking de QBs |
 | `history/` | — | Manifests anteriores e log de ingestões |
 

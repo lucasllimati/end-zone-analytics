@@ -6,7 +6,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { isPacked, unpack } from '../../src/lib/pack';
-import type { Manifest, QbModelEntry, SuperBowl, Team, LeagueTrend, QualityCheck, TeamProfile } from '../../src/lib/types';
+import { careerBucket } from '../../src/lib/buckets';
+import type { DraftPick, Game, Manifest, QbModelEntry, RefereeSummary, SuperBowl, Team, LeagueTrend, QualityCheck, TeamProfile } from '../../src/lib/types';
 
 const DATA = path.resolve(__dirname, '../../data');
 const has = fs.existsSync(path.join(DATA, 'manifest.json'));
@@ -91,5 +92,18 @@ describe.skipIf(!has)('dados publicados', () => {
     const lv = read<TeamProfile>('teams/LV.json');
     expect(lv.identities.map((i) => i.abbr)).toEqual(expect.arrayContaining(['OAK', 'LV']));
     expect(new Set(lv.stadiums.map((st) => st.name)).size).toBe(lv.stadiums.length);
+  });
+  it('estatísticas por jogo, árbitros e linhas de aposta publicadas', () => {
+    const allen = read<Record<string, unknown>>(`players/gamelogs/${String(careerBucket('00-0034857')).padStart(2, '0')}.json`);
+    expect(allen['00-0034857']).toBeTruthy();
+    expect(fs.existsSync(path.join(DATA, 'boxscores/2025/1.json'))).toBe(true);
+    const refs = read<RefereeSummary[]>('referees.json');
+    expect(refs.length).toBeGreaterThan(20);
+    const games = read<Game[]>('games/2024.json');
+    expect(games.filter((g) => g.spread !== null).length).toBeGreaterThan(250);
+    // Linha conhecida: Vikings favoritos por 16,5 contra os Bills na semana 3 de 2018.
+    expect(read<Game[]>('games/2018.json').find((g) => g.id === '2018_03_BUF_MIN')!.spread).toBe(16.5);
+    const draft = read<DraftPick[]>('draft.json').filter((d) => d.season <= 2010);
+    expect(draft.filter((d) => d.carAv !== null).length / draft.length).toBeGreaterThan(0.6);
   });
 });

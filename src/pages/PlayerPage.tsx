@@ -15,6 +15,8 @@ import { age, height, num, percent, signed, weight } from '../lib/format';
 import { derived, percentile, positionBucket, sumLines } from '../lib/stats';
 import type { PlayerSeasonLine } from '../lib/types';
 import { metric } from '../content/metrics';
+import { TabPanel, Tabs } from '../components/Tabs';
+import { DraftValue, GameLog, KickingSplits, ReturnsSummary } from './player/PlayerSections';
 
 /** Métricas por jogo usadas no radar de percentis, por grupo de posição. */
 const RADAR: Record<string, { key: string; label: string; f: (l: PlayerSeasonLine) => number | null; low?: boolean }[]> = {
@@ -49,7 +51,28 @@ const RADAR: Record<string, { key: string; label: string; f: (l: PlayerSeasonLin
     { key: 'pd', label: 'PD/j', f: (l) => l.pd / l.games },
     { key: 'defInt', label: 'INT/j', f: (l) => l.defInt / l.games },
   ],
+  K: [
+    { key: 'fgPct', label: 'FG%', f: (l) => derived(l).fgPct },
+    { key: 'fg40', label: 'FG% 40+', f: (l) => fgFrom(l, 3) },
+    { key: 'fg50', label: '50+/j', f: (l) => (derived(l).fg50 ?? 0) / l.games },
+    { key: 'xpPct', label: 'XP%', f: (l) => (l.xpa ? l.xpm / l.xpa : null) },
+    { key: 'fgLong', label: 'Mais longo', f: (l) => l.fgLong },
+  ],
+  P: [
+    { key: 'puntAvg', label: 'Média', f: (l) => derived(l).puntAvg },
+    { key: 'puntNet', label: 'Líquida', f: (l) => derived(l).puntNet },
+    { key: 'in20', label: 'Dentro da 20 %', f: (l) => (l.punts ? l.ptIn20 / l.punts : null) },
+    { key: 'tb', label: 'Touchback % (menos)', f: (l) => (l.punts ? l.ptTb / l.punts : null), low: true },
+  ],
 };
+
+/** Aproveitamento de FG a partir de uma faixa de distância (3 = 40+). */
+function fgFrom(l: PlayerSeasonLine, from: number): number | null {
+  if (!l.fgMade || !l.fgMiss) return null;
+  const m = l.fgMade.slice(from).reduce((a, b) => a + b, 0);
+  const a = m + l.fgMiss.slice(from).reduce((x, y) => x + y, 0);
+  return a ? m / a : null;
+}
 const radarGroup = (pos: string) => {
   const b = positionBucket(pos);
   if (b === 'TE') return 'WR';
@@ -62,6 +85,7 @@ export default function PlayerPage() {
   const { mode } = useApp();
   const career = useAsync(() => api.career(id), [id]);
   const [st, setSt] = useState<'REG' | 'POST'>('REG');
+  const [view, setView] = useState<'seasons' | 'games'>('seasons');
   const chartRef = useRef<SVGSVGElement>(null);
   const radarRef = useRef<SVGSVGElement>(null);
   const c = career.data;
@@ -82,7 +106,8 @@ export default function PlayerPage() {
     // Mínimo de jogos proporcional ao andamento da temporada (≥ 35% do máximo disputado).
     const maxG = Math.max(...pop.data.filter((l) => l.st === 'REG').map((l) => l.games));
     const minG = Math.max(1, Math.ceil(maxG * 0.35));
-    const peers = pop.data.filter((l) => l.st === 'REG' && l.games >= minG && radarGroup(l.pos) === group && (group !== 'QB' || l.att >= l.games * 14));
+    const volume = (l: PlayerSeasonLine) => (group === 'QB' ? l.att >= l.games * 14 : group === 'K' ? l.fga >= 8 : group === 'P' ? l.punts >= 20 : true);
+    const peers = pop.data.filter((l) => l.st === 'REG' && l.games >= minG && radarGroup(l.pos) === group && volume(l));
     const values = defs.map((d) => {
       const v = d.f(latest);
       const popv = peers.map(d.f).filter((x): x is number => x !== null && Number.isFinite(x));
@@ -185,6 +210,12 @@ export default function PlayerPage() {
             <dd>{b.college ?? 'Não disponível'}</dd>
             <dt>Draft</dt>
             <dd>{b.draftYear ? `${b.draftYear} · ${b.draftRound}ª rodada, ${b.draftPick}ª escolha${b.draftTeam ? ` (${b.draftTeam})` : ''}` : 'Não draftado / não disponível'}</dd>
+            {b.yearsExp !== null && b.yearsExp !== undefined && (
+              <>
+                <dt>Experiência</dt>
+                <dd>{b.yearsExp === 0 ? 'Novato' : `${b.yearsExp} temporada${b.yearsExp === 1 ? '' : 's'} na NFL`}</dd>
+              </>
+            )}
           </dl>
         </div>
       </section>
@@ -206,6 +237,10 @@ export default function PlayerPage() {
           </div>
         </section>
       )}
+
+      {tot && <ReturnsSummary career={tot} />}
+      {tot && bucket === 'K' && <KickingSplits career={tot} latest={latest} />}
+      <DraftValue bio={b} />
 
       <div className="two-col">
         <section className="card">
@@ -243,41 +278,56 @@ export default function PlayerPage() {
               <RadarChart ref={radarRef} ariaLabel="Radar de percentis" axes={radar.defs.map((d) => d.label)} series={[{ id: b.id, label: b.name, slot: 0, values: radar.values, raw: radar.raw }]} size={300} />
             </ChartFrame>
           ) : (
-            <p className="small muted">Percentis disponíveis para QB, RB, WR, TE e defensores com estatísticas na temporada mais recente.</p>
+            <p className="small muted">Percentis disponíveis para QB, RB, WR, TE, defensores, kickers e punters com estatísticas na temporada mais recente.</p>
           )}
         </section>
       </div>
 
-      <section>
-        <div className="section-title">
-          <h2>Temporada a temporada</h2>
-          <div className="chips">
-            <button type="button" className="chip" aria-pressed={st === 'REG'} onClick={() => setSt('REG')}>
-              Temporada regular
-            </button>
-            <button type="button" className="chip" aria-pressed={st === 'POST'} onClick={() => setSt('POST')}>
-              Playoffs
-            </button>
-          </div>
-        </div>
-        <ModeNote beginner={<>Cada linha é uma temporada. Ative o modo Expert para ver métricas avançadas como EPA e CPOE.</>} />
-        {lines.length ? (
-          <DataTable
-            rows={[...lines].reverse()}
-            rowKey={(r) => `${r.season}-${r.st}`}
-            caption={`Estatísticas de ${b.name} por temporada`}
-            exportName={`${b.name}-${st === 'REG' ? 'temporada-regular' : 'playoffs'}`}
-            expert={mode === 'expert'}
-            columns={[
-              { key: 'season', label: 'Temporada', render: (r) => r.season },
-              { key: 'team', label: 'Time', render: (r) => <TeamLogo abbr={r.team} size={20} />, value: (r) => r.team },
-              ...statColumns(pos),
-            ]}
-          />
+      <Tabs
+        label="Estatísticas"
+        value={view}
+        onChange={setView}
+        tabs={[
+          { id: 'seasons', label: 'Temporada a temporada' },
+          { id: 'games', label: 'Jogo a jogo' },
+        ]}
+      />
+      <TabPanel id={view}>
+        {view === 'games' ? (
+          <GameLog id={b.id} name={b.name} pos={pos} expert={mode === 'expert'} />
         ) : (
-          <Unavailable>{st === 'POST' ? 'Sem jogos de playoffs na base.' : 'Sem estatísticas de temporada regular.'}</Unavailable>
+          <section>
+            <div className="section-title">
+              <h2>Temporada a temporada</h2>
+              <div className="chips">
+                <button type="button" className="chip" aria-pressed={st === 'REG'} onClick={() => setSt('REG')}>
+                  Temporada regular
+                </button>
+                <button type="button" className="chip" aria-pressed={st === 'POST'} onClick={() => setSt('POST')}>
+                  Playoffs
+                </button>
+              </div>
+            </div>
+            <ModeNote beginner={<>Cada linha é uma temporada. Ative o modo Expert para ver métricas avançadas como EPA e CPOE.</>} />
+            {lines.length ? (
+              <DataTable
+                rows={[...lines].reverse()}
+                rowKey={(r) => `${r.season}-${r.st}`}
+                caption={`Estatísticas de ${b.name} por temporada`}
+                exportName={`${b.name}-${st === 'REG' ? 'temporada-regular' : 'playoffs'}`}
+                expert={mode === 'expert'}
+                columns={[
+                  { key: 'season', label: 'Temporada', render: (r) => r.season },
+                  { key: 'team', label: 'Time', render: (r) => <TeamLogo abbr={r.team} size={20} />, value: (r) => r.team },
+                  ...statColumns(pos),
+                ]}
+              />
+            ) : (
+              <Unavailable>{st === 'POST' ? 'Sem jogos de playoffs na base.' : 'Sem estatísticas de temporada regular.'}</Unavailable>
+            )}
+          </section>
         )}
-      </section>
+      </TabPanel>
 
       {c.similar.length > 0 && (
         <section className="card">

@@ -13,6 +13,7 @@ import { useTeamColor } from '../data/useTeamColor';
 import { GAME_TYPE_LABEL, franchiseOf } from '../lib/teams';
 import { headToHead } from '../lib/games';
 import { dateBR, num, weekdayPt } from '../lib/format';
+import { BoxScore, MarketCard, RefereeCard, RestRows } from './game/GameSections';
 
 interface Detail {
   state: string;
@@ -231,6 +232,7 @@ export default function GamePage() {
               </ChartFrame>
             </section>
           )}
+          <BoxScore g={g} nick={nick} />
           {!d && !detail.loading && (
             <Callout title="Detalhes jogada a jogada indisponíveis">
               Placar por quarto, drives e probabilidade de vitória vêm da API em tempo real (requer o servidor da aplicação e uma conexão com a fonte). Os dados básicos do jogo continuam disponíveis.
@@ -259,6 +261,7 @@ export default function GamePage() {
               <dd>{g.temp !== null ? `${g.temp} °F (${num(((g.temp - 32) * 5) / 9)} °C)` : 'Não disponível'}</dd>
               <dt>Vento</dt>
               <dd>{g.wind !== null ? `${g.wind} mph` : 'Não disponível'}</dd>
+              <RestRows g={g} nick={nick} />
               <dt>Público</dt>
               <dd>{d?.venue.attendance ? num(d.venue.attendance) : 'Não disponível'}</dd>
               <dt>QB visitante</dt>
@@ -273,6 +276,8 @@ export default function GamePage() {
               <dd>{g.referee ?? 'Não disponível'}</dd>
             </dl>
           </section>
+          <MarketCard g={g} nick={nick} />
+          <RefereeCard name={g.referee} />
           {d && d.teamStats.length > 0 && (
             <section className="card">
               <h2>Estatísticas dos times</h2>

@@ -23,7 +23,8 @@ export function sumLines(lines: PlayerSeasonLine[]): PlayerSeasonLine | null {
   const keys: (keyof PlayerSeasonLine)[] = [
     'games', 'cmp', 'att', 'passYds', 'passTd', 'int', 'sacked', 'airYds', 'carries', 'rushYds', 'rushTd', 'rec', 'tgt',
     'recYds', 'recTd', 'yac', 'tackles', 'tfl', 'sacks', 'qbHits', 'defInt', 'pd', 'ff', 'defTd', 'fgm', 'fga', 'xpm',
-    'xpa', 'punts', 'puntYds', 'fumLost', 'fpts', 'fptsPpr',
+    'xpa', 'punts', 'puntYds', 'fumLost', 'fpts', 'fptsPpr', 'passFd', 'rushFd', 'recFd', 'pass20', 'pass40', 'rush20',
+    'rush40', 'rec20', 'rec40', 'gwfgm', 'gwfga', 'ptIn20', 'ptTb', 'ptNet', 'pr', 'prYds', 'kr', 'krYds', 'stTd',
   ];
   const out: PlayerSeasonLine = { ...first, season: Math.max(...lines.map((l) => l.season)), team: lines[lines.length - 1].team };
   for (const k of keys) (out as unknown as Record<string, number>)[k] = lines.reduce((s, l) => s + ((l[k] as number) ?? 0), 0);
@@ -41,6 +42,16 @@ export function sumLines(lines: PlayerSeasonLine[]): PlayerSeasonLine | null {
   out.cpoe = cpAtt ? cp.reduce((s, l) => s + (l.cpoe as number) * l.att, 0) / cpAtt : null;
   const longs = lines.map((l) => l.fgLong).filter((v): v is number => v !== null);
   out.fgLong = longs.length ? Math.max(...longs) : null;
+  // Faixas de FG somadas posição a posição; participações (alvos, jardas aéreas) não se somam entre temporadas.
+  const addArr = (k: 'fgMade' | 'fgMiss') => {
+    const arrs = lines.map((l) => l[k]).filter((v): v is number[] => Array.isArray(v));
+    return arrs.length ? arrs.reduce((acc, a) => acc.map((v, i) => v + (a[i] ?? 0)), [0, 0, 0, 0, 0, 0]) : null;
+  };
+  out.fgMade = addArr('fgMade');
+  out.fgMiss = addArr('fgMiss');
+  out.tgtShare = null;
+  out.airShare = null;
+  out.wopr = null;
   return out;
 }
 
@@ -56,6 +67,8 @@ export function derived(l: PlayerSeasonLine) {
     catchRate: l.tgt === null ? null : safeDiv(l.rec, l.tgt),
     fgPct: safeDiv(l.fgm, l.fga),
     puntAvg: safeDiv(l.puntYds, l.punts),
+    puntNet: safeDiv(l.ptNet ?? 0, l.punts),
+    fg50: l.fgMade ? l.fgMade[4] + l.fgMade[5] : null,
     scrimYds: l.rushYds + l.recYds,
     totalTd: l.passTd + l.rushTd + l.recTd,
     passYdsPg: safeDiv(l.passYds, l.games),

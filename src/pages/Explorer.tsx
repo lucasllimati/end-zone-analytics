@@ -14,14 +14,15 @@ import { num } from '../lib/format';
 import { ACTIVE_TEAMS, franchiseOf } from '../lib/teams';
 import type { PlayerSeasonLine, TeamSeason } from '../lib/types';
 
-const PLAYER_METRICS = ['passYds', 'passTd', 'int', 'cmpPct', 'ypa', 'rating', 'epaPerDb', 'cpoe', 'rushYds', 'rushTd', 'ypc', 'rec', 'tgt', 'recYds', 'recTd', 'ypr', 'yac', 'scrimYds', 'totalTd', 'tackles', 'sacks', 'tfl', 'qbHits', 'defInt', 'pd', 'ff', 'fgm', 'fgPct', 'fpts', 'fptsPpr'];
+const PLAYER_METRICS = ['passYds', 'passTd', 'int', 'cmpPct', 'ypa', 'rating', 'epaPerDb', 'cpoe', 'rushYds', 'rushTd', 'ypc', 'rec', 'tgt', 'recYds', 'recTd', 'ypr', 'yac', 'scrimYds', 'totalTd', 'tackles', 'sacks', 'tfl', 'qbHits', 'defInt', 'pd', 'ff', 'fgm', 'fgPct', 'fg50', 'gwfgm', 'puntNet', 'ptIn20', 'prYds', 'krYds', 'stTd', 'tgtShare', 'airShare', 'wopr', 'pass20', 'rush20', 'rec20', 'passFd', 'rushFd', 'recFd', 'fpts', 'fptsPpr'];
 const TEAM_METRICS = ['w', 'pf', 'pa', 'diff', 'ppg', 'papg', 'passYds', 'rushYds', 'epaPlay', 'sacks', 'giveaways'];
 /** Volume mínimo para métricas de taxa (evita distorções com amostras pequenas). */
 const MIN_VOL: Record<string, (l: PlayerSeasonLine) => boolean> = {
   cmpPct: (l) => l.att >= 150, ypa: (l) => l.att >= 150, rating: (l) => l.att >= 150, epaPerDb: (l) => l.att >= 150, cpoe: (l) => l.att >= 150,
-  ypc: (l) => l.carries >= 50, ypr: (l) => l.rec >= 20, fgPct: (l) => l.fga >= 10,
+  ypc: (l) => l.carries >= 50, ypr: (l) => l.rec >= 20, fgPct: (l) => l.fga >= 10, puntNet: (l) => l.punts >= 20,
+  tgtShare: (l) => (l.tgt ?? 0) >= 30, airShare: (l) => (l.tgt ?? 0) >= 30, wopr: (l) => (l.tgt ?? 0) >= 30,
 };
-const DERIVED = new Set(['cmpPct', 'ypa', 'rating', 'epaPerDb', 'ypc', 'ypr', 'fgPct', 'scrimYds', 'totalTd']);
+const DERIVED = new Set(['cmpPct', 'ypa', 'rating', 'epaPerDb', 'ypc', 'ypr', 'fgPct', 'scrimYds', 'totalTd', 'fg50', 'puntNet']);
 const pVal = (l: PlayerSeasonLine, k: string): number | null => (DERIVED.has(k) ? (derived(l) as Record<string, number | null>)[k] : (l[k as keyof PlayerSeasonLine] as number | null));
 const tVal = (t: TeamSeason, k: string): number | null => {
   const g = t.w + t.l + t.t || 1;
@@ -44,6 +45,8 @@ const EXAMPLES = [
   { label: 'Mais TDs de passe (2010–2025, carreira)', q: 'ds=players&from=2010&to=2025&pos=QB&metric=passTd&agg=total' },
   { label: 'Melhor EPA/dropback em uma temporada', q: 'ds=players&from=1999&to=2025&pos=QB&metric=epaPerDb&agg=season' },
   { label: 'Mais sacks desde 2015', q: 'ds=players&from=2015&to=2025&metric=sacks&agg=total' },
+  { label: 'Recebedores mais acionados (WOPR)', q: 'ds=players&from=2006&to=2025&metric=wopr&agg=season' },
+  { label: 'Mais FGs de 50+ jardas (carreira)', q: 'ds=players&from=1999&to=2025&pos=K&metric=fg50&agg=total' },
   { label: 'Ataques mais eficientes (EPA/jogada)', q: 'ds=teams&from=1999&to=2025&metric=epaPlay' },
   { label: 'Defesas que menos sofreram pontos por jogo', q: 'ds=teams&from=1999&to=2025&metric=papg&dir=asc' },
 ];

@@ -27,6 +27,7 @@ export function game(p: Partial<Game> & Pick<Game, 'home' | 'away'>): Game {
     stadium: 'Estádio Teste',
     stadiumId: 'TST00',
     espn: null,
+    spread: null, total: null, homeMl: null, awayMl: null, homeRest: null, awayRest: null,
     ...p,
   };
 }
@@ -43,6 +44,9 @@ export function line(p: Partial<PlayerSeasonLine> & Pick<PlayerSeasonLine, 'id'>
     carries: 0, rushYds: 0, rushTd: 0, rushEpa: null, rec: 0, tgt: 0, recYds: 0, recTd: 0, yac: 0, recEpa: null,
     tackles: 0, tfl: 0, sacks: 0, qbHits: 0, defInt: 0, pd: 0, ff: 0, defTd: 0, fgm: 0, fga: 0, fgLong: null,
     xpm: 0, xpa: 0, punts: 0, puntYds: 0, fumLost: 0, fpts: 0, fptsPpr: 0,
+    passFd: 0, rushFd: 0, recFd: 0, pass20: 0, pass40: 0, rush20: 0, rush40: 0, rec20: 0, rec40: 0, tgtShare: null,
+    airShare: null, wopr: null, fgMade: null, fgMiss: null, gwfgm: 0, gwfga: 0, ptIn20: 0, ptTb: 0, ptNet: 0, pr: 0, prYds: 0,
+    kr: 0, krYds: 0, stTd: 0,
     ...p,
   };
 }

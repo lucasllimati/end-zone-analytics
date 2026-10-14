@@ -194,8 +194,11 @@ data/
 ├── teams.json               36 abreviações (32 ativas + históricas)
 ├── games/all.json, {ano}.json
 ├── stats/players-{ano}.json, teams-{ano}.json
-├── players/index.json, careers/00..63.json
-├── team-seasons.json, trends.json, stadiums.json
+├── players/index.json, careers/00..63.json, gamelogs/00..63.json
+├── boxscores/{ano}/{semana}.json
+├── rosters/{ano}.json        elenco de cada time
+├── teams/{CODE}.json        perfil de cada franquia
+├── team-seasons.json, trends.json, stadiums.json, referees.json
 ├── superbowls.json, records-curated.json, records-computed.json
 ├── draft.json, models/qb-model.json
 └── history/changes.json, manifest-N.json
@@ -208,11 +211,13 @@ data/
 | Verificação | `npm run data:check` | Compara o `updated_at` de cada arquivo remoto com o registrado no manifest. Lista conjuntos e **temporadas** com novidade. Não baixa nada. |
 | Parcial (incremental) | `npm run data:partial` | Baixa somente arquivos cuja versão mudou; reconstrói os derivados a partir do cache. Normalmente segundos. |
 | Parcial (forçada) | `npm run data:partial -- --datasets games,playerStats --seasons 2026` | Força o download dos conjuntos/temporadas indicados. |
-| Completa | `npm run data:full` | Baixa e reprocessa tudo (~114 arquivos, ~40 MB, ~1 min). |
+| Completa | `npm run data:full` | Baixa e reprocessa tudo (~230 arquivos, ~850 MB com estatísticas por jogo e play-by-play, 10–15 min). |
 
 Com servidor: área **`/admin`** → *Fontes e cargas* (verificar, parcial com filtros ou completa com confirmação), ou `POST /api/admin/sync` autenticado; o agendador interno (`SYNC_*`) roda cargas sozinho. No site publicado: GitHub Actions a cada 6 h (ou *Run workflow*).
 
-Conjuntos (`--datasets`): `teams`, `games`, `players`, `playerStats`, `teamStats`, `draft`.
+Conjuntos (`--datasets`): `teams`, `games`, `players`, `playerStats`, `teamStats`, `playerWeek`, `teamWeek`, `pbp`, `rosters`, `draft`.
+
+A primeira carga com play-by-play processa ~530 MB em fluxo (5–10 min); as seguintes reaproveitam o resumo em cache e só reprocessam a temporada que mudou.
 
 ## 6. Frontend: páginas e funcionalidades
 

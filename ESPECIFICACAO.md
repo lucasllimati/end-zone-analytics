@@ -63,7 +63,7 @@ flowchart LR
 | Rota | Página | Grupo do menu |
 |---|---|---|
 | `/` | Início | — |
-| `/season` (abas `standings`, `schedule`, `leaders`, `playoffs`, `power`, `sos`) | Temporada | Liga / Analytics |
+| `/season` (abas `standings`, `schedule`, `leaders`, `playoffs`, `power`, `sos`, `efficiency`, `market`) | Temporada | Liga / Analytics |
 | `/teams` · `/teams/:abbr` | Times · Perfil do time | Times & Jogadores |
 | `/players` · `/players/:id` | Jogadores · Perfil do jogador | Times & Jogadores |
 | `/compare` | Comparador | Times & Jogadores |
@@ -77,6 +77,7 @@ flowchart LR
 | `/history` | História da NFL | História / Analytics |
 | `/rankings` | Ranking de QBs | Analytics |
 | `/explorer` | Explorador de dados | Analytics |
+| `/referees` | Árbitros | Estatísticas |
 | `/learn` | Comece aqui | Aprenda |
 | `/rules` | Regras e faltas | Aprenda |
 | `/positions` | Posições | Aprenda |
@@ -110,6 +111,8 @@ Abas (estado na URL `?tab=`):
 | Playoffs | Chave interativa da temporada; aviso “Playoffs ainda não disputados” |
 | Power ranking | Modelo transparente: Power Score (soma ponderada de z-scores), campanha, saldo/jogo, SOS, EPA/jogada, forma (4 jogos); seção “Como é calculado?” |
 | Força de tabela | SOS jogado, SOS restante, jogos restantes; destaque “Tabela mais difícil até agora” |
+| Eficiência | Ataque, defesa, times especiais e **situações** (3ª descida, 4ª descida — conversão e decisão de ir —, red zone, taxa de sucesso, EPA por jogada cedido; do play-by-play) de cada time com o ranking na liga (EPA por jogada, jardas e EPA cedidos, jogadas de 20+, first downs, turnovers, FG% de 40+, punt líquido, retornos); gráfico ataque × defesa |
+| Zebras e expectativa | Favoritos que venceram/cobriram, % acima do total, vantagem de descanso; maiores zebras da temporada; tabela por time (contra a linha, como favorito/azarão, over-under, após folga) |
 
 Observação: a classificação usa critério de desempate **simplificado** (informado na tela).
 
@@ -117,11 +120,12 @@ Observação: a classificação usa critério de desempate **simplificado** (inf
 - Lista: 32 franquias ativas por conferência/divisão, com logo, cores e campanha da temporada selecionada.
 - Perfil — abas:
   - **Visão geral:** últimos 5 resultados, próximo jogo, tabela da divisão (time destacado), gráfico de pontos marcados/sofridos por jogo, “Vitórias por temporada”, Super Bowls, rivais.
+  - **Eficiência:** cada métrica de ataque, defesa, times especiais e situações (3ª/4ª descida, red zone, sucesso) da temporada com o ranking na liga.
   - **Jogos** da temporada selecionada.
-  - **Elenco:** destaques da temporada.
+  - **Elenco:** destaques da temporada e elenco completo (ataque, defesa, times especiais) com número, posição, idade, altura, peso, experiência, universidade, draft e situação; idade e experiência médias, novatos.
   - **Recordes:** líderes da franquia na temporada regular (carreira no time ou uma temporada), 10 estatísticas, top 5.
   - **História:** ficha (nomes/cidades, ex.: OAK → LV; estádios com nomes de patrocínio), momentos marcantes (melhor/pior temporada, maiores sequências, maiores vitórias e derrotas), técnicos (campanha jogo a jogo, inclusive interinos), QBs titulares, Super Bowls e temporada a temporada.
-  - **Confrontos:** desempenho por situação (casa, fora, divisão, até 8 pontos, prorrogação, coberto/ao ar livre, playoffs) e retrospecto contra cada adversário com link para o histórico.
+  - **Confrontos:** desempenho por situação (casa, fora, divisão, até 8 pontos, prorrogação, coberto/ao ar livre, após folga, descanso curto, playoffs), contra a expectativa do mercado (ATS, favorito/azarão, over-under, por temporada, maiores zebras a favor) e retrospecto contra cada adversário com link para o histórico.
   - **Draft:** escolhas desde 1980, Hall of Fame draftados, melhores escolhas por AV e a classe mais recente (códigos antigos, ex.: Oilers → TEN, mapeados para a franquia atual).
   - **Times semelhantes** (similaridade).
   - Dados das abas Recordes/História/Confrontos/Draft: `data/teams/{CODE}.json`.
@@ -131,8 +135,10 @@ Observação: a classificação usa critério de desempate **simplificado** (inf
 - Perfil:
   - Bio (foto, posição, universidade, altura, peso, nascimento, draft, número, status).
   - **Carreira — temporada regular** e playoffs; aviso “Carreira parcial” quando começou antes de 1999.
-  - **Temporada a temporada** com métricas por posição (ex.: CMP%, Y/A, EPA/DB, Rec/j, Y/R, Sacks/j, Tackles/j).
-  - Gráfico de evolução e radar por percentil.
+  - **Temporada a temporada** com métricas por posição (ex.: CMP%, Y/A, EPA/DB, Y/R, jogadas de 20+, first downs; recebedores: participação nos alvos, nas jardas aéreas e WOPR; kickers: 50+ e FGs da vitória; punters: média líquida, dentro da 20, touchbacks).
+  - **Jogo a jogo:** gráfico por jogo da temporada escolhida, tabela com adversário e resultado, melhores jogos da carreira.
+  - **Field goals por distância** (kickers), **retornos** (quem retornou 5+ vezes) e **valor de draft** (AV real × esperado para a escolha, posição na classe).
+  - Gráfico de evolução e radar por percentil (QB, RB, WR/TE, defensores, kickers e punters).
   - **Jogadores semelhantes** (similaridade estatística).
 
 ### 4.5 Comparador (`/compare`)
@@ -147,7 +153,10 @@ Três modos:
 - Rivalidades clássicas pré-configuradas. Cobertura: desde 1999.
 
 ### 4.7 Página do jogo (`/games/:id`)
-- Ficha do jogo (data, estádio, teto, gramado, clima, técnicos, árbitro, QBs).
+- Ficha do jogo (data, estádio, teto, gramado, clima, **dias de descanso de cada time**, técnicos, árbitro, QBs).
+- **Expectativa do mercado:** favorito e linha, total esperado, chance de vitória (moneyline sem a margem da casa), resultado contra a linha e o total; selo “Zebra” quando o azarão vence.
+- **Árbitro:** retrospecto do árbitro principal (jogos, pontos por jogo, mandante, acima do total).
+- **Box score** (dados publicados, funciona sem a ESPN): passe, corrida, recepção, defesa, chutes, punts e retornos de cada time.
 - Placar por quarto, **evolução do placar**, jogadas de pontuação, drives, destaques, estatísticas dos times.
 - **Probabilidade de vitória** jogada a jogada (modelo da ESPN).
 - “Antes deste jogo”: contexto das campanhas e confrontos.
@@ -159,13 +168,14 @@ Três modos:
 - Edição: ficha (técnicos, QBs, MVP, prorrogação), links para jogo/times.
 
 ### 4.9 Recordes (`/records`)
-Abas: **Oficiais (todos os tempos)** · Temporada (1999+) · Carreira (1999+) · Playoffs (1999+) · Jogos · Times.
+Abas: **Oficiais (todos os tempos)** · Temporada (1999+) · Carreira (1999+) · Playoffs (1999+) · Times · Jogos (inclui as maiores zebras pela linha) · **Times especiais** (FGs, 50+, FGs da vitória, FG%, FGs mais longos, punt líquido, dentro da 20, jardas e TDs de retorno).
 - Detecção de recorde em andamento: líder atual × recorde oficial, com ritmo projetado para 17 jogos.
 
 ### 4.10 Draft (`/draft`)
 - Escolhas por ano desde 1980 (rodada, pick, time, jogador, posição, universidade, AV, Pro Bowls, All-Pro, HOF).
 - **Valor de carreira por número de escolha** (gráfico), **Draft Value Score**, melhores por rodada, maiores “achados”.
-- Só drafts “maduros” entram na análise de valor.
+- **Escolhas altas que não renderam** (top 10 abaixo do esperado), **Quem drafta melhor** (valor acima do esperado por franquia, 2000+) e **Valor por posição** (AV médio na 1ª rodada e no geral).
+- Só drafts “maduros” entram na análise de valor. AV = AV ponderado de carreira (PFR).
 
 ### 4.11 Hall of Fame (`/hall-of-fame`)
 - Membros **draftados desde 1980** (limitação informada em “Cobertura desta página”), com draft, time que draftou, AV, Pro Bowls, All-Pro, jogos e última temporada.
@@ -176,7 +186,10 @@ Abas: **Oficiais (todos os tempos)** · Temporada (1999+) · Carreira (1999+) ·
 - Médias por década e comparação entre eras.
 
 ### 4.13 Estádios (`/stadiums`)
-- Estádio, times, teto, gramado, jogos (1999+), primeiro/último jogo, Super Bowls sediados (1999+).
+- Estádio, times, teto, gramado, jogos (1999+), pontos por jogo, vitórias do mandante, temperatura e vento médios, FG%, primeiro/último jogo, Super Bowls sediados (1999+).
+
+### 4.13.1 Árbitros (`/referees`)
+- Árbitros principais com 16+ jogos desde 1999: período, jogos, playoffs, Super Bowls, pontos por jogo, vitórias do mandante, % acima do total, prorrogações; filtro “em atividade”.
 
 ### 4.14 Ranking de QBs (`/rankings`)
 - Modelo **EZA-QB v1** baseado em dados, com **pesos ajustáveis** e predefinições: Equilibrado (padrão), Só eficiência, Só títulos, Volume e longevidade.
@@ -247,6 +260,9 @@ Verificações de qualidade atuais (18): 32 franquias ativas; IDs de jogos únic
 | Cadastro de jogadores | nflverse (`players`) | CC-BY 4.0 | Todos |
 | Estatísticas de jogadores | nflverse (`stats_player`, REG/POST por temporada) | CC-BY 4.0 | 1999 → atual |
 | Estatísticas de times | nflverse (`stats_team`) | CC-BY 4.0 | 1999 → atual |
+| Estatísticas por jogo (jogadores e times) | nflverse (`stats_player_week`, `stats_team_week`) | CC-BY 4.0 | 1999 → atual |
+| Play-by-play (resumo situacional por time) | nflverse (`pbp`) | CC-BY 4.0 | 1999 → atual |
+| Elencos | nflverse (`rosters`) | CC-BY 4.0 | 1999 → atual |
 | Draft | nflverse (`draft_picks`, derivado de Pro Football Reference) | CC-BY 4.0 | 1980 → atual |
 | Super Bowls I–LX e recordes oficiais | Curadoria (`data-curated/`, NFL Record & Fact Book) | Fatos; texto próprio | Todos os tempos |
 | Ao vivo (placar, drives, probabilidade de vitória) | API pública do site da ESPN | Sem garantia de disponibilidade | Temporada atual |
@@ -258,7 +274,7 @@ Verificações de qualidade atuais (18): 32 franquias ativas; IDs de jogos únic
 | `manifest.json` | Versão do schema, data de geração, `ingestionVersion`, último modo, cobertura (primeira/última/atual temporada, semana, último jogo), metadados por conjunto (fonte, URL, licença, versão remota, linhas, sha256), resumo de qualidade |
 | `quality.json` | Resultado de cada verificação (id, conjunto, descrição, status, detalhe) |
 | `teams.json` | abbr, nome, apelido, conferência, divisão, cores, logo claro/escuro, wordmark, franquia, ativo |
-| `games/all.json`, `games/{ano}.json` | id, temporada, tipo (REG/WC/DIV/CON/SB), semana, data/hora, times, placar, prorrogação, campo neutro, jogo de divisão, teto, gramado, temperatura, vento, QBs, técnicos, árbitro, estádio, ID ESPN |
+| `games/all.json`, `games/{ano}.json` | id, temporada, tipo (REG/WC/DIV/CON/SB), semana, data/hora, times, placar, prorrogação, campo neutro, jogo de divisão, teto, gramado, temperatura, vento, QBs, técnicos, árbitro, estádio, ID ESPN, linha de fechamento (spread, total, moneylines), dias de descanso |
 | `stats/players-{ano}.json` | Por jogador/temporada/fase: jogos; passe (cmp, att, jardas, TD, INT, sacks, EPA, CPOE, air yards); corrida (tentativas, jardas, TD, EPA); recepção (rec, alvos, jardas, TD, YAC, EPA); defesa (tackles, TFL, sacks, QB hits, INT, PD, FF, TD); chutes (FG, XP, punts); fumbles perdidos; fantasy |
 | `stats/teams-{ano}.json` | Totais de time: passe, corrida, EPA, sacks, INT, fumbles, penalidades, chutes, TD de times especiais |
 | `players/index.json` | Índice de busca: id, nome, posição, último time, primeira/última temporada |
@@ -269,14 +285,18 @@ Verificações de qualidade atuais (18): 32 franquias ativas; IDs de jogos únic
 | `records-curated.json` / `records-computed.json` | Recordes oficiais / top 10 calculados (1999+) |
 | `teams/{CODE}.json` | Perfil da franquia: identidades, estádios, técnicos, QBs, splits, retrospecto, momentos, líderes, draft |
 | `draft.json` | Temporada, rodada, pick, time, jogador, posição, universidade, idade, AV, Pro Bowls, All-Pro, HOF, jogos |
-| `stadiums.json` | Estádio, times, teto, gramado, jogos, primeiro/último, Super Bowls |
+| `stadiums.json` | Estádio, times, teto, gramado, jogos, primeiro/último, Super Bowls, pontos por jogo, vitórias do mandante, temperatura e vento médios, FG% |
+| `rosters/{ano}.json` | Elenco de cada time: número, posição, idade, altura, peso, experiência, universidade, draft, situação |
+| `referees.json` | Árbitros com 16+ jogos: período, jogos, playoffs, Super Bowls, pontos por jogo, mandante, % acima do total, prorrogações |
+| `players/gamelogs/NN.json` | Jogo a jogo por jogador (mesmos buckets dos perfis) |
+| `boxscores/{ano}/{semana}.json` | Estatísticas individuais de todos os jogos da rodada (box score) |
 | `models/qb-model.json` | Componentes brutos do ranking de QBs |
 | `history/` | Manifests anteriores e log de mudanças |
 
 Convenções: arquivos grandes em formato colunar `{cols, rows}`; ausência = `null` (exibida como “Não disponível”); temporada = ano de início (Super Bowl LX, fev/2026 → temporada 2025); IDs estáveis (time = abreviação nflverse, jogo = `game_id`, jogador = GSIS ID).
 
 ### 6.3 Banco de dados
-Hoje não há banco: o volume (~35 MB) e o uso somente leitura são atendidos por JSON.
+Hoje não há banco: o volume (~180 MB, com jogo a jogo e box scores carregados sob demanda) e o uso somente leitura são atendidos por JSON.
 **[Planejado]** SQLite/DuckDB como destino do ETL quando houver dados de jogada a jogada, consultas livres no Explorador ou contas de administrador; PostgreSQL apenas para várias instâncias ou muitos usuários escrevendo.
 
 ---

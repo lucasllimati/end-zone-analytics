@@ -12,3 +12,4 @@ export function careerBucket(id: string): number {
 }
 
 export const bucketFile = (id: string) => `players/careers/${String(careerBucket(id)).padStart(2, '0')}.json`;
+export const gameLogFile = (id: string) => `players/gamelogs/${String(careerBucket(id)).padStart(2, '0')}.json`;

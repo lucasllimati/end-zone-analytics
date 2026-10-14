@@ -14,4 +14,5 @@ export interface ComputedRecordsShape {
   postseasonCareer: Record<string, LeaderEntryShape[]>;
   teamSeason: Record<string, LeaderEntryShape[]>;
   games: Record<string, LeaderEntryShape[]>;
+  specialTeams?: Record<string, LeaderEntryShape[]>;
 }

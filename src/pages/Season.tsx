@@ -20,8 +20,9 @@ import { DIVISION_ORDER, franchiseOf } from '../lib/teams';
 import { dateBR, num, pct3, signed } from '../lib/format';
 import { useApp } from '../context/AppContext';
 import type { Game, StandingRow } from '../lib/types';
+import { EfficiencyView, MarketView } from './season/SeasonInsights';
 
-type Tab = 'standings' | 'schedule' | 'leaders' | 'playoffs' | 'power' | 'sos';
+type Tab = 'standings' | 'schedule' | 'leaders' | 'playoffs' | 'power' | 'sos' | 'efficiency' | 'market';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'standings', label: 'Classificação' },
   { id: 'schedule', label: 'Calendário' },
@@ -29,6 +30,8 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'playoffs', label: 'Playoffs' },
   { id: 'power', label: 'Power ranking' },
   { id: 'sos', label: 'Força de tabela' },
+  { id: 'efficiency', label: 'Eficiência' },
+  { id: 'market', label: 'Zebras e expectativa' },
 ];
 
 const wlt = (r: [number, number, number]) => fmtRecord(r);
@@ -62,6 +65,8 @@ export default function Season() {
             {tab === 'playoffs' && <PlayoffsView games={games.data} season={season!} standings={standings} />}
             {tab === 'power' && <PowerView games={games.data} season={season!} standings={standings} />}
             {tab === 'sos' && <SosView games={games.data} season={season!} standings={standings} />}
+            {tab === 'efficiency' && <EfficiencyView season={season!} standings={standings} />}
+            {tab === 'market' && <MarketView games={games.data} season={season!} />}
           </>
         )}
       </TabPanel>

@@ -962,3 +962,47 @@ main .ref-list a:hover {
   color: var(--accent);
   text-decoration: none;
 }
+
+/* Ranking na liga ao lado do valor (tabelas de eficiência). */
+.rank-tag {
+  display: inline-block;
+  min-width: 2.6em;
+  margin-left: 6px;
+  font-size: 0.75em;
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.rank-tag.top {
+  color: var(--good-text);
+  font-weight: 600;
+}
+.rank-tag.bottom {
+  color: var(--critical-text);
+}
+
+.eff-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.eff-list .meter {
+  margin-top: 6px;
+}
+
+/* Card que ocupa a linha inteira dentro de uma grade. */
+.grid > .span-all {
+  grid-column: 1 / -1;
+}
+
+/* Eficiência do time: 4 cartões em 2 × 2 (auto-fit deixaria um cartão sozinho na última linha). */
+.eff-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 760px) {
+  .eff-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

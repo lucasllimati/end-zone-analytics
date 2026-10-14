@@ -18,7 +18,7 @@ console.log(`Dados copiados para ${to}`);
 const site = process.env.SITE_URL?.replace(/\/$/, '');
 if (site) {
   const read = (rel) => JSON.parse(fs.readFileSync(path.join(from, rel), 'utf8'));
-  const routes = ['/', '/season', '/teams', '/players', '/compare', '/matchup', '/stadiums', '/super-bowl', '/records', '/draft', '/hall-of-fame', '/history', '/rankings', '/explorer', '/learn', '/rules', '/positions', '/playbook', '/strategy', '/glossary', '/data'];
+  const routes = ['/', '/season', '/teams', '/players', '/compare', '/matchup', '/stadiums', '/referees', '/super-bowl', '/records', '/draft', '/hall-of-fame', '/history', '/rankings', '/explorer', '/learn', '/rules', '/positions', '/playbook', '/strategy', '/glossary', '/data'];
   for (const t of read('teams.json').filter((t) => t.active)) routes.push(`/teams/${t.abbr.toLowerCase()}`);
   for (const s of read('superbowls.json')) routes.push(`/super-bowl/${s.number}`);
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${routes.map((r) => `  <url><loc>${site}${r}</loc></url>`).join('\n')}\n</urlset>\n`;

@@ -360,6 +360,7 @@ export interface ComputedRecords {
   postseasonCareer: Record<string, LeaderEntry[]>;
   teamSeason: Record<string, LeaderEntry[]>;
   games: Record<string, LeaderEntry[]>;
+  specialTeams?: Record<string, LeaderEntry[]>;
 }
 
 export const RECORD_STATS: (keyof PlayerSeasonLine)[] = [

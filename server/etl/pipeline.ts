@@ -14,16 +14,21 @@ import { CURATED_DIR, DATA_DIR, config } from '../config';
 import { SOURCES, assetName } from '../../src/lib/sources';
 import { CAREER_BUCKETS, careerBucket } from '../../src/lib/buckets';
 import {
-  DRAFT_COLS, GAME_COLS, INDEX_COLS, PLAYER_LINE_COLS, TEAM_LINE_COLS, TEAM_SEASON_COLS, pack,
+  BOX_COLS, DRAFT_COLS, GAME_COLS, GAME_LOG_COLS, INDEX_COLS, PLAYER_LINE_COLS, ROSTER_COLS, TEAM_LINE_COLS, TEAM_SEASON_COLS, pack,
 } from '../../src/lib/pack';
 import { sumLines } from '../../src/lib/stats';
 import { currentWeek } from '../../src/lib/games';
 import type {
-  CuratedRecord, DatasetMeta, Manifest, PlayerCareer, PlayerIndexEntry, PlayerSeasonLine, TeamSeasonLine,
+  CuratedRecord, DatasetMeta, Manifest, PlayerCareer, PlayerGameLine, PlayerIndexEntry, PlayerSeasonLine, RosterEntry, TeamGameLine,
+  TeamSeasonLine,
 } from '../../src/lib/types';
 import { getAsset, resetVersionCache, type RawFile } from './fetcher';
 import { replaceFile } from './files';
-import { parseCsv, qbStarts, toBios, toDraft, toGames, toPlayerLines, toTeamLines, toTeams } from './transform';
+import {
+  parseCsv, qbStarts, toBios, toDraft, toGames, toPlayerGameLines, toPlayerLines, toRoster, toTeamGameLines, toTeamLines, toTeams,
+} from './transform';
+import { buildReferees, buildSpecialTeams, buildUpsets, enrichStadiums, fillAllowed } from './insights';
+import { mergePbp, pbpSummaries } from './pbp';
 import {
   buildQbModel, buildRecords, buildSimilarity, buildStadiums, buildSuperBowls, buildTeamSeasons, buildTrends, type CuratedSb,
 } from './analytics';
@@ -86,7 +91,8 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineResult
     const anyFilter = Boolean(opts.datasets?.length || opts.seasons?.length);
     return anyFilter && dsOk && sOk;
   };
-  const raw: Record<string, RawFile[]> = {};
+  // Só nome/versão/hash de cada arquivo ficam em memória até o manifest (os CSVs semanais somam centenas de MB).
+  const raw: Record<string, (Omit<RawFile, 'text'> & { hash: string })[]> = {};
   const fetchSource = async (key: string, season?: number) => {
     const src = SOURCES.find((s) => s.key === key)!;
     const files: RawFile[] = [];
@@ -97,7 +103,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineResult
         if (f.downloaded) downloaded.push(f.name);
       }
     }
-    raw[key] = [...(raw[key] ?? []), ...files];
+    raw[key] = [...(raw[key] ?? []), ...files.map(({ text, ...f }) => ({ ...f, hash: sha(text) }))];
     return files;
   };
 
@@ -115,6 +121,8 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineResult
   const lines: PlayerSeasonLine[] = [];
   const teamLines: TeamSeasonLine[] = [];
   const statsBySeason = new Map<number, { p: PlayerSeasonLine[]; t: TeamSeasonLine[] }>();
+  const gameLines: PlayerGameLine[] = [];
+  const teamGames: TeamGameLine[] = [];
   for (const s of seasons) {
     const pf = await fetchSource('playerStats', s);
     const tf = await fetchSource('teamStats', s);
@@ -123,6 +131,23 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineResult
     lines.push(...p);
     teamLines.push(...t);
     statsBySeason.set(s, { p, t });
+    // Por jogo: base do jogo a jogo, do box score e do que cada defesa cedeu.
+    for (const f of await fetchSource('playerWeek', s)) gameLines.push(...toPlayerGameLines(parseCsv(f.text)));
+    for (const f of await fetchSource('teamWeek', s)) teamGames.push(...toTeamGameLines(parseCsv(f.text)));
+  }
+  fillAllowed(teamLines, teamGames);
+
+  log('• Play-by-play (3ª e 4ª descidas, red zone, taxa de sucesso)');
+  const pbp = await pbpSummaries(seasons, (s) => forced('pbp', s), log);
+  mergePbp(teamLines, pbp.rows);
+  raw.pbp = pbp.files;
+  for (const f of pbp.files) if (f.downloaded) downloaded.push(f.name);
+
+  log('• Elencos por temporada');
+  const rosters = new Map<number, RosterEntry[]>();
+  for (const s of seasons) {
+    const files = await fetchSource('rosters', s);
+    if (files.length) rosters.set(s, toRoster(parseCsv(files[0].text)));
   }
   log('• Jogadores');
   const bios = toBios(parseCsv((await fetchSource('players'))[0].text));
@@ -151,7 +176,10 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineResult
   }
   const similar = buildSimilarity(regCareers);
   const records = buildRecords(lines, regCareers, teamSeasons, games);
-  const stadiums = buildStadiums(games);
+  records.games.upsets = buildUpsets(games);
+  records.specialTeams = buildSpecialTeams(lines, regCareers);
+  const stadiums = enrichStadiums(buildStadiums(games), games, gameLines);
+  const referees = buildReferees(games);
 
   log('• Qualidade de dados');
   const quality = runQuality({ teams, games, lines, draft, superBowls, sbIssues, teamSeasons, curatedRecords, currentSeason });
@@ -174,6 +202,8 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineResult
   await writeJson('records-curated.json', { source: recCurated.source, asOf: recCurated.asOf, records: curatedRecords });
   await writeJson('records-computed.json', records);
   await writeJson('stadiums.json', stadiums);
+  await writeJson('referees.json', referees);
+  for (const [s, r] of rosters) await writeJson(`rosters/${s}.json`, pack(r, [...ROSTER_COLS]));
   await writeJson('models/qb-model.json', qbModel);
   await writeJson('quality.json', { checkedAt: new Date().toISOString(), checks: quality });
 
@@ -186,7 +216,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineResult
     const bio = bios.get(id) ?? {
       id, name: latest.name, pos: latest.pos, posGroup: null, team: latest.team, first: null, last: null, headshot: null,
       college: null, height: null, weight: null, birth: null, draftYear: null, draftRound: null, draftPick: null,
-      draftTeam: null, jersey: null, status: null, espnId: null,
+      draftTeam: null, jersey: null, status: null, espnId: null, yearsExp: null,
     };
     const first = ls[0].season;
     const last = latest.season;
@@ -198,6 +228,23 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineResult
     };
   }
   index.sort((a, b) => (b.last ?? 0) - (a.last ?? 0) || a.name.localeCompare(b.name));
+
+  // Jogo a jogo por jogador (mesmos buckets dos perfis) e box score por rodada.
+  const logBuckets: Record<string, PlayerGameLine[]>[] = Array.from({ length: CAREER_BUCKETS }, () => ({}));
+  const boxes = new Map<string, PlayerGameLine[]>();
+  for (const l of gameLines) {
+    const b = logBuckets[careerBucket(l.id)];
+    (b[l.id] ??= []).push(l);
+    const k = `${l.season}/${l.week}`;
+    const box = boxes.get(k);
+    if (box) box.push(l);
+    else boxes.set(k, [l]);
+  }
+  for (let i = 0; i < CAREER_BUCKETS; i++) {
+    const entries = Object.entries(logBuckets[i]).map(([id, ls]) => [id, pack(ls.sort((a, b) => a.season - b.season || a.week - b.week), [...GAME_LOG_COLS])]);
+    await writeJson(`players/gamelogs/${String(i).padStart(2, '0')}.json`, Object.fromEntries(entries));
+  }
+  for (const [k, ls] of boxes) await writeJson(`boxscores/${k}.json`, pack(ls, [...BOX_COLS]));
   await writeJson('players/index.json', pack(index, [...INDEX_COLS]));
   for (let i = 0; i < CAREER_BUCKETS; i++) {
     const entries = Object.entries(buckets[i]).map(([id, c]) => [id, { bio: c.bio, similar: c.similar, lines: pack(c.lines, [...PLAYER_LINE_COLS]) }]);
@@ -209,6 +256,8 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineResult
   const datasets: Record<string, DatasetMeta> = {};
   const rowsOf: Record<string, number> = {
     teams: teams.length, games: games.length, players: bios.size, playerStats: lines.length, teamStats: teamLines.length, draft: draft.length,
+    playerWeek: gameLines.length, teamWeek: teamGames.length, pbp: pbp.rows.length,
+    rosters: [...rosters.values()].reduce((n, r) => n + r.length, 0),
   };
   for (const src of SOURCES) {
     const files = raw[src.key] ?? [];
@@ -223,7 +272,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineResult
       remoteVersion: Object.values(assets).filter(Boolean).sort().pop() ?? null,
       assets,
       retrievedAt: anyDownloaded || !prev?.datasets[src.key] ? now : prev.datasets[src.key].retrievedAt,
-      sha256: sha(files.map((f) => sha(f.text)).join('')),
+      sha256: sha(files.map((f) => f.hash).join('')),
       rows: rowsOf[src.key] ?? 0,
       seasons: src.seasonal ? seasons : null,
     };

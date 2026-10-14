@@ -3,10 +3,10 @@
  * com cache em memória e deduplicação. Funciona com ou sem a API (hospedagem estática).
  */
 import { isPacked, unpack } from '../lib/pack';
-import { bucketFile } from '../lib/buckets';
+import { bucketFile, gameLogFile } from '../lib/buckets';
 import type {
-  CuratedRecord, DraftPick, Game, LeagueTrend, Manifest, PlayerCareer, PlayerIndexEntry, PlayerSeasonLine, QbModelEntry,
-  QualityCheck, Stadium, SuperBowl, Team, TeamProfile, TeamSeason, TeamSeasonLine,
+  CuratedRecord, DraftPick, Game, LeagueTrend, Manifest, PlayerCareer, PlayerGameLine, PlayerIndexEntry, PlayerSeasonLine,
+  QbModelEntry, QualityCheck, RefereeSummary, RosterEntry, Stadium, SuperBowl, Team, TeamProfile, TeamSeason, TeamSeasonLine,
 } from '../lib/types';
 import type { ComputedRecordsShape } from './shapes';
 
@@ -64,6 +64,15 @@ export const api = {
   curatedRecords: () => load<{ source: string; asOf: string; records: CuratedRecord[] }>('records-curated.json'),
   computedRecords: () => load<ComputedRecordsShape>('records-computed.json'),
   stadiums: () => load<Stadium[]>('stadiums.json'),
+  referees: () => load<RefereeSummary[]>('referees.json'),
+  roster: (season: number) => load<RosterEntry[]>(`rosters/${season}.json`),
+  /** Box score de uma rodada (todos os jogos da semana). */
+  boxScore: (season: number, week: number) => load<PlayerGameLine[]>(`boxscores/${season}/${week}.json`),
+  async gameLog(id: string): Promise<Omit<PlayerGameLine, 'id' | 'name' | 'pos'>[]> {
+    const bucket = await load<Record<string, unknown>>(gameLogFile(id));
+    const p = bucket[id];
+    return p && isPacked(p) ? unpack(p) : [];
+  },
   qbModel: () => load<QbModelEntry[]>('models/qb-model.json'),
   quality: () => load<{ checkedAt: string; checks: QualityCheck[] }>('quality.json'),
   changes: () =>

@@ -116,8 +116,45 @@ export const METRICS: Record<string, MetricDef> = {
   takeaways: { label: 'Interceptações da defesa', short: 'INT', simple: 'Passes do adversário interceptados pela defesa.', expert: 'Defensive interceptions (o dataset de times não traz fumbles recuperados).' },
   giveaways: { label: 'Turnovers cometidos', short: 'TO', simple: 'Vezes em que o ataque perdeu a bola (interceptação ou fumble perdido).', expert: 'Giveaways = INT lançadas + fumbles perdidos.', lowerIsBetter: true },
   homeWinPct: { label: 'Vitórias do mandante', short: 'CASA%', simple: 'Percentual de jogos vencidos pelo time da casa.', expert: 'Home win% (exclui campos neutros e empates). Mede a vantagem de jogar em casa.', format: 'pct' },
-  carAv: { label: 'Approximate Value (carreira)', short: 'AV', simple: 'Nota única do Pro Football Reference que resume o valor de qualquer jogador na carreira.', expert: 'Approximate Value (PFR): pontos de valor distribuídos por time e posição a cada temporada; permite comparar posições diferentes de forma aproximada.' },
+  carAv: { label: 'Approximate Value (carreira)', short: 'AV', simple: 'Nota única do Pro Football Reference que resume o valor de qualquer jogador na carreira.', expert: 'Approximate Value ponderado de carreira (PFR, “weighted AV”: 100% do melhor ano, 95% do segundo…); permite comparar posições diferentes de forma aproximada.' },
   drAv: { label: 'AV pelo time que draftou', short: 'DrAV', simple: 'Valor que o jogador gerou para o time que o escolheu no draft.', expert: 'Approximate Value acumulado somente pelo time que o selecionou.' },
+
+  // Recebedores e jogadas longas
+  tgtShare: { label: 'Participação nos alvos', short: 'TGT%', simple: 'De cada 100 passes do time, quantos foram para este jogador.', expert: 'Target share: alvos do jogador ÷ alvos do time na temporada.', format: 'pct' },
+  airShare: { label: 'Participação nas jardas aéreas', short: 'AIR%', simple: 'Fatia das jardas lançadas no ar pelo time que foram na direção deste jogador.', expert: 'Air yards share: air yards dos alvos do jogador ÷ air yards do time.', format: 'pct' },
+  wopr: { label: 'WOPR', short: 'WOPR', simple: 'Nota de “oportunidade” do recebedor: quanto o ataque depende dele. Acima de 0,6 é elite.', expert: 'Weighted Opportunity Rating = 1,5 × target share + 0,7 × air yards share.', formula: '1,5 × TGT% + 0,7 × AIR%', digits: 2 },
+  pass20: { label: 'Passes de 20+ jardas', short: '20+', simple: 'Passes completos que ganharam 20 jardas ou mais.', expert: 'Completions of 20+ yards.' },
+  pass40: { label: 'Passes de 40+ jardas', short: '40+', simple: 'Passes completos que ganharam 40 jardas ou mais.', expert: 'Completions of 40+ yards.' },
+  rush20: { label: 'Corridas de 20+ jardas', short: '20+', simple: 'Corridas que ganharam 20 jardas ou mais.', expert: 'Rushes of 20+ yards.' },
+  rush40: { label: 'Corridas de 40+ jardas', short: '40+', simple: 'Corridas que ganharam 40 jardas ou mais.', expert: 'Rushes of 40+ yards.' },
+  rec20: { label: 'Recepções de 20+ jardas', short: '20+', simple: 'Recepções que ganharam 20 jardas ou mais.', expert: 'Receptions of 20+ yards.' },
+  rec40: { label: 'Recepções de 40+ jardas', short: '40+', simple: 'Recepções que ganharam 40 jardas ou mais.', expert: 'Receptions of 40+ yards.' },
+  passFd: { label: 'First downs de passe', short: '1D', simple: 'Passes que renovaram a série de descidas.', expert: 'Passing first downs.' },
+  rushFd: { label: 'First downs de corrida', short: '1D', simple: 'Corridas que renovaram a série de descidas.', expert: 'Rushing first downs.' },
+  recFd: { label: 'First downs de recepção', short: '1D', simple: 'Recepções que renovaram a série de descidas.', expert: 'Receiving first downs.' },
+
+  // Times especiais
+  gwfgm: { label: 'FGs da vitória', short: 'GWFG', simple: 'Field goals que colocaram o time na frente no fim do jogo e garantiram a vitória.', expert: 'Game-winning field goals made (definição nflverse).' },
+  fg50: { label: 'FGs de 50+ jardas', short: '50+', simple: 'Field goals convertidos de 50 jardas ou mais — os chutes mais difíceis.', expert: 'Field goals made from 50+ yards.' },
+  ptIn20: { label: 'Punts dentro da 20', short: 'IN20', simple: 'Punts que deixaram o adversário começando perto da própria end zone (dentro da linha de 20).', expert: 'Punts downed/returned inside the opponent 20.' },
+  ptTb: { label: 'Touchbacks de punt', short: 'TB', simple: 'Punts que entraram na end zone — o adversário começa na linha de 20.', expert: 'Punt touchbacks.', lowerIsBetter: true },
+  puntNet: { label: 'Média líquida de punt', short: 'NET', simple: 'Distância média do punt já descontando o retorno do adversário. Mede o resultado real do chute.', expert: 'Net punting average = (jardas de punt − jardas de retorno − 20 × touchbacks) ÷ punts.', digits: 1 },
+  prYds: { label: 'Jardas em retornos de punt', short: 'PR YDS', simple: 'Jardas ganhas devolvendo punts do adversário.', expert: 'Punt return yards.' },
+  krYds: { label: 'Jardas em retornos de kickoff', short: 'KR YDS', simple: 'Jardas ganhas devolvendo kickoffs do adversário.', expert: 'Kickoff return yards.' },
+  stTd: { label: 'TDs de times especiais', short: 'ST TD', simple: 'Touchdowns em retornos de punt/kickoff ou em chutes bloqueados.', expert: 'Special teams touchdowns.' },
+
+  // Defesa do time e mercado
+  epaAllowed: { label: 'EPA cedido por jogo', short: 'EPA DEF', simple: 'Quantos pontos o ataque adversário adiciona, em média, por jogo contra esta defesa. Menor (negativo) é melhor.', expert: '(EPA de passe + EPA de corrida dos adversários, somados jogo a jogo) ÷ jogos.', digits: 2, format: 'signed', lowerIsBetter: true },
+  ydsAllowedPg: { label: 'Jardas cedidas por jogo', short: 'YDS/J DEF', simple: 'Jardas que o adversário ganha, em média, contra esta defesa.', expert: 'Passing + rushing yards allowed ÷ jogos.', digits: 1, lowerIsBetter: true },
+  ats: { label: 'Contra a linha (ATS)', short: 'ATS', simple: 'Quantas vezes o time superou a expectativa do mercado: venceu por mais (ou perdeu por menos) do que o previsto.', expert: 'Against the spread: margem real > linha de fechamento. Push = exatamente na linha.' },
+  overPct: { label: 'Jogos acima do total', short: 'OVER%', simple: 'Percentual de jogos em que a soma dos pontos passou do total esperado pelo mercado.', expert: 'Over rate vs. linha de total de fechamento (exclui pushes).', format: 'pct' },
+  thirdPct: { label: 'Conversão na 3ª descida', short: '3RD%', simple: 'De cada 100 terceiras descidas, quantas viraram first down. É o momento em que o ataque mais precisa resolver.', expert: '3rd down conversions ÷ tentativas (play-by-play; jogadas anuladas por falta não contam).', format: 'pct' },
+  fourthPct: { label: 'Conversão na 4ª descida', short: '4TH%', simple: 'Quando o time tentou a 4ª descida (em vez de chutar), quantas vezes conseguiu o first down.', expert: '4th down conversions ÷ tentativas de corrida/passe na 4ª descida.', format: 'pct' },
+  goRate: { label: 'Decisão de ir na 4ª descida', short: 'GO%', simple: 'Em quantas 4ªs descidas o técnico mandou tentar (correr ou passar) em vez de chutar punt ou field goal. Times modernos arriscam mais.', expert: 'Tentativas de conversão ÷ (tentativas + punts + FGs) na 4ª descida.', format: 'pct' },
+  rzPct: { label: 'TD% na red zone', short: 'RZ%', simple: 'Quando o time chega perto da end zone (dentro da linha de 20), quantas vezes sai com touchdown em vez de só um field goal.', expert: 'Drives que alcançaram a 20 do adversário e terminaram em TD ÷ drives que alcançaram a 20.', format: 'pct' },
+  successRate: { label: 'Taxa de sucesso', short: 'SR', simple: 'Percentual de jogadas que deixaram o ataque em situação melhor (EPA positivo). Mede consistência, não só jogadas grandes.', expert: 'Jogadas de scrimmage com EPA > 0 ÷ jogadas de scrimmage (nflfastR).', format: 'pct' },
+  epaPlayAllowed: { label: 'EPA por jogada cedido', short: 'EPA/P DEF', simple: 'Quantos pontos o adversário adiciona, em média, a cada jogada contra esta defesa. Negativo = defesa forte.', expert: 'Σ EPA das jogadas de scrimmage dos adversários ÷ jogadas (play-by-play).', digits: 3, format: 'signed', lowerIsBetter: true },
+  rest: { label: 'Dias de descanso', short: 'DESC.', simple: 'Dias desde o jogo anterior. Uma semana normal tem 7; após a folga (bye), 13 ou 14.', expert: 'Rest days (nflverse/schedules).' },
 };
 
 export const metric = (k: string): MetricDef => METRICS[k] ?? { label: k, simple: k, expert: k };

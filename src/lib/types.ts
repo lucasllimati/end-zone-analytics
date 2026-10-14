@@ -52,6 +52,15 @@ export interface Game {
   stadium: string | null;
   stadiumId: string | null;
   espn: string | null;
+  /** Linha de aposta de fechamento: margem esperada do mandante (positivo = mandante favorito). */
+  spread: number | null;
+  /** Total de pontos esperado (over/under). */
+  total: number | null;
+  homeMl: number | null;
+  awayMl: number | null;
+  /** Dias de descanso desde o jogo anterior. */
+  homeRest: number | null;
+  awayRest: number | null;
 }
 
 /** Linha de estatística de um jogador em uma temporada (REG ou POST). */
@@ -101,6 +110,34 @@ export interface PlayerSeasonLine {
   fumLost: number;
   fpts: number;
   fptsPpr: number;
+  passFd: number;
+  rushFd: number;
+  recFd: number;
+  /** Jogadas longas: passes completos / corridas / recepções de 20+ e 40+ jardas. */
+  pass20: number;
+  pass40: number;
+  rush20: number;
+  rush40: number;
+  rec20: number;
+  rec40: number;
+  /** Participação nos alvos e nas jardas aéreas do time; WOPR = 1,5×alvos + 0,7×aéreas. Só por temporada. */
+  tgtShare: number | null;
+  airShare: number | null;
+  wopr: number | null;
+  /** FGs certos/errados por faixa: 0–19, 20–29, 30–39, 40–49, 50–59, 60+. null para quem não chutou. */
+  fgMade: number[] | null;
+  fgMiss: number[] | null;
+  /** FGs da vitória (game-winning). */
+  gwfgm: number;
+  gwfga: number;
+  ptIn20: number;
+  ptTb: number;
+  ptNet: number;
+  pr: number;
+  prYds: number;
+  kr: number;
+  krYds: number;
+  stTd: number;
 }
 
 export interface TeamSeasonLine {
@@ -132,6 +169,52 @@ export interface TeamSeasonLine {
   punts: number;
   puntYds: number;
   stTd: number;
+  passFd: number;
+  rushFd: number;
+  pass20: number;
+  pass40: number;
+  rush20: number;
+  rush40: number;
+  tfl: number;
+  qbHits: number;
+  pd: number;
+  fgMade: number[] | null;
+  fgMiss: number[] | null;
+  fgLong: number | null;
+  gwfgm: number;
+  gwfga: number;
+  ptIn20: number;
+  ptTb: number;
+  ptNet: number;
+  prYds: number;
+  krYds: number;
+  /** Cedido pela defesa (soma do ataque dos adversários, estatísticas por jogo). null sem dados semanais. */
+  passYdsAllowed: number | null;
+  rushYdsAllowed: number | null;
+  passEpaAllowed: number | null;
+  rushEpaAllowed: number | null;
+  /*
+   * Situacionais do play-by-play (ausentes quando a temporada ainda não tem pbp publicado).
+   * plays/epa/success = jogadas de scrimmage do ataque; prefixo d = o que a defesa cedeu.
+   * fourthOpp = 4ª descidas com decisão (corrida, passe, punt ou FG); fourthAtt = tentativas de conversão.
+   */
+  plays?: number;
+  epa?: number;
+  success?: number;
+  thirdAtt?: number;
+  thirdConv?: number;
+  fourthOpp?: number;
+  fourthAtt?: number;
+  fourthConv?: number;
+  rzTrips?: number;
+  rzTd?: number;
+  dPlays?: number;
+  dEpa?: number;
+  dSuccess?: number;
+  dThirdAtt?: number;
+  dThirdConv?: number;
+  dRzTrips?: number;
+  dRzTd?: number;
 }
 
 export interface PlayerBio {
@@ -154,6 +237,7 @@ export interface PlayerBio {
   jersey: number | null;
   status: string | null;
   espnId: string | null;
+  yearsExp: number | null;
 }
 
 /** Entrada leve para busca. */
@@ -164,6 +248,83 @@ export interface PlayerIndexEntry {
   team: string | null;
   first: number | null;
   last: number | null;
+}
+
+/** Jogador no elenco de um time em uma temporada (nflverse/rosters). */
+export interface RosterEntry {
+  id: string | null;
+  name: string;
+  team: string;
+  pos: string;
+  depth: string | null;
+  jersey: number | null;
+  status: string | null;
+  birth: string | null;
+  height: number | null;
+  weight: number | null;
+  college: string | null;
+  exp: number | null;
+  draftPick: number | null;
+}
+
+/** Linha de um jogador em um jogo (estatísticas semanais da nflverse). */
+export interface PlayerGameLine {
+  id: string;
+  name: string;
+  pos: string;
+  season: number;
+  week: number;
+  st: SeasonType;
+  game: string;
+  team: string;
+  opp: string;
+  cmp: number;
+  att: number;
+  passYds: number;
+  passTd: number;
+  int: number;
+  sacked: number;
+  passEpa: number | null;
+  carries: number;
+  rushYds: number;
+  rushTd: number;
+  rushEpa: number | null;
+  rec: number;
+  tgt: number;
+  recYds: number;
+  recTd: number;
+  recEpa: number | null;
+  tackles: number;
+  sacks: number;
+  qbHits: number;
+  defInt: number;
+  pd: number;
+  ff: number;
+  fgm: number;
+  fga: number;
+  fgLong: number | null;
+  xpm: number;
+  xpa: number;
+  punts: number;
+  puntYds: number;
+  prYds: number;
+  krYds: number;
+  fumLost: number;
+  fptsPpr: number;
+}
+
+/** Ataque de um time em um jogo (usado para calcular o que cada defesa cedeu). */
+export interface TeamGameLine {
+  team: string;
+  opp: string;
+  season: number;
+  week: number;
+  st: SeasonType;
+  game: string;
+  passYds: number;
+  rushYds: number;
+  passEpa: number | null;
+  rushEpa: number | null;
 }
 
 export interface PlayerCareer {
@@ -255,6 +416,31 @@ export interface Stadium {
   first: number;
   last: number;
   superBowls: number;
+  /** Pontos por jogo (soma dos dois times). */
+  avgPts?: number | null;
+  /** Aproveitamento do mandante (jogos não neutros, sem empates). */
+  homeWinPct?: number | null;
+  /** Médias de temperatura (°F) e vento (mph) nos jogos com medição (céu aberto). */
+  avgTemp?: number | null;
+  avgWind?: number | null;
+  /** Aproveitamento de field goals no estádio (estatísticas por jogo). */
+  fgPct?: number | null;
+  fgAtt?: number;
+}
+
+/** Árbitro principal (referee) e o perfil dos jogos que apitou. */
+export interface RefereeSummary {
+  name: string;
+  games: number;
+  from: number;
+  to: number;
+  playoffs: number;
+  superBowls: number;
+  avgPts: number;
+  homeWinPct: number | null;
+  /** Fração de jogos acima do total de pontos esperado pelo mercado. */
+  overPct: number | null;
+  ot: number;
 }
 
 /** Resumo de um time em uma temporada (gerado pelo pipeline a partir de jogos + estatísticas). */
@@ -448,4 +634,17 @@ export interface TeamProfile {
     season: { stat: string; entries: { id: string; name: string; value: number; season: number }[] }[];
   };
   draft: { picks: number; firstRound: number; proBowlers: number; hof: TeamDraftRef[]; best: TeamDraftRef[]; recent: TeamDraftRef[] };
+  /**
+   * Desempenho contra a expectativa do mercado (linhas de fechamento). ats/ou = [acima, abaixo, push];
+   * favored/underdog = campanha (V-D-E) quando favorito/azarão.
+   */
+  betting: {
+    games: number;
+    ats: WLT;
+    ou: WLT;
+    favored: WLT;
+    underdog: WLT;
+    bySeason: { season: number; ats: WLT; ou: WLT; favored: WLT; underdog: WLT }[];
+    upsets: (TeamGameRef & { line: number })[];
+  };
 }

@@ -2,6 +2,7 @@
  * Perfil de franquia (data/teams/{CODE}.json): identidade, estádios, técnicos, QBs, recortes, confrontos,
  * extremos, recordes da franquia e draft. Tudo derivado dos dados publicados — nada é digitado à mão.
  */
+import { atsResult, expectedMargin, ouResult } from '../../src/lib/betting';
 import { draftFranchise, franchiseOf } from '../../src/lib/teams';
 import type { DraftPick, Game, PlayerSeasonLine, TeamDraftRef, TeamGameRef, TeamProfile, TeamSeason, WLT } from '../../src/lib/types';
 
@@ -58,6 +59,7 @@ export function buildTeamProfile(code: string, allGames: Game[], seasons: TeamSe
     const home = franchiseOf(g.home) === code;
     return { home, pf: (home ? g.homeScore : g.awayScore)!, pa: (home ? g.awayScore : g.homeScore)!, opp: franchiseOf(home ? g.away : g.home), qb: home ? g.homeQb : g.awayQb };
   };
+  const myRest = (g: Game) => (franchiseOf(g.home) === code ? g.homeRest : g.awayRest);
   const ref = (g: Game): TeamGameRef => {
     const v = view(g);
     return { id: g.id, season: g.season, date: g.date, type: g.type, opp: v.opp, home: v.home && !g.neutral, pf: v.pf, pa: v.pa };
@@ -135,7 +137,43 @@ export function buildTeamProfile(code: string, allGames: Game[], seasons: TeamSe
     split('Estádio coberto', (g) => reg(g) && (g.roof === 'dome' || g.roof === 'closed')),
     split('Ao ar livre', (g) => reg(g) && (g.roof === 'outdoors' || g.roof === 'open')),
     split('Playoffs', (g) => g.type !== 'REG'),
+    // Descanso (dias desde o jogo anterior): folga = semana de bye; curto = quinta-feira após domingo.
+    split('Após semana de folga', (g) => reg(g) && (myRest(g) ?? 0) >= 10, '10+ dias de descanso'),
+    split('Descanso curto', (g) => reg(g) && myRest(g) !== null && myRest(g)! <= 5, 'até 5 dias, ex.: quinta à noite'),
   ];
+
+  // Contra a linha de aposta (expectativa do mercado), temporada regular e playoffs.
+  const bySeasonMap = new Map<number, { season: number; ats: WLT; ou: WLT; favored: WLT; underdog: WLT }>();
+  const betting: TeamProfile['betting'] = { games: 0, ats: [0, 0, 0], ou: [0, 0, 0], favored: [0, 0, 0], underdog: [0, 0, 0], bySeason: [], upsets: [] };
+  const triple = (r: WLT, k: string, a: string, b: string) => (k === a ? r[0]++ : k === b ? r[1]++ : r[2]++);
+  const upsetList: (TeamGameRef & { line: number })[] = [];
+  for (const g of games) {
+    const me = franchiseOf(g.home) === code ? g.home : g.away;
+    const ats = atsResult(g, me);
+    if (!ats) continue;
+    const v = view(g);
+    const s = bySeasonMap.get(g.season) ?? { season: g.season, ats: [0, 0, 0] as WLT, ou: [0, 0, 0] as WLT, favored: [0, 0, 0] as WLT, underdog: [0, 0, 0] as WLT };
+    betting.games++;
+    triple(betting.ats, ats, 'cover', 'miss');
+    triple(s.ats, ats, 'cover', 'miss');
+    const ou = ouResult(g);
+    if (ou) {
+      triple(betting.ou, ou, 'over', 'under');
+      triple(s.ou, ou, 'over', 'under');
+    }
+    const exp = expectedMargin(g, me)!;
+    if (exp > 0) {
+      add(betting.favored, v.pf, v.pa);
+      add(s.favored, v.pf, v.pa);
+    } else if (exp < 0) {
+      add(betting.underdog, v.pf, v.pa);
+      add(s.underdog, v.pf, v.pa);
+      if (v.pf > v.pa) upsetList.push({ ...ref(g), line: -exp });
+    }
+    bySeasonMap.set(g.season, s);
+  }
+  betting.bySeason = [...bySeasonMap.values()].sort((a, b) => b.season - a.season);
+  betting.upsets = upsetList.sort((a, b) => b.line - a.line || b.date.localeCompare(a.date)).slice(0, 8);
 
   // Confrontos contra cada adversário.
   const h2hMap = new Map<string, { opp: string; record: WLT; pf: number; pa: number; games: number; last: string }>();
@@ -230,5 +268,6 @@ export function buildTeamProfile(code: string, allGames: Game[], seasons: TeamSe
     extremes: { best: toRec(byPct[0]), worst: toRec(byPct.at(-1)), biggestWins, worstLosses, winStreak: streak(1), lossStreak: streak(-1) },
     leaders,
     draft: draftSummary,
+    betting,
   };
 }

@@ -17,9 +17,11 @@ import { DIVISIONS_CURRENT, franchiseOf } from '../lib/teams';
 import { dateBR, num, pct3, signed } from '../lib/format';
 import { RIVALRIES } from '../content/rivalries';
 import type { Game, TeamSeason } from '../lib/types';
+import { TeamEfficiency } from './team/TeamEfficiency';
+import { TeamRoster } from './team/TeamRoster';
 import { DivisionTable, DraftSection, FranchiseHistory, FranchiseRecords, Matchups, PointsChart, RecentForm } from './team/TeamSections';
 
-type Tab = 'overview' | 'schedule' | 'players' | 'records' | 'history' | 'matchups' | 'draft' | 'similar';
+type Tab = 'overview' | 'efficiency' | 'schedule' | 'players' | 'records' | 'history' | 'matchups' | 'draft' | 'similar';
 
 function playoffResult(s: TeamSeason): string {
   if (s.sbWin) return 'Campeão do Super Bowl';
@@ -128,6 +130,7 @@ export default function TeamPage() {
         onChange={setTab}
         tabs={[
           { id: 'overview', label: 'Visão geral' },
+          { id: 'efficiency', label: 'Eficiência' },
           { id: 'schedule', label: `Jogos ${season ?? ''}` },
           { id: 'players', label: 'Elenco' },
           { id: 'records', label: 'Recordes' },
@@ -201,29 +204,35 @@ export default function TeamPage() {
             <Unavailable />
           ))}
         {tab === 'players' && (
-          <div className="grid grid-3">
-            {[
-              { k: 'passYds', l: 'Jardas de passe' },
-              { k: 'rushYds', l: 'Jardas corridas' },
-              { k: 'recYds', l: 'Jardas recebidas' },
-              { k: 'tackles', l: 'Tackles' },
-              { k: 'sacks', l: 'Sacks' },
-              { k: 'defInt', l: 'Interceptações' },
-            ].map(({ k, l }) => {
-              const top = [...teamPlayers].sort((a, b) => (b[k as keyof typeof b] as number) - (a[k as keyof typeof a] as number)).filter((p) => (p[k as keyof typeof p] as number) > 0).slice(0, 5);
-              return (
-                <div className="card" key={k}>
-                  <h3>{l}</h3>
-                  {top.length ? (
-                    <BarList ariaLabel={l} items={top.map((p) => ({ key: p.id, value: p[k as keyof typeof p] as number, label: <Link to={`/players/${p.id}`}>{p.name}</Link>, sub: p.pos }))} />
-                  ) : (
-                    <p className="small muted">Dados não disponíveis.</p>
-                  )}
-                </div>
-              );
-            })}
+          <div className="stack">
+            <h2>Destaques de {season}</h2>
+            <div className="grid grid-3">
+              {[
+                { k: 'passYds', l: 'Jardas de passe' },
+                { k: 'rushYds', l: 'Jardas corridas' },
+                { k: 'recYds', l: 'Jardas recebidas' },
+                { k: 'tackles', l: 'Tackles' },
+                { k: 'sacks', l: 'Sacks' },
+                { k: 'defInt', l: 'Interceptações' },
+              ].map(({ k, l }) => {
+                const top = [...teamPlayers].sort((a, b) => (b[k as keyof typeof b] as number) - (a[k as keyof typeof a] as number)).filter((p) => (p[k as keyof typeof p] as number) > 0).slice(0, 5);
+                return (
+                  <div className="card" key={k}>
+                    <h3>{l}</h3>
+                    {top.length ? (
+                      <BarList ariaLabel={l} items={top.map((p) => ({ key: p.id, value: p[k as keyof typeof p] as number, label: <Link to={`/players/${p.id}`}>{p.name}</Link>, sub: p.pos }))} />
+                    ) : (
+                      <p className="small muted">Dados não disponíveis.</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <h2>Elenco completo</h2>
+            {season && <TeamRoster code={code} season={season} />}
           </div>
         )}
+        {tab === 'efficiency' && season && <TeamEfficiency code={code} season={season} standings={standings} />}
         {tab === 'records' && (profile.loading ? <Loading /> : profile.data ? <FranchiseRecords profile={profile.data} /> : <Unavailable>Recordes da franquia indisponíveis.</Unavailable>)}
         {tab === 'matchups' && (profile.loading ? <Loading /> : profile.data ? <Matchups profile={profile.data} code={code} /> : <Unavailable>Confrontos indisponíveis.</Unavailable>)}
         {tab === 'draft' && (profile.loading ? <Loading /> : profile.data ? <DraftSection profile={profile.data} code={code} /> : <Unavailable>Draft indisponível.</Unavailable>)}
