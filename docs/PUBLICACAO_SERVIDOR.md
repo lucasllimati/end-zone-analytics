@@ -110,6 +110,15 @@ Ficam de fora de propósito: `@types/node` major (acompanha o Node 22 de produç
 
 Em *Settings → General → Pull Requests*, **Automatically delete head branches** fica ligado: ao fazer o merge (ou fechar) um PR, a branch é apagada sozinha.
 
+**Notificações sem bagunça:** os PRs do Dependabot chegam **atribuídos a você** e com as etiquetas `dependencias` ou `ci`, então aparecem no filtro **Assigned** da caixa de notificações. Ajustes recomendados (feitos uma vez, na interface do GitHub):
+
+| Onde | Ajuste | Por quê |
+|---|---|---|
+| github.com/settings/notifications → *GitHub Actions* | **Only notify for failed workflows** | Só avisa quando a publicação falha |
+| github.com/settings/notifications → *Dependabot alerts* | Web e e-mail ligados | Vulnerabilidades chegam na hora |
+| Página do repositório → **Watch → Custom** | Marcar só *Pull requests* e *Security alerts* (desmarcar *Issues*, *Releases*, *Discussions*) | Recebe só o que exige ação |
+| Caixa de notificações | Filtro **Assigned**; depois de resolver, **Done** (ou selecionar tudo → *Done*) | Inbox vazia = nada pendente |
+
 ---
 
 ## 5. Monitoramento (grátis)
