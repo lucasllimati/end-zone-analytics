@@ -18,6 +18,12 @@ export interface Column<T> {
   /** Só aparece no modo Expert. */
   expertOnly?: boolean;
   className?: string;
+  /**
+   * Largura fixa da coluna (CSS, ex.: '4.5rem'). Se alguma coluna define largura, a tabela usa layout fixo:
+   * tabelas do mesmo tipo na mesma página ficam com colunas idênticas, independentemente do conteúdo.
+   * Colunas sem largura dividem o espaço restante.
+   */
+  width?: string;
 }
 
 interface Props<T> {
@@ -67,6 +73,11 @@ export function DataTable<T>({ rows, columns, rowKey, caption, initialSort, expo
     );
 
   const visible = sorted.slice(0, limit);
+  const fixed = cols.some((c) => c.width);
+  // Largura mínima = soma das colunas fixas + 10rem para cada coluna flexível (abaixo disso, rolagem horizontal).
+  const minWidth = fixed
+    ? `calc(${[...(rank ? ['2.75rem'] : []), ...cols.map((c) => c.width ?? '10rem')].join(' + ')})`
+    : undefined;
   return (
     <div>
       {exportName && (
@@ -76,8 +87,16 @@ export function DataTable<T>({ rows, columns, rowKey, caption, initialSort, expo
         </div>
       )}
       <div className={`table-wrap${bare ? ' bare' : ''}`} tabIndex={0} role="region" aria-label={caption}>
-        <table className="data">
+        <table className={fixed ? 'data fixed' : 'data'} style={minWidth ? { minWidth } : undefined}>
           <caption className="sr-only">{caption}</caption>
+          {fixed && (
+            <colgroup>
+              {rank && <col style={{ width: '2.75rem' }} />}
+              {cols.map((c) => (
+                <col key={c.key} style={c.width ? { width: c.width } : undefined} />
+              ))}
+            </colgroup>
+          )}
           <thead>
             <tr>
               {rank && (

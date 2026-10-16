@@ -1006,3 +1006,27 @@ main .ref-list a:hover {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Sequência dos últimos jogos na classificação: cada resultado é uma casa do mesmo tamanho, com fundo suave
+   na cor do resultado. A forma uniforme evita a ilusão de espaçamento desigual entre letras largas (W) e estreitas (L). */
+.last5 {
+  display: inline-flex;
+  gap: 3px;
+  vertical-align: middle;
+}
+.last5 > span {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  background: var(--fill);
+}
+.last5 > span.good {
+  background: var(--good-soft);
+}
+.last5 > span.bad {
+  background: var(--critical-soft);
+}

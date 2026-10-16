@@ -28,14 +28,16 @@ main:focus {
   display: grid;
   gap: var(--space-4);
 }
+/* Grades responsivas com teto de colunas: o número no nome é o máximo (em telas largas, auto-fit sem teto
+   criava 4–5 colunas e deixava cartões sozinhos na última linha). Abaixo do mínimo, caem para menos colunas. */
 .grid-2 {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, max(340px, calc((100% - var(--space-4)) / 2))), 1fr));
 }
 .grid-3 {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, max(260px, calc((100% - 2 * var(--space-4)) / 3))), 1fr));
 }
 .grid-4 {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, max(200px, calc((100% - 3 * var(--space-4)) / 4))), 1fr));
 }
 .row {
   display: flex;
@@ -1045,6 +1047,9 @@ input[type='range'] {
 
 /* ------------------------------ Tables ------------------------------ */
 .table-wrap {
+  /* Referência de posição: textos só para leitores de tela (.sr-only, absolutos) dentro da tabela
+     ficam presos à área de rolagem dela, em vez de esticar a página no celular. */
+  position: relative;
   overflow-x: auto;
   border: 0;
   border-radius: var(--radius);
@@ -1756,4 +1761,67 @@ details.table-view table.data td {
 
 table.data .team-chip {
   vertical-align: middle;
+}
+
+/* Cabeçalho numérico: o ⓘ vai para a esquerda do rótulo, para que o rótulo termine exatamente
+   na mesma borda dos números da coluna (alinhamento à direita real, não do ícone). */
+table.data th.num .th-inner {
+  flex-direction: row-reverse;
+}
+table.data th.num .sort-btn {
+  display: inline-flex;
+  flex-direction: row-reverse;
+  gap: 2px;
+}
+
+/* Layout fixo (colunas com largura definida): mesmas posições em todas as tabelas do mesmo tipo.
+   Texto que não cabe é cortado com reticências em vez de empurrar as colunas. */
+table.data.fixed {
+  table-layout: fixed;
+}
+table.data.fixed td {
+  overflow: clip;
+  overflow-clip-margin: 4px; /* mantém visível o anel de foco dos links dentro da célula */
+  text-overflow: ellipsis;
+}
+
+/* .balance: quando sobra um único cartão na última linha de uma grade de 3 colunas, ele vai para a
+   coluna do meio (composição simétrica). Só a partir da largura em que a grade de fato tem 3 colunas. */
+@media (min-width: 960px) {
+  .grid-3.balance > :last-child:nth-child(3n + 1):not(:first-child) {
+    grid-column: 2;
+  }
+}
+
+/* Seis indicadores sem espaço para uma linha: 3 + 3 em vez de 5 + 1. */
+@media (max-width: 1279px) {
+  .tiles:has(> :last-child:nth-child(6)) {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, max(170px, calc((100% - 2 * var(--space-3)) / 3))), 1fr));
+  }
+}
+
+/* Tablet (600–1023 px): grades com divisões exatas para não sobrar cartão sozinho.
+   4 e 8 itens → 2 colunas; 5, 6 e 9 → 3 colunas; grade de 4 colunas vira 2, e um item ímpar
+   no fim ocupa a linha inteira. */
+@media (min-width: 600px) and (max-width: 1023px) {
+  .tiles:has(> :last-child:nth-child(4)),
+  .tiles:has(> :last-child:nth-child(8)),
+  .split-grid:has(> :last-child:nth-child(4)),
+  .split-grid:has(> :last-child:nth-child(8)),
+  .split-grid:has(> :last-child:nth-child(10)) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tiles:has(> :last-child:nth-child(5)),
+  .tiles:has(> :last-child:nth-child(6)),
+  .tiles:has(> :last-child:nth-child(9)),
+  .split-grid:has(> :last-child:nth-child(6)),
+  .split-grid:has(> :last-child:nth-child(9)) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .grid-4 > :last-child:nth-child(2n + 1) {
+    grid-column: 1 / -1;
+  }
 }

@@ -110,7 +110,8 @@ export default function Positions() {
         {UNITS.map((u) => (
           <div key={u.id} style={{ marginBottom: 16 }}>
             <h3 className="small muted">{u.label}</h3>
-            <div className="grid grid-4">
+            {/* 4 colunas, exceto quando sobraria 1 posição sozinha na última linha (ex.: 5 → 3 + 2). */}
+            <div className={`grid ${POSITIONS.filter((p) => p.unit === u.id).length % 4 === 1 ? 'grid-3' : 'grid-4'}`}>
               {POSITIONS.filter((p) => p.unit === u.id).map((p) => (
                 <button
                   key={p.id}

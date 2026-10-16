@@ -110,7 +110,7 @@ export default function Records() {
               return (
                 <section key={g}>
                   <h2 style={{ fontSize: '1rem' }}>{groups[g]}</h2>
-                  <div className="grid grid-3">
+                  <div className="grid grid-3 balance">
                     {recs.map((r) => (
                       <div className="card tight" key={r.id}>
                         <div className="small muted">{r.label}</div>

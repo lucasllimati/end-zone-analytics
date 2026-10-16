@@ -54,6 +54,17 @@ Raios 10/14/20 px e pílula (`980px`); espaços em `rem` (`--space-1…8`); cont
 | `.segmented`, `.badge.*` | `styles/components.css` | Recortes compactos dentro de painéis; selos de estado |
 | `DiagramField`, `HorizontalField` | `components/Field.tsx` | Campos para posições, playbook, simulador e faltas |
 
+## Alinhamento e proporções (regras)
+
+| Regra | Como |
+|---|---|
+| **Tabelas do mesmo tipo têm a mesma grade** | Colunas com `width` no `DataTable` ativam `table-layout: fixed` + `<colgroup>`: as 8 divisões da classificação (e qualquer conjunto de tabelas iguais) ficam com as colunas exatamente na mesma posição, independentemente do conteúdo. Texto longo é cortado com reticências |
+| **Número alinhado ao rótulo** | Em colunas numéricas, o ⓘ e a seta de ordenação ficam à **esquerda** do rótulo; o rótulo termina na mesma borda dos números |
+| **Teto de colunas nas grades** | `.grid-2/3/4` têm no máximo 2/3/4 colunas (antes, `auto-fit` criava 4–5 em telas largas) e caem para menos colunas abaixo do mínimo |
+| **Sem cartão sozinho na última linha** | Conteúdo dimensionado para a grade (ex.: 12 recordes da franquia em 3 × 4; 7 árbitros em 4 + 3); `.balance` centraliza um cartão restante na coluna do meio; no tablet (600–1023 px), grades de 4/8/10 itens usam 2 colunas e de 5/6/9 itens, 3 |
+| **Forma uniforme para sequências** | Últimos jogos (V/D/E) em casas de 18 px com fundo suave na cor do resultado: letras largas e estreitas ocupam o mesmo espaço visual |
+| **Auditoria** | Script de verificação (deriva de colunas, cabeçalho × números, cartões órfãos, rolagem lateral) rodado em 1440, 1024, 768 e 390 px em todas as rotas e abas |
+
 ## Gráficos (regras)
 
 - Forma escolhida pela tarefa: linha para tempo, barras horizontais para rankings, colunas para edições, radar para percentis (≤ 3 séries), dispersão para relação entre duas medidas.

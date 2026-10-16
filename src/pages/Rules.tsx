@@ -117,7 +117,7 @@ export default function Rules() {
       <section className="card">
         <h2>Equipe de arbitragem</h2>
         <p className="text-2 small">Sete árbitros em campo, cada um com uma área de responsabilidade, mais o replay central em Nova York.</p>
-        <div className="grid grid-3">
+        <div className="grid grid-4">
           {OFFICIALS.map((o) => (
             <div key={o.id} className="tile">
               <div style={{ fontWeight: 650 }}>

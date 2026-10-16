@@ -36,6 +36,8 @@ const STATS: { key: keyof PlayerSeasonLine; label: string }[] = [
   { key: 'sacks', label: 'Sacks' },
   { key: 'defInt', label: 'Interceptações' },
   { key: 'tackles', label: 'Tackles' },
+  { key: 'ff', label: 'Fumbles forçados' },
+  { key: 'fgm', label: 'Field goals' },
 ];
 
 const draftRef = (d: DraftPick): TeamDraftRef => ({
