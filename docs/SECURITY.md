@@ -39,7 +39,7 @@ Não abra issue pública. Envie os detalhes ao mantenedor do projeto por canal p
 | Código-fonte | O build público não gera source maps (`VITE_PUBLIC_STATIC=1`): o repositório é privado e os `.map` entregariam o código inteiro |
 | Abuso do placar ao vivo | O Worker responde `/api/live/*` do cache da borda (30–60 s): uma rajada de acessos vira uma chamada à ESPN por janela, sem esgotar a cota do Worker. Detalhe de jogo só para IDs da base (`data/live-ids.json`); sem a lista, recusa (falha fechada) |
 | Cabeçalhos da API do Worker | `Content-Security-Policy: default-src 'none'`, `X-Frame-Options: DENY`, `Cross-Origin-Resource-Policy: same-origin`, HSTS, `nosniff`, `Referrer-Policy: no-referrer` |
-| Cadeia de suprimentos | Actions fixadas por SHA (com a versão no comentário), `persist-credentials: false` no checkout, `wrangler` com versão exata, `npm audit --audit-level=high` no CI e na publicação, Dependabot semanal (npm e actions) |
+| Cadeia de suprimentos | Actions fixadas por SHA (com a versão no comentário), `persist-credentials: false` no checkout, `wrangler` com versão exata, `npm audit --audit-level=high` no CI e na publicação, Dependabot mensal e agrupado (no máximo 3 PRs: npm minor/patch, npm major, actions) |
 | Atualização segura do front | Após nova publicação, erro de carregamento de módulo antigo recarrega a página uma vez (sem laço) |
 | Dados versionados | `.gitignore` ancorado na raiz (`/data/`, `/data-raw/`, `/ops/`) — código em `src/data/` e `tests/data/` vai para o git |
 
@@ -61,7 +61,7 @@ Auditoria de 14/10/2026, revista no teste de invasão de 16/10/2026. Repita a ca
 | 10 | CSRF | ✅ teste | Cookie `SameSite=Strict` + cabeçalho `X-EZA-Admin` obrigatório nas ações; sem CORS |
 | 11 | Upload sem validação | ✅ n/a | Não há upload |
 | 12 | Revelando informação | ✅ | Erros 500 genéricos; sem stack trace; sem source maps no site público; versão do Node só para admin autenticado |
-| 13 | Dependências vulneráveis | ✅ | `npm audit`: 0 vulnerabilidades (16/10/2026); CI e publicação falham com vulnerabilidade alta; Dependabot abre PRs semanais (npm e actions) |
+| 13 | Dependências vulneráveis | ✅ | `npm audit`: 0 vulnerabilidades (16/10/2026); CI e publicação falham com vulnerabilidade alta; Dependabot mensal e agrupado, alertas de segurança na hora |
 | 14 | Tokens mal gerenciados | ✅ | Sessão expira em 8 h e some no logout; token nunca vai para log, URL ou `localStorage`; segredos do CI por passo |
 | 15 | Rate limit | ✅ teste | Fastify: 600/min por IP; Worker: cache na borda para `/api/live/*` |
 | 16 | Dados sensíveis expostos | ✅ | `data/` só tem dados públicos; log operacional (`ops/`) fora da pasta servida; admin fora do build público |

@@ -25,3 +25,4 @@
 8. Dados pré-1999 (temporada a temporada) a partir de fonte aberta verificável.
 9. **E2E no CI** (hoje roda localmente; o CI roda tipos, testes, ortografia, build e auditoria).
 10. **Regressão visual automatizada** por screenshot.
+11. **Migração para Vite 8** (empacotador Rolldown) junto com `@vitejs/plugin-react` 5+; até lá o Dependabot não propõe essas versões grandes.

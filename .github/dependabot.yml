@@ -1,22 +1,39 @@
-# Atualizações automáticas de dependências (PRs semanais, agrupadas para não lotar a fila).
-# As actions estão fixadas por SHA nos workflows; o Dependabot atualiza o SHA e o comentário de versão.
+# Atualizações automáticas de dependências — no máximo 3 PRs por mês, agrupados:
+#   1) npm: correções e melhorias (minor + patch) num PR só;
+#   2) npm: versões grandes (major), num PR separado para revisar com calma;
+#   3) GitHub Actions: tudo num PR só (os workflows fixam cada action por SHA, e o Dependabot atualiza o SHA).
+# Alertas de segurança (Dependabot security updates) continuam chegando na hora, independentemente deste agendamento.
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 5
+      interval: monthly
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: deps
     groups:
-      producao:
-        dependency-type: production
+      dependencias:
         update-types: [minor, patch]
-      desenvolvimento:
-        dependency-type: development
-        update-types: [minor, patch]
+      versoes-grandes:
+        update-types: [major]
+    ignore:
+      # @types/node acompanha a versão do Node em produção (22), não a mais nova.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+      # Vite 8 troca o empacotador (Rolldown) e exige o plugin React novo: migração planejada à parte (ROADMAP).
+      - dependency-name: vite
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@vitejs/plugin-react'
+        update-types: ['version-update:semver-major']
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
+    open-pull-requests-limit: 1
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns: ['*']

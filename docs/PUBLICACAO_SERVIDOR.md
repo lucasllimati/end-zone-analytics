@@ -72,7 +72,7 @@ No Cloudflare não existe a página `/admin`, porque ela depende de um servidor 
 | Fonte fora do ar ou dado reprovado | Nada é publicado; o site segue com os dados anteriores; você recebe e-mail (e ntfy) | Só se repetir por mais de um dia |
 | `git push` na `main` | Testes → dados → build → publica a nova versão do código | Não |
 | 60 dias sem commits (repositório público) | O GitHub pausa o cron e avisa por e-mail | Clicar em **Enable workflow** |
-| Toda segunda-feira | O Dependabot abre PRs com atualizações de dependências e de actions (agrupadas) | Revisar: se o CI do PR passar, **Merge** — a publicação roda testes e `npm audit` de novo |
+| Uma vez por mês | O Dependabot abre no máximo 3 PRs agrupados: correções/melhorias do npm, versões grandes do npm e GitHub Actions | Ver abaixo, em *Atualizações de dependências* |
 
 ---
 
@@ -91,6 +91,24 @@ No Cloudflare não existe a página `/admin`, porque ela depende de um servidor 
 | Domínio próprio | Worker → **Settings → Domains & Routes → Add → Custom domain**; atualize a variável `SITE_URL` |
 | Ver uso e limites | Cloudflare → Worker → **Metrics**; GitHub → *Settings → Billing → Usage* (minutos do Actions) |
 | Testar localmente a versão publicada | `npm run build:static` e `npx wrangler@4.144.0 dev --port 8788` |
+
+---
+
+## 4.1 Branches e atualizações de dependências
+
+**Fluxo de trabalho:** a `main` é a produção — todo push nela testa, gera os dados e publica. Para mudanças grandes, trabalhe numa branch (ex.: `dev`): o `ci.yml` testa cada push fora da `main`, e você publica fazendo o merge na `main`. Mudanças pequenas podem ir direto na `main`.
+
+**Atualizações de dependências (Dependabot):** uma vez por mês chegam no máximo 3 PRs agrupados (`.github/dependabot.yml`):
+
+| PR | O que fazer |
+|---|---|
+| `deps: … dependencias` (minor + patch) | Se o CI passou (✓), **Merge** |
+| `deps: … versoes-grandes` (major) | Ler o que muda; se o CI passou e nada quebra localmente (`npm run qa` e `npm run test:e2e`), **Merge** |
+| `ci: … actions` | Se o CI passou, **Merge**; depois rode **Actions → Atualizar dados e publicar → Run workflow** para confirmar a publicação |
+
+Ficam de fora de propósito: `@types/node` major (acompanha o Node 22 de produção) e Vite/plugin React major (migração planejada no [ROADMAP](ROADMAP.md)). Alertas de **segurança** do Dependabot chegam na hora, fora desse calendário.
+
+Em *Settings → General → Pull Requests*, **Automatically delete head branches** fica ligado: ao fazer o merge (ou fechar) um PR, a branch é apagada sozinha.
 
 ---
 
