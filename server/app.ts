@@ -59,13 +59,16 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
   });
   const store = new DataStore(opts.dataDir ?? DATA_DIR);
   const checkCache = new TtlCache<UpdateCheckResult>();
+  const ops = new OpsLog(opts.opsDir ?? OPS_DIR, opts.notifier ?? { url: config.alertWebhook, format: config.alertFormat, minSeverity: config.alertMinSeverity });
   const adminToken = opts.adminToken ?? config.adminToken;
   // Em produção, token curto = adivinhável: o login fica desligado até ser trocado por um forte.
   const weakToken = config.isProd && adminToken.length > 0 && adminToken.length < MIN_TOKEN_LENGTH;
-  const auth = new AdminAuth(weakToken ? '' : adminToken, opts.allowLocalAdmin ?? !config.isProd, config.isProd);
-  if (weakToken) app.log.error(`ADMIN_TOKEN tem menos de ${MIN_TOKEN_LENGTH} caracteres: login administrativo desativado. Gere um com: openssl rand -base64 32`);
+  // Uma única trava para todas as formas de autenticar (login e Authorization: Bearer).
   const loginGuard = new LoginThrottle();
-  const ops = new OpsLog(opts.opsDir ?? OPS_DIR, opts.notifier ?? { url: config.alertWebhook, format: config.alertFormat, minSeverity: config.alertMinSeverity });
+  const auth = new AdminAuth(weakToken ? '' : adminToken, opts.allowLocalAdmin ?? !config.isProd, config.isProd, loginGuard, () => {
+    void ops.event({ severity: 'error', component: 'auth', message: 'Acesso administrativo bloqueado por excesso de tokens inválidos (Bearer)' }).catch(() => {});
+  });
+  if (weakToken) app.log.error(`ADMIN_TOKEN tem menos de ${MIN_TOKEN_LENGTH} caracteres: login administrativo desativado. Gere um com: openssl rand -base64 32`);
   const afterSync = () => {
     store.invalidate();
     checkCache.clear();
@@ -92,6 +95,11 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
       },
     },
     crossOriginEmbedderPolicy: false,
+    frameguard: { action: 'deny' },
+  });
+  // Recursos do navegador que o site não usa ficam bloqueados (helmet não define este cabeçalho).
+  app.addHook('onSend', async (_req, reply) => {
+    reply.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
   });
   await app.register(compress, { global: true, threshold: 1024 });
   await app.register(rateLimit, { max: 600, timeWindow: '1 minute' });
@@ -186,7 +194,7 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
     const q = z
       .object({
         season: seasonQ.optional(),
-        stat: z.string().regex(/^[a-zA-Z]+$/).default('passYds'),
+        stat: z.string().regex(/^[a-zA-Z0-9]+$/).max(20).default('passYds'),
         type: z.enum(['REG', 'POST']).default('REG'),
         limit: z.coerce.number().int().min(1).max(100).default(10),
       })
@@ -197,7 +205,8 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
     const lines = await store.playerStats(season).catch(() => null);
     if (!lines) return reply.code(404).send(notFound('Temporada'));
     const stat = q.data.stat as keyof PlayerSeasonLine;
-    if (!(stat in (lines[0] ?? {}))) return reply.code(400).send({ error: 'bad_request', message: `Estatística desconhecida: ${stat}` });
+    // Só colunas numéricas próprias da linha (sem "constructor", "toString" e afins herdados do protótipo).
+    if (!lines[0] || !Object.hasOwn(lines[0], stat) || typeof lines[0][stat] !== 'number') return reply.code(400).send({ error: 'bad_request', message: 'Estatística desconhecida.' });
     return lines
       .filter((l) => l.st === q.data.type)
       .sort((a, b) => ((b[stat] as number) ?? 0) - ((a[stat] as number) ?? 0))
@@ -239,6 +248,9 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
   app.get('/api/live/game/:espnId', async (req, reply) => {
     const id = (req.params as { espnId: string }).espnId;
     if (!/^\d{6,12}$/.test(id)) return reply.code(400).send({ error: 'bad_request' });
+    // Só jogos da base: o servidor não vira proxy para IDs arbitrários da ESPN.
+    const known = await store.allGames().catch(() => []);
+    if (!known.some((g) => g.espn === id)) return reply.code(404).send(notFound('Jogo'));
     try {
       return await gameDetail(id);
     } catch (e) {

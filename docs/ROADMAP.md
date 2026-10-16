@@ -10,10 +10,12 @@
 | 6 — Playbook | Formações e 29 jogadas/coberturas animadas | ✅ |
 | 7 — Avançado | Rankings configuráveis e power ranking | ✅ parcial |
 | 8 — Produto e operação | Redesign (linguagem Apple: tipografia do sistema, materiais translúcidos, controles segmentados; símbolo da bola oval), área `/admin` protegida, log operacional e alertas, agendador, publicação grátis no Cloudflare com cron e portão de qualidade | ✅ |
+| 9 — Profundidade dos dados | Perfil de franquia (história, técnicos, QBs, estádios, momentos, recordes, draft), estatísticas por jogo (jogo a jogo, box score), play-by-play resumido (3ª/4ª descida, red zone, sucesso, EPA cedido), elencos, linhas de aposta (zebras, contra a linha), descanso, árbitros, eficiência com ranking, times especiais, valor de draft | ✅ |
+| 10 — Segurança | Checklist de 19 pontos, OWASP Top 10, teste de invasão (pentest), correções, actions por SHA, Dependabot | ✅ |
 
 ## Próximos passos
 
-1. **Play-by-play (nflverse `pbp`)**: success rate, EPA defensivo, heatmaps de campo, taxa de passe em situação neutra, recordes por jogo de jogadores.
+1. **Play-by-play completo**: mapas de calor de campo, taxa de passe em situação neutra, recordes por jogo e probabilidade de vitória própria (hoje vem da ESPN). Success rate, EPA defensivo, 3ª/4ª descida e red zone já estão no site.
 2. **Simulador de playoffs (“what-if”)** e probabilidades por Monte Carlo, com desempates oficiais completos.
 3. **Prêmios** (MVP, OPOY, DPOY, novatos, técnico) a partir de fonte com licença adequada.
 4. **SQLite/DuckDB opcional** como destino de publicação para consultas ad hoc (PostgreSQL só com várias instâncias).

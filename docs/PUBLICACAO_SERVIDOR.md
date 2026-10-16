@@ -72,6 +72,7 @@ No Cloudflare não existe a página `/admin`, porque ela depende de um servidor 
 | Fonte fora do ar ou dado reprovado | Nada é publicado; o site segue com os dados anteriores; você recebe e-mail (e ntfy) | Só se repetir por mais de um dia |
 | `git push` na `main` | Testes → dados → build → publica a nova versão do código | Não |
 | 60 dias sem commits (repositório público) | O GitHub pausa o cron e avisa por e-mail | Clicar em **Enable workflow** |
+| Toda segunda-feira | O Dependabot abre PRs com atualizações de dependências e de actions (agrupadas) | Revisar: se o CI do PR passar, **Merge** — a publicação roda testes e `npm audit` de novo |
 
 ---
 
@@ -116,7 +117,7 @@ Não há backup a fazer manualmente:
 |---|---|---|
 | Código | GitHub | `git revert` + push, ou rollback da versão na Cloudflare |
 | Versões publicadas do site | Cloudflare guarda as anteriores | **Deployments → Rollback** |
-| Dados | Recriados a partir das fontes abertas | **Run workflow → `full`** (3–6 min) |
+| Dados | Recriados a partir das fontes abertas | **Run workflow → `full`** (~4 min no Actions; o play-by-play é processado em fluxo) |
 | Segredos | GitHub Secrets (não dá para lê-los de volta) | Gere de novo na Cloudflare e cadastre outra vez |
 
 ---
@@ -129,6 +130,11 @@ Não há backup a fazer manualmente:
 - [ ] O site público não tem `/admin` nem login (o build estático exclui), e o Worker responde 404 ao resto de `/api/*`.
 - [ ] Os cabeçalhos de segurança vêm de `public/_headers`. Para conferir, rode `curl -sI <endereço>` e veja `content-security-policy` e `strict-transport-security`.
 - [ ] `.env`, `/data/`, `/data-raw/`, `/ops/` e `.wrangler/` estão fora do git (`.gitignore`).
+- [ ] O site publicado não tem source maps (`curl -s <endereço>/assets/<arquivo>.js | grep -c sourceMappingURL` → 0).
+- [ ] O placar ao vivo sai do cache da borda: a segunda chamada a `/api/live/scoreboard` traz `CF-Cache-Status: HIT`.
+- [ ] No GitHub, *Settings → Code security*: **Dependabot alerts**, **Dependabot security updates** e **Secret scanning** ligados.
+- [ ] Opcional: Cloudflare → *Security → WAF → Rate limiting rules* → uma regra para `/api/` (ex.: 60 requisições em 10 s por IP). O plano grátis permite uma regra.
+- [ ] Relatório completo do teste de invasão e checklist de 19 pontos: [SECURITY.md](SECURITY.md).
 
 ---
 
@@ -139,10 +145,10 @@ Tudo cabe no plano grátis:
 | Recurso | Limite grátis | Uso do projeto |
 |---|---|---|
 | Cloudflare Workers: páginas e dados (static assets) | Sem limite de requisições | Todo o tráfego do site |
-| Cloudflare Workers: código (`/api/live/*`) | 100 mil requisições/dia | Só o placar ao vivo, com cache de 30–60 s |
-| Tamanho do site | 20 mil arquivos; 25 MB por arquivo | ~290 arquivos, ~35 MB no total |
-| GitHub Actions | Repositório público: ilimitado. Privado: 2.000 min/mês | ~200–500 min/mês (1,5–5 min por execução) |
-| Cache do Actions | 10 GB | Dezenas de MB |
+| Cloudflare Workers: código (`/api/live/*`) | 100 mil requisições/dia | Só o placar ao vivo, servido do cache da borda (30–60 s) e só para jogos da base |
+| Tamanho do site | 20 mil arquivos; 25 MB por arquivo | ~960 arquivos, ~190 MB no total (maior arquivo ≈ 2 MB) |
+| GitHub Actions | Repositório público: ilimitado. Privado: 2.000 min/mês | ~250–500 min/mês (2–4 min por execução) |
+| Cache do Actions | 10 GB | ~400 MB (estatísticas por jogo e resumos do play-by-play) |
 
 Sem cartão de crédito em nenhum dos dois serviços.
 

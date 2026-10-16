@@ -1,0 +1,22 @@
+# Atualizações automáticas de dependências (PRs semanais, agrupadas para não lotar a fila).
+# As actions estão fixadas por SHA nos workflows; o Dependabot atualiza o SHA e o comentário de versão.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      producao:
+        dependency-type: production
+        update-types: [minor, patch]
+      desenvolvimento:
+        dependency-type: development
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday

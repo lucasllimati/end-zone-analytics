@@ -25,7 +25,7 @@ Este guia explica o que o projeto faz, como está organizado, como os dados cheg
 Uma enciclopédia interativa, banco de dados histórico e laboratório de analytics da NFL, em português, que atende ao mesmo tempo:
 
 - **Iniciantes** — explicações simples em cada número (botão ⓘ), página “A NFL em 10 minutos”, simulador de down & distance, posições num campo interativo e playbook animado.
-- **Especialistas** — EPA, CPOE, percentis, ajuste de era, power ranking transparente, explorador de dados com exportação.
+- **Especialistas** — EPA, CPOE, taxa de sucesso, eficiência com ranking na liga, situações (3ª/4ª descida, red zone), participação nos alvos e WOPR, percentis, ajuste de era, power ranking transparente, expectativa do mercado (contra a linha, zebras), jogo a jogo, box score e explorador de dados com exportação.
 
 O seletor **Iniciante / Expert** no topo muda as notas explicativas, as colunas avançadas e os textos alternativos; ele só aparece nas páginas em que a troca muda algo visível. O seletor de **temporada** no cabeçalho faz todas as páginas respeitarem o ano escolhido (1999–hoje).
 
@@ -34,7 +34,7 @@ O seletor **Iniciante / Expert** no topo muda as notas explicativas, as colunas 
 ```mermaid
 flowchart LR
     subgraph Fontes
-        NV[(nflverse<br/>GitHub Releases<br/>CSV · CC-BY 4.0)]
+        NV[(nflverse<br/>GitHub Releases · CC-BY 4.0<br/>calendário · estatísticas por temporada e por jogo<br/>play-by-play · elencos · draft)]
         CUR[(Curadoria<br/>data-curated/*.json<br/>Super Bowls I–LX, recordes)]
         ESPN[(API pública ESPN<br/>placar ao vivo, drives,<br/>win probability)]
     end
@@ -180,7 +180,10 @@ Camadas (cada uma testada isoladamente):
 | RAW | `server/etl/fetcher.ts` → `data-raw/` | Download com retry, escrita atômica, `.meta.json` com a versão remota |
 | NORMALIZED | `server/etl/transform.ts` | CSV → tipos do contrato; vazio/NA → `null` (nunca 0 em métricas) |
 | ANALYTICS | `server/etl/analytics.ts` | Temporadas por time, tendências da liga, Super Bowls (curadoria × nflverse), modelo de QBs, similaridade, recordes, estádios |
-| QUALITY | `server/etl/quality.ts` | 18 verificações (duplicidade, placares, times, jogos por temporada, formato de playoffs, estatísticas impossíveis, alvos × recepções, passer rating, nomes, draft, Super Bowls, recordes — divergências conhecidas ficam documentadas na curadoria) |
+| ANALYTICS | `server/etl/teamProfiles.ts` | Perfil de cada franquia: identidades, estádios, técnicos (jogo a jogo), QBs, recortes (casa, divisão, descanso…), confrontos, momentos marcantes, recordes da franquia, draft, contra a linha |
+| ANALYTICS | `server/etl/insights.ts` | Árbitros, maiores zebras, recordes de times especiais, o que cada defesa cedeu (soma do ataque dos adversários jogo a jogo), clima/mandante/FG% por estádio |
+| ANALYTICS | `server/etl/pbp.ts` | Play-by-play em fluxo (download → gunzip → CSV) → resumo por time: 3ª e 4ª descidas, decisão de ir na 4ª, red zone, taxa de sucesso, EPA por jogada (ataque e defesa). Só o resumo fica em cache e só é refeito quando a versão remota (ou a lógica) muda |
+| QUALITY | `server/etl/quality.ts` | 19 verificações (duplicidade, placares, times, jogos por temporada, formato de playoffs, estatísticas impossíveis, alvos × recepções, passer rating, nomes, draft, AV de carreira presente, Super Bowls, recordes — divergências conhecidas ficam documentadas na curadoria) |
 | PUBLISH | `server/etl/pipeline.ts` → `data/` | JSON (colunar quando grande), `manifest.json`, `quality.json`, `history/` |
 
 **Publicações e histórico:** uma nova publicação só é criada quando o conteúdo muda (sha256 dos conjuntos ou resultado da qualidade). Nesse caso o manifest anterior vai para `data/history/manifest-N.json` (últimos 10) e `data/history/changes.json` registra o que mudou (conjuntos e variação de linhas). Sem mudanças, a publicação é mantida e só `lastCheckedAt` é atualizado. O job é idempotente. Se a lista de versões remotas não puder ser consultada (ex.: limite da API do GitHub), a carga parcial falha com erro explícito, em vez de reportar sucesso sem atualizar.
@@ -201,6 +204,7 @@ data/
 ├── team-seasons.json, trends.json, stadiums.json, referees.json
 ├── superbowls.json, records-curated.json, records-computed.json
 ├── draft.json, models/qb-model.json
+├── live-ids.json            IDs ESPN aceitos pelo Worker em /api/live/game/{id}
 └── history/changes.json, manifest-N.json
 ```
 
@@ -224,17 +228,17 @@ A primeira carga com play-by-play processa ~530 MB em fluxo (5–10 min); as seg
 | Rota | Conteúdo |
 |---|---|
 | `/` | Hero, jogos da semana (com placar ao vivo), jogo em destaque, líderes, classificação resumida, perguntas frequentes, último Super Bowl |
-| `/season` | Abas: classificação (divisões/conferências/liga, 14 colunas com ⓘ), calendário, líderes (REG/POST), playoffs (chave real ou projeção “se terminasse hoje”), power ranking, força de tabela |
-| `/games/:id` | Game Center: placar por quarto, evolução do placar, jogadas de pontuação (clicáveis), drives, probabilidade de vitória, ficha (estádio, teto, gramado, clima, QBs, técnicos, árbitro), estatísticas dos times, destaques, histórico do confronto |
-| `/teams`, `/teams/:abbr` | Cards com logos por divisão; perfil com analytics da temporada, vitórias por temporada, elenco, história temporada a temporada, Super Bowls, rivais, times semelhantes |
-| `/players`, `/players/:id` | Busca com filtros; perfil com bio, totais, evolução, radar de percentis, temporada a temporada (REG/POST), semelhantes |
+| `/season` | Abas: classificação (divisões/conferências/liga, 14 colunas com ⓘ), calendário, líderes (REG/POST), playoffs (chave real ou projeção “se terminasse hoje”), power ranking, força de tabela, **eficiência** (ataque, defesa, times especiais e situações com ranking; gráfico ataque × defesa) e **zebras e expectativa** (favoritos, contra a linha, totais, vantagem de descanso, maiores zebras) |
+| `/games/:id` | Game Center: placar por quarto, evolução do placar, jogadas de pontuação (clicáveis), drives, probabilidade de vitória, **box score** (passe, corrida, recepção, defesa, chutes, punts, retornos), **expectativa do mercado** (favorito, linha, total, chance pela moneyline, resultado contra a linha, selo de zebra), ficha (estádio, teto, gramado, clima, **descanso**, QBs, técnicos, árbitro), **perfil do árbitro**, estatísticas dos times, destaques, histórico do confronto |
+| `/teams`, `/teams/:abbr` | Cards com logos por divisão; perfil com abas: visão geral (últimos jogos, próximo jogo, divisão, pontos por jogo), **eficiência** com ranking, jogos, **elenco completo**, recordes da franquia, história (ficha, estádios, momentos marcantes, técnicos, QBs, Super Bowls), confrontos (situações, contra a linha, retrospecto por adversário), draft, times semelhantes |
+| `/players`, `/players/:id` | Busca com filtros; perfil com bio, totais, **valor de draft**, **FGs por distância** (kickers), **retornos**, evolução, radar de percentis (todas as posições, inclusive K e P), temporada a temporada (REG/POST, com participação nos alvos, WOPR, jogadas de 20+, first downs) e **jogo a jogo** (gráfico, tabela, melhores jogos), semelhantes |
 | `/compare` | Jogador × jogador (tabela, linhas por ano de carreira, radar de QBs), time × time, temporada × temporada |
 | `/matchup` | Confronto direto e rivalidades clássicas, linha do tempo clicável |
 | `/super-bowl`, `/super-bowl/:n` | 60 edições, gráfico de diferenças, títulos, MVPs, linha do tempo/tabela, detalhe |
-| `/records` | Oficiais (curadoria) + calculados (temporada, carreira, playoffs, times, jogos) + **detecção de novo recorde / ritmo de recorde** |
+| `/records` | Oficiais (curadoria) + calculados (temporada, carreira, playoffs, times, jogos e maiores zebras, **times especiais**) + **detecção de novo recorde / ritmo de recorde** |
 | `/rankings` | Ranking de QBs com 7 pesos ajustáveis e metodologia |
-| `/draft`, `/hall-of-fame` | Draft desde 1980, curva de valor por escolha, Draft Value Score, melhores por rodada; membros do HOF draftados |
-| `/history`, `/stadiums` | Eras 1920–hoje, evolução do jogo em 10 métricas, comparação por década; estádios |
+| `/draft`, `/hall-of-fame` | Draft desde 1980, curva de valor por escolha, Draft Value Score, escolhas altas que não renderam, melhores por rodada, **quem drafta melhor**, **valor por posição**; membros do HOF draftados |
+| `/history`, `/stadiums`, `/referees` | Eras 1920–hoje, evolução do jogo em 10 métricas, comparação por década; estádios (pontos por jogo, mandante, clima, FG%); **árbitros** (jogos, pontos por jogo, mandante, acima do total) |
 | `/learn`, `/rules`, `/positions`, `/playbook`, `/strategy`, `/glossary` | Conteúdo educativo (básico → avançado) com campo interativo, animações e simulador |
 | `/explorer` | Monte rankings por período/posição/time/métrica; URL compartilhável; exportação |
 | `/data` | Pública: fontes, licenças, cobertura, como os números chegam ao site, limitações conhecidas e qualidade |
@@ -259,6 +263,15 @@ Todo número calculado tem um ⓘ com “como é calculado?”. Nenhum ranking �
 | Similaridade | Distância euclidiana em z-scores de produção por jogo; 100 ÷ (1 + d) |
 | Draft Value Score | AV de carreira − AV esperado para o número da escolha (média dos picks ±4, drafts até 2016) |
 | Simulador de down | Heurísticas didáticas com faixas aproximadas — explicitamente não é um modelo oficial |
+| Contra a linha (ATS) | Margem real − margem esperada pela linha de fechamento (`spread_line` = margem do mandante); push = igual. Só como medida de surpresa, sem recomendação de aposta |
+| Chance pela moneyline | Probabilidade implícita de cada lado, normalizada para remover a margem da casa |
+| Zebra | Vitória do azarão; tamanho = pontos da linha |
+| Eficiência com ranking | Cada métrica da temporada regular ranqueada entre os 32 times (empates compartilham posição; menor-é-melhor invertido) |
+| EPA cedido | Soma do EPA dos adversários jogo a jogo (por jogo) e por jogada (play-by-play) |
+| Taxa de sucesso | Jogadas de scrimmage com EPA > 0 ÷ jogadas |
+| Red zone TD% | Drives com snap dentro da 20 do adversário que terminam em TD ÷ drives com snap dentro da 20 (ponto extra e 2 pontos não contam) |
+| WOPR | 1,5 × participação nos alvos + 0,7 × participação nas jardas aéreas |
+| Valor de draft (jogador e franquia) | AV de carreira (ponderado, PFR) − AV esperado para a escolha; por franquia, soma de 2000 até o último draft maduro |
 
 ## 8. Princípios de dados (regra de ouro)
 
@@ -274,7 +287,7 @@ Todo número calculado tem um ⓘ com “como é calculado?”. Nenhum ranking �
 - **Gráficos:** paleta categórica validada para daltonismo nos dois temas; linhas de 2 px, barras ≤ 24 px com ponta arredondada; legenda + “ver dados em tabela” + exportação em todos; cores de time com contraste mínimo garantido (fallback automático).
 - **Acessibilidade:** HTML semântico, skip link, foco visível, `aria-sort` nas tabelas, abas com setas, tooltips com Esc, campo de posições navegável por Tab, `prefers-reduced-motion` respeitado, regiões roláveis focáveis. Auditado com axe (WCAG 2.1 AA) em 12 páginas × 2 dispositivos.
 - **Responsivo:** menus em gaveta no celular, tabelas com rolagem horizontal, nenhuma página com rolagem lateral (testado em 29 rotas × 2 dispositivos).
-- **Performance:** cada página é um chunk carregado sob demanda (bundle inicial ≈ 96 KB gzip), dados em cache, logos redimensionados pela CDN (de 490 KB para ~4 KB), gzip/br no servidor e cache imutável dos assets.
+- **Performance:** cada página é um chunk carregado sob demanda (bundle inicial ≈ 105 KB gzip), dados em cache, jogo a jogo e box score baixados só quando a seção abre, logos redimensionados pela CDN (de 490 KB para ~4 KB), gzip/br no servidor e cache imutável dos assets. Depois de uma nova publicação, quem estava com o site aberto recarrega sozinho se pedir um arquivo antigo que não existe mais.
 
 ## 10. Qualidade: testes, QA, UX e revisão de texto
 
@@ -283,7 +296,9 @@ Todo número calculado tem um ⓘ com “como é calculado?”. Nenhum ranking �
 | Unitários | Vitest | `tests/unit` — classificação, estatísticas, modelos, simulador, formatação, busca, exportação, verificação de atualização |
 | Componentes | Testing Library | `tests/unit/components.test.tsx` — ⓘ por modo, ordenação acessível, abas por teclado |
 | Integridade do conteúdo | Vitest | `tests/unit/content.test.ts` — glossário, posições, playbook, penalidades, rotas do menu |
-| API | Vitest + `fastify.inject` | `tests/api` — endpoints, validação, 404, segurança, login/sessão/anti-CSRF do admin, eventos, agendador e alertas |
+| API | Vitest + `fastify.inject` | `tests/api` — endpoints, validação, 404, login/sessão/anti-CSRF do admin, eventos, agendador e alertas |
+| Segurança | Vitest | `tests/api/security.test.ts` — IP forjado não burla o limite de login, trava global (login e Bearer), propriedades herdadas recusadas, IDs fora da base, cache e cabeçalhos do Worker; `tests/unit/lib.test.ts` — CSV sem fórmulas |
+| Análises novas | Vitest | `tests/unit/insights.test.ts` — linhas de aposta, zebras, eficiência e ranking, defesa cedida, resumo do play-by-play |
 | Pipeline | Vitest | `tests/data/etl.test.ts` — transformação, curadoria × nflverse, qualidade |
 | Dados publicados | Vitest | `tests/data/published.test.ts` — Super Bowls, títulos, faixas plausíveis, cobertura |
 | E2E + UX | Playwright | `tests/e2e` — 29 rotas sem erros/sem rolagem lateral, busca, modo Expert, tema, logos, simulador, admin, separação público × admin; roda também contra o site estático (`E2E_STATIC=1`) |
@@ -297,7 +312,7 @@ Resultados da última execução estão em [TESTING.md](TESTING.md).
 
 - **Saúde:** `GET /health` (processo) e `GET /ready` (dados carregados, versão, qualidade, sync em andamento).
 - **Logs:** JSON estruturado (pino); cada resposta traz `Server-Timing` com a latência.
-- **Segurança:** CSP restritiva, rate limit, validação de entrada com zod; admin com sessão em cookie HttpOnly, anti-CSRF e `ADMIN_TOKEN` (acesso local sem token só fora de produção). Ver [SECURITY.md](SECURITY.md).
+- **Segurança:** CSP restritiva, rate limit, validação de entrada com zod; admin com sessão em cookie HttpOnly, anti-CSRF, `ADMIN_TOKEN` forte (24+ caracteres em produção), trava global contra força bruta e IP confiável só atrás de proxy (`TRUST_PROXY`); Worker com cache na borda e só IDs de jogos da base; build público sem source maps; CI com segredos por passo, actions por SHA e Dependabot. Relatório do teste de invasão em [SECURITY.md](SECURITY.md).
 - **Publicação:** Cloudflare Workers + GitHub Actions — configuração em [PUBLICACAO.md](PUBLICACAO.md), operação em [PUBLICACAO_SERVIDOR.md](PUBLICACAO_SERVIDOR.md). Referência técnica e hospedagem própria: [DEPLOYMENT.md](DEPLOYMENT.md).
 - **Agendamento:** GitHub Actions (cron a cada 6 h) no site publicado; agendador interno (`SYNC_PARTIAL_EVERY_HOURS`, `SYNC_FULL_*`) na versão com servidor.
 - **Eventos e alertas:** resumo de cada execução no Actions; com servidor, `/admin` → *Logs e alertas* e webhook (ntfy, Discord, Slack).
@@ -321,7 +336,7 @@ end-zone-analytics/
 │   ├── index.ts              inicialização
 │   ├── openapi.ts            especificação OpenAPI 3.1
 │   ├── services/             dataStore, espn (ao vivo), jobs, scheduler, ops, auth, ttlCache
-│   └── etl/                  cli, pipeline, fetcher, transform, analytics, quality
+│   └── etl/                  cli, pipeline, fetcher, transform, analytics, teamProfiles, insights, pbp, quality
 ├── src/
 │   ├── lib/                  lógica pura compartilhada (tipos, classificação, estatísticas, modelos…)
 │   ├── content/              conteúdo editorial (métricas, glossário, regras, posições, playbook…)
@@ -341,6 +356,8 @@ end-zone-analytics/
 - Desempates de classificação são simplificados.
 - Hall of Fame cobre apenas membros draftados desde 1980.
 - Público, capacidade de estádios e arbitragem dos Super Bowls antigos não estão na base.
-- Dados ao vivo dependem de uma API pública não oficial (ESPN).
+- Dados ao vivo e a probabilidade de vitória jogada a jogada dependem de uma API pública não oficial (ESPN).
+- Do play-by-play, só o resumo situacional por time é publicado (sem mapas de campo jogada a jogada).
+- Linhas de aposta são de fechamento (nflverse) e usadas só como expectativa do mercado.
 
-**Roadmap (ver [ROADMAP.md](ROADMAP.md)):** SQLite/DuckDB (ou PostgreSQL com várias instâncias) como camada de publicação opcional, play-by-play (heatmaps de campo, success rate, EPA defensivo), simulador de playoffs (“what-if”) e probabilidades, prêmios (MVP, OPOY…) com fonte licenciada, consultas em linguagem natural no explorador, páginas de análise compartilháveis (`/analysis/:id`).
+**Roadmap (ver [ROADMAP.md](ROADMAP.md)):** SQLite/DuckDB (ou PostgreSQL com várias instâncias) como camada de publicação opcional, play-by-play completo (mapas de campo, probabilidade de vitória própria), simulador de playoffs (“what-if”) e probabilidades, prêmios (MVP, OPOY…) com fonte licenciada, consultas em linguagem natural no explorador, páginas de análise compartilháveis (`/analysis/:id`).

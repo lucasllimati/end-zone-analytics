@@ -1,7 +1,7 @@
 # End Zone Analytics — Especificação funcional
 
 Documento de referência de **todas as páginas, funcionalidades e dados** da plataforma.
-Reflete o estado atual do código (v1.2 — design inspirado na Apple, área administrativa protegida, publicação no Cloudflare). Site no ar: <https://end-zone-analytics.nfldata.workers.dev>. Itens marcados como **[Planejado]** ainda não existem.
+Reflete o estado atual do código (v1.3 — perfis de franquia, estatísticas por jogo, play-by-play resumido, elencos, expectativa do mercado, árbitros e revisão de segurança com teste de invasão). Site no ar: <https://end-zone-analytics.nfldata.workers.dev>. Itens marcados como **[Planejado]** ainda não existem.
 
 > Documentos técnicos complementares: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATA_MODEL.md](docs/DATA_MODEL.md), [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md), [docs/API.md](docs/API.md), [docs/SECURITY.md](docs/SECURITY.md), [docs/ROADMAP.md](docs/ROADMAP.md).
 
@@ -15,13 +15,13 @@ Reflete o estado atual do código (v1.2 — design inspirado na Apple, área adm
 | Público | Iniciantes (linguagem simples) e especialistas (EPA, CPOE, modelos) |
 | Idioma | Português do Brasil (termos técnicos da NFL mantidos em inglês quando consagrados) |
 | Princípios | Minimalista e profissional · **nunca inventar dados** · ausência = “Não disponível” (nunca 0) · fonte e data visíveis · ⓘ explicação em todo número relevante |
-| Cobertura detalhada | Temporadas **1999 → atual** (nflverse); Draft desde 1980; Super Bowls I–LX e recordes oficiais por curadoria |
+| Cobertura detalhada | Temporadas **1999 → atual** (nflverse: calendário com linhas de aposta e descanso, estatísticas por temporada e por jogo, play-by-play resumido, elencos); Draft desde 1980; Super Bowls I–LX e recordes oficiais por curadoria |
 
 ### Arquitetura resumida
 
 ```mermaid
 flowchart LR
-  NV[nflverse<br/>GitHub Releases CSV] -->|ETL: npm run data:*| RAW[data-raw/<br/>cache CSV]
+  NV[nflverse<br/>GitHub Releases CSV<br/>+ play-by-play em fluxo] -->|ETL: npm run data:*| RAW[data-raw/<br/>cache CSV + resumos]
   CUR[data-curated/<br/>Super Bowls, recordes] --> ETL
   RAW --> ETL[Pipeline ETL<br/>transformação + analytics + qualidade]
   ETL --> DATA[data/<br/>JSON publicados + manifest]
@@ -227,7 +227,7 @@ Autorização sempre no servidor (sessão em cookie `HttpOnly`/`SameSite=Strict`
 
 | Modo | Comando | O que faz |
 |---|---|---|
-| Completa | `npm run data:full` | Baixa e reprocessa todas as fontes (~114 arquivos, ~40 MB, ~1 min) |
+| Completa | `npm run data:full` | Baixa e reprocessa todas as fontes (~230 arquivos, ~850 MB com estatísticas por jogo e play-by-play; 5–15 min local, ~4 min no GitHub Actions) |
 | Parcial | `npm run data:partial` | Sem filtros: incremental (baixa só arquivos com versão remota diferente). Com filtros: força fontes/temporadas escolhidas |
 | Verificação | `npm run data:check` | Só compara versões locais × remotas, sem baixar |
 | Qualidade | `npm run data:quality` | Reexecuta as verificações sobre os dados publicados |
@@ -314,18 +314,18 @@ Base `http://localhost:8787`. Somente leitura, exceto `/api/admin/*`. Especifica
 | GET | `/api/games?season&team&week&type&limit`, `/api/games/:id` | Jogos filtrados / jogo |
 | GET | `/api/standings?season` | Classificação calculada (desempate simplificado) |
 | GET | `/api/players?q&pos&limit`, `/api/players/:id` | Busca / carreira do jogador |
-| GET | `/api/stats/leaders?season&stat&limit` | Líderes (400 para estatística desconhecida) |
+| GET | `/api/stats/leaders?season&stat&limit` | Líderes (400 para estatística desconhecida ou que não seja coluna numérica) |
 | GET | `/api/super-bowls`, `/api/super-bowls/:n` | Super Bowls |
 | GET | `/api/records`, `/api/draft` | Recordes / draft |
 | GET | `/api/rankings/qb` | Ranking de QBs |
-| GET | `/api/live/scoreboard`, `/api/live/game/:espnId` | Ao vivo via ESPN (cache 30 s / 60 s) |
+| GET | `/api/live/scoreboard`, `/api/live/game/:espnId` | Ao vivo via ESPN (cache 30 s / 60 s); só IDs de jogos da base (404 para os demais) |
 | GET/POST | `/api/admin/session` (GET), `/api/admin/login`, `/api/admin/logout` (POST) | Sessão administrativa |
 | GET | `/api/admin/check` | Verifica dados novos (cache 10 min) 🔒 |
 | POST | `/api/admin/sync` | Inicia carga `{mode, datasets?, seasons?}` → 202 + job (máx. 5/min) 🔒 |
 | GET | `/api/admin/jobs`, `/api/admin/jobs/:id` | Status das cargas 🔒 |
 | GET | `/api/admin/overview`, `/api/admin/events` | Painel e logs/alertas 🔒 |
 
-Segurança: 🔒 = sessão administrativa, `Authorization: Bearer <ADMIN_TOKEN>` ou acesso local (só fora de produção); ações por cookie exigem `X-EZA-Admin: 1`; rate limit geral de 600 req/min; cabeçalhos CSP, `nosniff` etc. via helmet; parâmetros validados com zod.
+Segurança: 🔒 = sessão administrativa, `Authorization: Bearer <ADMIN_TOKEN>` ou acesso local (só fora de produção); ações por cookie exigem `X-EZA-Admin: 1`; rate limit geral de 600 req/min e 5/min para login e sync; trava global após 20 tokens errados em 15 min (login ou Bearer); IP do cliente só de `X-Forwarded-For` com `TRUST_PROXY`; cabeçalhos CSP, HSTS, `nosniff`, `X-Frame-Options: DENY`, `Permissions-Policy`; parâmetros validados com zod; corpo ≤ 32 KB.
 
 ---
 
@@ -335,7 +335,8 @@ Segurança: 🔒 = sessão administrativa, `Authorization: Bearer <ADMIN_TOKEN>`
 |---|---|
 | `API_PORT` | Porta da API (padrão 8787) |
 | `HOST` | Interface de rede |
-| `ADMIN_TOKEN` | Login da área administrativa (obrigatório em produção) |
+| `ADMIN_TOKEN` | Login da área administrativa (obrigatório em produção; com menos de 24 caracteres o login fica desativado). Gere com `openssl rand -base64 32` |
+| `TRUST_PROXY` | Quantos proxies à frente da API são confiáveis para ler o IP real (0 = API exposta direto, padrão; 1 = atrás do Caddy do docker-compose) |
 | `OPS_DIR` | Log operacional privado (padrão `ops/`) |
 | `SITE_URL` | URL pública usada para gerar `sitemap.xml` no `build:static` |
 | `SYNC_PARTIAL_EVERY_HOURS`, `SYNC_FULL_WEEKDAY`, `SYNC_FULL_HOUR_UTC` | Agendador interno de cargas (parcial a cada N h; completa semanal) |
@@ -375,8 +376,10 @@ Guias: [docs/PUBLICACAO.md](docs/PUBLICACAO.md) (configuração) · [docs/PUBLIC
 | Unitários / componentes | Vitest + Testing Library | Bibliotecas, componentes, ETL (transformação, analytics, qualidade), API (`fastify.inject`), dados publicados |
 | E2E + acessibilidade | Playwright + axe-core | Navegação de todas as páginas, fluxos principais, violações WCAG |
 | Ortografia | cspell (pt-BR + en) | Código, docs e curadoria |
+| Segurança | Vitest + teste de invasão manual | Força bruta, IP forjado, CSRF, path traversal, XSS, injeção em parâmetros, CSV injection, cabeçalhos, Worker; relatório em `docs/SECURITY.md` |
+| Dependências | `npm audit` + Dependabot | CI e publicação falham com vulnerabilidade alta; PRs semanais de atualização |
 
-Critério de pronto: `npm run qa` e `npm run test:e2e` sem falhas.
+Critério de pronto: `npm run qa` e `npm run test:e2e` sem falhas; `npm audit` sem vulnerabilidade alta.
 
 ---
 
@@ -387,4 +390,4 @@ Critério de pronto: `npm run qa` e `npm run test:e2e` sem falhas.
 | P1 | E2E no CI (hoje o CI roda `qa`, build e auditoria; E2E é local) |
 | P2 | Pré-renderização (SSG) das páginas públicas para SEO; regressão visual automatizada por screenshot |
 | P2 | Time favorito; filtros compartilháveis em todas as tabelas; onboarding de 3 passos |
-| Futuro | SQLite/DuckDB; play-by-play; simulador de playoffs; prêmios; dados pré-1999 |
+| Futuro | SQLite/DuckDB; play-by-play completo (mapas de campo, probabilidade de vitória própria); simulador de playoffs; prêmios; dados pré-1999 |

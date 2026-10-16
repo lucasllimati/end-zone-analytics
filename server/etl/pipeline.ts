@@ -203,6 +203,8 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineResult
   await writeJson('records-computed.json', records);
   await writeJson('stadiums.json', stadiums);
   await writeJson('referees.json', referees);
+  // IDs ESPN aceitos pelo Worker em /api/live/game/:id (evita usar o site como proxy de IDs arbitrários).
+  await writeJson('live-ids.json', [...new Set(games.map((g) => g.espn).filter((id): id is string => Boolean(id)))]);
   for (const [s, r] of rosters) await writeJson(`rosters/${s}.json`, pack(r, [...ROSTER_COLS]));
   await writeJson('models/qb-model.json', qbModel);
   await writeJson('quality.json', { checkedAt: new Date().toISOString(), checks: quality });

@@ -65,7 +65,17 @@ export class LoginThrottle {
 
 export class AdminAuth {
   private sessions = new Map<string, number>();
-  constructor(private token: string, private allowLocal: boolean, private secureCookie: boolean) {}
+  /**
+   * `throttle` é compartilhado com o login: tokens errados enviados como Bearer também contam
+   * para a trava global, e durante o bloqueio nem o Bearer é aceito (sem atalho para força bruta).
+   */
+  constructor(
+    private token: string,
+    private allowLocal: boolean,
+    private secureCookie: boolean,
+    private throttle: LoginThrottle = new LoginThrottle(),
+    private onBearerFailure: () => void = () => {},
+  ) {}
 
   get tokenConfigured() {
     return Boolean(this.token);
@@ -86,10 +96,24 @@ export class AdminAuth {
     return true;
   }
 
+  /** Resultado por requisição: várias checagens na mesma requisição contam uma tentativa só. */
+  private decided = new WeakMap<object, AuthMethod | null>();
+
   /** Método de autenticação da requisição, ou null se não autorizada. */
   method(req: FastifyRequest): AuthMethod | null {
+    if (this.decided.has(req)) return this.decided.get(req)!;
+    const m = this.resolve(req);
+    this.decided.set(req, m);
+    return m;
+  }
+
+  private resolve(req: FastifyRequest): AuthMethod | null {
     const bearer = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
-    if (bearer && this.token && safeEqual(bearer, this.token)) return 'token';
+    if (bearer && this.token) {
+      if (this.throttle.blockedFor() > 0) return null;
+      if (safeEqual(bearer, this.token)) return 'token';
+      if (this.throttle.fail()) this.onBearerFailure();
+    }
     if (this.sessionValid(parseCookies(req.headers.cookie)[SESSION_COOKIE])) return 'session';
     if (this.allowLocal && this.isLocal(req)) return 'local';
     return null;

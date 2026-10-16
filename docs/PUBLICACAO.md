@@ -127,7 +127,7 @@ git push
 
 Para disparar manualmente: **Actions → Atualizar dados e publicar → Run workflow → `full` → Run workflow**.
 
-- A primeira execução leva de 3 a 6 minutos (baixa todos os dados). As seguintes, de 1 a 3.
+- A primeira execução leva de 4 a 8 minutos (baixa todos os dados, inclusive estatísticas por jogo e play-by-play, ~850 MB processados em fluxo). As seguintes, de 2 a 4, porque reaproveitam o cache.
 - Os passos da execução são, em ordem:
   1. Testes do código
   2. Restaurar dados
@@ -211,9 +211,9 @@ Operação do dia a dia (forçar carga, ver jobs e logs, rollback, monitoramento
 
 | Recurso | Uso esperado |
 |---|---|
-| Minutos do GitHub Actions | Repositório público: ilimitado. Privado: 2.000 min/mês; cada execução leva de 1,5 a 5 min, o que dá ~200–500 min/mês |
+| Minutos do GitHub Actions | Repositório público: ilimitado. Privado: 2.000 min/mês; cada execução leva de 2 a 4 min, o que dá ~250–500 min/mês |
 | Requisições do Worker | Só o placar ao vivo conta (100 mil/dia, com cache); páginas e dados são arquivos estáticos e não contam |
-| Tamanho do site | ~35 MB em ~290 arquivos; o limite é 25 MB **por arquivo** e 20 mil arquivos |
+| Tamanho do site | ~190 MB em ~960 arquivos (maior arquivo ≈ 2 MB); o limite é 25 MB **por arquivo** e 20 mil arquivos |
 | Cache de dados do Actions | Bem abaixo do limite de 10 GB |
 
 > **Repositório sem commits por 60 dias:** em repositórios públicos, o GitHub pausa os workflows agendados e avisa por e-mail. Para reativar, vá em **Actions → Atualizar dados e publicar → Enable workflow**.

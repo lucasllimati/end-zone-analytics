@@ -6,12 +6,15 @@
 
 Dados, história, estatísticas e educação sobre a NFL — para quem nunca viu um jogo e para especialistas.
 
-- **Temporada:** classificação, calendário, placares ao vivo, playoffs, líderes, power ranking e força de tabela.
-- **Times e jogadores:** 32 franquias com logos, carreiras desde 1999, percentis, jogadores semelhantes e comparador.
-- **História:** todos os Super Bowls (I–LX), recordes, draft desde 1980, Hall of Fame e a evolução do jogo.
+- **Temporada:** classificação, calendário, placares ao vivo, playoffs, líderes, power ranking, força de tabela, **eficiência dos 32 times** (ataque, defesa, times especiais e situações — 3ª/4ª descida, red zone — com ranking na liga) e **zebras e expectativa do mercado**.
+- **Game Center:** placar por quarto, drives, probabilidade de vitória, **box score completo**, linha de aposta e resultado contra ela, descanso de cada time e o perfil do árbitro.
+- **Times:** perfil de cada franquia com últimos jogos, eficiência, **elenco completo**, recordes da franquia, história (técnicos, QBs, estádios, momentos marcantes), confrontos e desempenho por situação, contra a linha e draft.
+- **Jogadores:** carreira desde 1999, **jogo a jogo** e melhores jogos, percentis (inclusive kickers e punters), FGs por distância, retornos, métricas de recebedor (participação nos alvos, WOPR) e valor de draft.
+- **História e liga:** todos os Super Bowls (I–LX), recordes (inclusive times especiais e maiores zebras), draft desde 1980 (quem drafta melhor, valor por posição), Hall of Fame, estádios (clima, mandante, FG%), **árbitros** e a evolução do jogo.
 - **Aprenda:** a NFL em 10 minutos, simulador de down & distance, regras e faltas, posições interativas, playbook animado, estratégia e glossário.
-- **Modo Iniciante / Expert** e o botão **ⓘ** em cada número, coluna e gráfico.
-- **Dados reais e rastreáveis** (nflverse, CC-BY 4.0). Dado ausente aparece como “Não disponível”, nunca como zero. Fontes, cobertura e qualidade em `/data`.
+- **Modo Iniciante / Expert** (só aparece onde muda algo) e o botão **ⓘ** em cada número, coluna e gráfico.
+- **Dados reais e rastreáveis** (nflverse, CC-BY 4.0: calendário, estatísticas por temporada e por jogo, play-by-play, elencos, draft). Dado ausente aparece como “Não disponível”, nunca como zero. Fontes, cobertura e qualidade em `/data`.
+- **Segurança revisada** com teste de invasão (pentest) e checklist OWASP — ver [SECURITY.md](docs/SECURITY.md).
 
 ## Início rápido (no seu computador)
 
@@ -19,7 +22,7 @@ Requisitos: Node.js 20+ (CI usa 22).
 
 ```bash
 npm install
-npm run data:full      # baixa e processa os dados (~1 min, só na primeira vez)
+npm run data:full      # baixa e processa os dados (5–15 min só na primeira vez; ~850 MB em fluxo)
 npm run dev            # site em http://localhost:5173 (API em :8787)
 ```
 
@@ -41,7 +44,7 @@ npm run dev            # site em http://localhost:5173 (API em :8787)
 ## Qualidade
 
 ```bash
-npm run qa         # tipos + testes unitários/API/dados + revisão ortográfica
+npm run qa         # tipos + testes unitários/API/segurança/dados + revisão ortográfica
 npm run test:e2e   # navegação, UX e acessibilidade (Playwright + axe), desktop e celular
 ```
 

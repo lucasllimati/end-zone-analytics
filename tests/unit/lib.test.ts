@@ -229,3 +229,16 @@ describe('draftFranchise', () => {
     expect(draftFranchise('XYZ', 1985)).toBeNull();
   });
 });
+
+describe('exportação CSV', () => {
+  it('neutraliza fórmulas (CSV injection) sem estragar números negativos', () => {
+    const csv = toCsv([{ a: '=HYPERLINK("http://x")', b: '+1+1', c: '@SUM(A1)', d: -5, e: '-3,5', f: 'Josh Allen' }]);
+    const row = csv.split('\n')[1];
+    expect(row).toContain(`"'=HYPERLINK(""http://x"")"`);
+    expect(row).toContain("'+1+1");
+    expect(row).toContain("'@SUM(A1)");
+    expect(row).toContain(',-5,');
+    expect(row).toContain('"-3,5"');
+    expect(row.endsWith('Josh Allen')).toBe(true);
+  });
+});

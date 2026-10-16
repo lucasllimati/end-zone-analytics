@@ -97,6 +97,10 @@ describe.skipIf(!has)('dados publicados', () => {
     const allen = read<Record<string, unknown>>(`players/gamelogs/${String(careerBucket('00-0034857')).padStart(2, '0')}.json`);
     expect(allen['00-0034857']).toBeTruthy();
     expect(fs.existsSync(path.join(DATA, 'boxscores/2025/1.json'))).toBe(true);
+    // O Worker só aceita IDs desta lista em /api/live/game: sem ela, o Game Center perderia os detalhes ao vivo.
+    const liveIds = read<string[]>('live-ids.json');
+    expect(liveIds.length).toBeGreaterThan(5000);
+    expect(liveIds).toContain('401547417');
     const refs = read<RefereeSummary[]>('referees.json');
     expect(refs.length).toBeGreaterThan(20);
     const games = read<Game[]>('games/2024.json');

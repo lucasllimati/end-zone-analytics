@@ -34,16 +34,44 @@ async function cached(request: Request, ctx: Ctx | undefined, produce: () => Pro
   return res;
 }
 
+/** Cabeçalhos de segurança de uma API JSON (o _headers do site não se aplica às respostas do Worker). */
+const API_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'",
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'no-referrer',
+  'Cross-Origin-Resource-Policy': 'same-origin',
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+};
+
 function json(body: unknown, maxAgeSeconds: number, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
+      ...API_HEADERS,
       'Content-Type': 'application/json; charset=utf-8',
       // Cache na borda: poupa a ESPN e responde rápido para todos os visitantes.
       'Cache-Control': status === 200 ? `public, max-age=${maxAgeSeconds}, s-maxage=${maxAgeSeconds}` : 'no-store',
-      'X-Content-Type-Options': 'nosniff',
     },
   });
+}
+
+/**
+ * IDs ESPN dos jogos da base (data/live-ids.json, gerado pelo pipeline). Só esses podem ser consultados:
+ * sem a lista, qualquer número viraria uma chamada à ESPN e o cache não ajudaria (cada ID é uma chave nova).
+ * Carregado uma vez por instância do Worker.
+ */
+let knownIds: Promise<Set<string> | null> | null = null;
+function liveIds(request: Request, env: Env): Promise<Set<string> | null> {
+  knownIds ??= env.ASSETS.fetch(new Request(new URL('/data/live-ids.json', request.url)))
+    .then(async (r) => (r.ok && (r.headers.get('content-type') ?? '').includes('json') ? new Set<string>(await r.json()) : null))
+    .catch(() => null)
+    .then((s) => {
+      // Falha ao ler a lista: tenta de novo na próxima requisição (não fixa o erro).
+      if (!s) knownIds = null;
+      return s;
+    });
+  return knownIds;
 }
 
 export default {
@@ -64,6 +92,9 @@ export default {
     const game = pathname.match(/^\/api\/live\/game\/([^/]+)$/);
     if (game) {
       if (!/^\d{6,12}$/.test(game[1])) return json({ error: 'bad_request' }, 0, 400);
+      const ids = await liveIds(request, env);
+      // Sem a lista (falha de leitura), recusa em vez de liberar qualquer ID (falha fechada).
+      if (!ids || !ids.has(game[1])) return json({ error: 'not_found', message: 'Jogo não encontrado.' }, 0, 404);
       return cached(request, ctx, async () => {
         try {
           return json(await gameDetail(game[1]), 60);

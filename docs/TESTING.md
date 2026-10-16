@@ -9,20 +9,21 @@ npm run test:e2e    # E2E, UX e acessibilidade (Playwright + axe) — desktop e 
 node scripts/screenshots.mjs   # capturas de tela + detector de rolagem horizontal
 ```
 
-## Última execução (11/10/2026, dados até a semana 5 de 2026)
+## Última execução (16/10/2026, dados até a semana 6 de 2026)
 
 | Suíte | Resultado |
 |---|---|
 | TypeScript (app + servidor + Worker), modo estrito | ✅ sem erros |
-| Vitest — 9 arquivos (unitários, componentes, conteúdo, API/admin, agendador/alertas, pipeline, dados publicados) | ✅ 107/107 |
-| Playwright com servidor (`npm run dev`) — 29 rotas × desktop/celular, fluxos de UX, admin, separação público × admin | ✅ 107 passaram · 1 ignorado por design (atalho de teclado no celular) |
+| Vitest — 11 arquivos (unitários, componentes, conteúdo, análises, API/admin, segurança, agendador/alertas, pipeline, dados publicados) | ✅ 125/125 |
+| Playwright com servidor (`npm run dev`) — rotas × desktop/celular, abas novas (eficiência, mercado, elenco, jogo a jogo, box score), seletor de modo, admin, separação público × admin | ✅ 128 passaram · 4 ignorados por design (atalho de teclado e seletor de modo no celular) |
+| Teste de invasão (pentest) — site publicado + servidor em modo produção + XSS no navegador | ✅ 7 achados corrigidos e reverificados (ver [SECURITY.md](SECURITY.md#relatório-do-teste-de-invasão-16102026)) |
 | Playwright contra o site publicado localmente (`build:static` + `wrangler dev`, `E2E_STATIC=1`) | ✅ 105 passaram · 3 ignorados por design (admin não existe no site estático) |
 | axe-core WCAG 2.1 AA — 12 páginas × 2 dispositivos, sem violações sérias/críticas | ✅ |
-| cspell pt-BR + en — 117 arquivos | ✅ 0 ocorrências |
+| cspell pt-BR + en — 130 arquivos | ✅ 0 ocorrências |
 | Paleta de gráficos (verificador de daltonismo) contra `#1c1c1e` (escuro) e `#ffffff` (claro) | ✅ escuro: todas passam · claro: aviso de contraste compensado por legenda + tabela |
-| Qualidade de dados (pipeline) | ✅ 18 ok · 0 alertas · 0 falhas |
+| Qualidade de dados (pipeline) | ✅ 19 ok · 0 alertas · 0 falhas |
 | CI em checkout limpo (só arquivos versionados): `npm ci`, `qa`, `build`, `npm audit` | ✅ 0 vulnerabilidades |
-| Produção (`end-zone-analytics.nfldata.workers.dev`) | ✅ `/data/*.json` em JSON, `/api/live/scoreboard` em JSON, rotas diretas, cabeçalhos CSP/HSTS, `/api/admin/*` → 404 |
+| Produção (`end-zone-analytics.nfldata.workers.dev`) | ✅ `/data/*.json` em JSON, `/api/live/scoreboard` em JSON com cache na borda (`CF-Cache-Status: HIT`), páginas novas sem erros, sem source maps, cabeçalhos CSP/HSTS, `/api/admin/*` → 404 |
 
 ## O que a revisão encontrou e corrigiu
 
@@ -50,6 +51,15 @@ node scripts/screenshots.mjs   # capturas de tela + detector de rolagem horizont
 | `.gitignore` com `data/` ignorava `src/data/` e `tests/data/` (CI falhava com “Cannot find module”) | Build | Padrões ancorados na raiz (`/data/`) |
 | Site publicado pelo build automático da Cloudflare sem a pasta de dados | Publicação | Publicação feita só pelo GitHub Actions (gera os dados antes); guia documenta desligar o build da Cloudflare |
 | Placar ao vivo no formato Pages Functions não rodava no Worker | Publicação | `worker/index.ts` com `run_worker_first` só para `/api/*` |
+| Técnico da temporada era o do último jogo (interino “levava” o ano) | Dado | Técnico = quem dirigiu mais jogos; perfis calculam técnicos jogo a jogo |
+| Estádios duplicados por nome de patrocínio | Dado | Agrupados pelo identificador do estádio, com os outros nomes listados |
+| Análises de valor do draft vazias: a fonte deixou de preencher `car_av` | Dado | Uso de `w_av` (AV ponderado) + verificação de qualidade `draft-av` |
+| Red zone inflada: ponto extra/2 pontos (da 15/2) contavam como chegada à red zone | Cálculo | Só snaps de scrimmage/FG; teste com o caso; resumo com versão de lógica (cache refeito ao mudar) |
+| Quatro cartões de eficiência em 3 colunas deixavam um sozinho | Layout | Grade fixa 2 × 2 |
+| Listas de “melhores jogos” e “zebras” quebradas no layout de referência | Layout | Estrutura de link com valor, descrição e detalhe |
+| Seletor Iniciante/Expert aparecia em páginas onde nada muda | UX | Só aparece quando a página tem conteúdo que depende do modo (teste e2e) |
+| Após nova publicação, quem estava com o site aberto quebrava ao abrir outra página (arquivo antigo inexistente) | Bug | Recarga automática única no erro de carregamento de módulo |
+| Sete achados de segurança (força bruta via IP forjado e via Bearer, source maps públicos, segredos no job inteiro do CI, abuso do placar, CSV injection, propriedades herdadas) | Segurança | Corrigidos com testes — ver [SECURITY.md](SECURITY.md) |
 
 ## Itens que exigem atenção humana
 

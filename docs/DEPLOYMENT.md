@@ -28,7 +28,7 @@ npm run build
 HOST=0.0.0.0 API_PORT=8787 ADMIN_TOKEN="$(openssl rand -base64 32)" npm start   # token com 24+ caracteres
 ```
 
-O processo serve o site (`dist/`), os dados (`/data`) e a API. Coloque atrás de um proxy reverso (nginx/Caddy) com HTTPS.
+O processo serve o site (`dist/`), os dados (`/data`) e a API. Coloque atrás de um proxy reverso (nginx/Caddy) com HTTPS e informe quantos proxies há na frente com `TRUST_PROXY` (ex.: `TRUST_PROXY=1`). Sem isso, a API ignora `X-Forwarded-For` — o correto quando ela está exposta direto, porque o cabeçalho pode ser forjado por qualquer cliente.
 
 Atualização dos dados: prefira o **agendador interno** (`SYNC_PARTIAL_EVERY_HOURS=6`, `SYNC_FULL_WEEKDAY`, `SYNC_FULL_HOUR_UTC`), que registra cada execução no `/admin`. Se preferir o cron do sistema (as execuções pelo terminal também são registradas):
 
@@ -54,7 +54,8 @@ Scripts de apoio em `deploy/`: `setup-server.sh` (Ubuntu: Docker, firewall, SSH 
 
 ## Checklist da hospedagem própria
 
-- [ ] `ADMIN_TOKEN` definido (em produção, sem ele não há acesso ao `/admin`)
+- [ ] `ADMIN_TOKEN` com 24+ caracteres aleatórios (`openssl rand -base64 32`); mais curto, o login fica desativado
+- [ ] `TRUST_PROXY` igual ao número de proxies na frente da API (1 com o Caddy do docker-compose; 0 se exposta direto)
 - [ ] `SYNC_PARTIAL_EVERY_HOURS` definido (agendador interno; dispensa o cron mostrado acima)
 - [ ] `ALERT_WEBHOOK_URL` definido (alertas de falha no celular)
 - [ ] HTTPS no proxy

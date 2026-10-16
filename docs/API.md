@@ -22,13 +22,13 @@ Todas as respostas são JSON. Valores ausentes são `null`. Erros seguem `{ "err
 | GET | `/api/standings?season` | Classificação calculada |
 | GET | `/api/players?q&pos&limit` | Busca (sem acentos, sem diferenciar maiúsculas) |
 | GET | `/api/players/{id}` | Carreira completa |
-| GET | `/api/stats/leaders?season&stat&type&limit` | Líderes de qualquer estatística |
+| GET | `/api/stats/leaders?season&stat&type&limit` | Líderes de qualquer estatística numérica da linha do jogador |
 | GET | `/api/super-bowls`, `/api/super-bowls/{n}` | Super Bowls |
 | GET | `/api/records` | Recordes oficiais e calculados |
 | GET | `/api/draft?season` | Escolhas do draft |
 | GET | `/api/rankings/qb?championships=20&…` | Ranking de QBs com pesos |
 | GET | `/api/live/scoreboard` | Placar da semana (ao vivo) |
-| GET | `/api/live/game/{espnId}` | Quartos, drives, pontuações, probabilidade de vitória |
+| GET | `/api/live/game/{espnId}` | Quartos, drives, pontuações, probabilidade de vitória. Só IDs de jogos da base (`/data/live-ids.json`); outros → 404 sem consultar a ESPN |
 | GET | `/api/admin/session` | Estado da sessão (`authenticated`, `method`, `tokenConfigured`) — público, sem segredos |
 | POST | `/api/admin/login`, `/api/admin/logout` | Login com `{ token }` (cookie de sessão) / encerrar sessão |
 | GET | `/api/admin/check?force=1` | Há dados novos nas fontes? 🔒 |
@@ -38,6 +38,10 @@ Todas as respostas são JSON. Valores ausentes são `null`. Erros seguem `{ "err
 | GET | `/api/admin/events?severity&component&jobId&days` | Logs e alertas com ação recomendada e estado de resolução 🔒 |
 
 🔒 = exige sessão administrativa, `Authorization: Bearer ADMIN_TOKEN` ou (somente fora de produção) acesso local.
+
+**Proteções de autenticação:** login limitado a 5 tentativas/min por IP; trava global após 20 tokens errados em 15 min (login **ou** Bearer, de qualquer IP), durante a qual nem o token certo é aceito; IP real só lido de `X-Forwarded-For` quando `TRUST_PROXY` > 0. Todas as tentativas recusadas e bloqueios ficam na auditoria (`/api/admin/events?component=auth`).
+
+**Site publicado (Worker):** as respostas de `/api/live/*` levam `Content-Security-Policy: default-src 'none'`, `X-Frame-Options: DENY`, `Cross-Origin-Resource-Policy: same-origin`, HSTS e `nosniff`, e são servidas do cache da borda (30 s placar, 60 s jogo).
 
 ## Exemplos
 
@@ -72,6 +76,8 @@ Resposta de `/api/admin/check`:
 | 403 | Ação administrativa por cookie sem o cabeçalho `X-EZA-Admin` |
 | 404 | Recurso inexistente |
 | 409 | Já existe uma sincronização em andamento |
-| 429 | Limite de requisições (600/min geral; 5/min para sync) |
+| 413 | Corpo da requisição acima de 32 KB |
+| 415 | Corpo que não é JSON (ex.: formulário de outro site) |
+| 429 | Limite de requisições (600/min geral; 5/min para login e sync) ou trava global do login (cabeçalho `Retry-After`) |
 | 502 | Fonte externa (ESPN/GitHub) indisponível |
 | 503 | Sem dados publicados (`npm run data:full`) |
