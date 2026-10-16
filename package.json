@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "@fastify/compress": "^9.2.2",
-    "@fastify/helmet": "^13.0.1",
+    "@fastify/helmet": "^13.2.0",
     "@fastify/rate-limit": "^11.2.1",
     "@fastify/static": "^10.1.6",
     "cross-env": "^10.1.0",
