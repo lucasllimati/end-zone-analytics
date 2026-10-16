@@ -38,7 +38,7 @@ export function useUpdates(auto = false) {
   const [checkError, setCheckError] = useState<string | null>(null);
   const [job, setJob] = useState<SyncJobView | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
-  const timer = useRef<number>();
+  const timer = useRef<number | undefined>(undefined);
 
   const check = useCallback(async (force = false) => {
     setChecking(true);

@@ -30,7 +30,7 @@ export function InfoTip(props: Props) {
   const [pos, setPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const btn = useRef<HTMLButtonElement>(null);
   const pop = useRef<HTMLDivElement>(null);
-  const hoverTimer = useRef<number>();
+  const hoverTimer = useRef<number | undefined>(undefined);
   const id = useId();
 
   const place = useCallback(() => {

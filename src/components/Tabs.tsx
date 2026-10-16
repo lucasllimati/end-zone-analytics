@@ -26,7 +26,9 @@ export function Tabs<T extends string>({ tabs, value, onChange, label }: Props<T
       {tabs.map((t, i) => (
         <button
           key={t.id}
-          ref={(el) => (refs.current[i] = el)}
+          ref={(el) => {
+            refs.current[i] = el;
+          }}
           role="tab"
           type="button"
           id={`tab-${t.id}`}

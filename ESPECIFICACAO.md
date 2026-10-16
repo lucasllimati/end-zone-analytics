@@ -31,7 +31,7 @@ flowchart LR
   DATA -->|build:static| WEB
 ```
 
-- **Frontend:** React 18 + TypeScript + Vite + React Router (cada página carregada sob demanda).
+- **Frontend:** React 19 + TypeScript 7 + Vite 6 + React Router 7 (cada página carregada sob demanda).
 - **Backend:** Fastify 5 (helmet, compressão, rate limit, validação zod), somente leitura + rotas de administração.
 - **Dados:** o CSV é lido **apenas na carga (ETL)**; em tempo de execução o site serve JSON pré-processado. Não há banco de dados.
 

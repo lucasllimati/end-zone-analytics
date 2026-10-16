@@ -4,7 +4,7 @@ import { download, serializeSvg, slugify, svgToPng, toCsv } from '../lib/export'
 interface Props {
   name: string;
   rows?: () => Record<string, unknown>[];
-  svg?: RefObject<SVGSVGElement>;
+  svg?: RefObject<SVGSVGElement | null>;
 }
 
 /** Menu "Exportar": CSV/JSON para dados, SVG/PNG para gráficos. */

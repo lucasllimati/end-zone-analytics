@@ -6,10 +6,10 @@ Resumo técnico. Os diagramas completos (macro, micro e sequência) estão no [G
 
 | Camada | Tecnologia | Motivo |
 |---|---|---|
-| Frontend | React 18 + TypeScript + Vite 6 + React Router 7 | SPA com divisão de código por rota, tipagem forte |
+| Frontend | React 19 + TypeScript 7 + Vite 6 + React Router 7 | SPA com divisão de código por rota, tipagem forte |
 | Estilo | CSS com design tokens (sem framework), fonte do sistema | Linguagem inspirada na Apple (cores de sistema, materiais translúcidos), tema escuro/claro por variáveis, zero runtime |
 | Gráficos | SVG próprio (`src/components/charts`) | Leve, acessível, exportável, sem dependências |
-| API | Fastify 5 + zod | Rápido, logs estruturados (pino), validação declarativa |
+| API | Fastify 5 + zod 4 | Rápido, logs estruturados (pino), validação declarativa |
 | Pipeline | TypeScript (tsx) + csv-parse (síncrono e em fluxo) + zlib | Mesma linguagem e mesmos tipos do frontend; o play-by-play (~19 MB comprimidos por temporada) é lido em fluxo e reduzido a um resumo por time |
 | Armazenamento | JSON versionados em `data/` | Leitura pura, cacheável, funciona sem servidor |
 | Testes | Vitest, Testing Library, Playwright, axe-core, cspell | Unitários a E2E, acessibilidade e ortografia |

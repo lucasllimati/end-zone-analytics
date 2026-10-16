@@ -17,7 +17,7 @@ function NavDropdown({ group }: { group: (typeof NAV)[number] }) {
   const ref = useRef<HTMLDivElement>(null);
   // Tolerância ao movimento do mouse: o menu só fecha depois de um instante fora dele,
   // então atravessar o espaço até as opções do menu (ou um desvio pequeno) não o derruba.
-  const closeTimer = useRef<number>();
+  const closeTimer = useRef<number | undefined>(undefined);
   const openedByHover = useRef(false);
   const loc = useLocation();
   const here = loc.pathname + loc.search;

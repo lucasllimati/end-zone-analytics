@@ -278,7 +278,7 @@ function ComparePlayers() {
   );
 }
 
-function QbRadar({ entries, ids, names, svgRef }: { entries: QbModelEntry[]; ids: string[]; names: string[]; svgRef: React.RefObject<SVGSVGElement> }) {
+function QbRadar({ entries, ids, names, svgRef }: { entries: QbModelEntry[]; ids: string[]; names: string[]; svgRef: React.RefObject<SVGSVGElement | null> }) {
   const axes: { label: string; f: (e: QbModelEntry) => number | null }[] = [
     { label: 'Jardas', f: (e) => e.passYds },
     { label: 'TDs', f: (e) => e.passTd },

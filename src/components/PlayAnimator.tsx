@@ -39,8 +39,8 @@ export function PlayAnimator({ play }: { play: Play }) {
   const [t, setT] = useState(reduced ? 1 : 0);
   const [playing, setPlaying] = useState(!reduced);
   const [speed, setSpeed] = useState(1);
-  const raf = useRef<number>();
-  const last = useRef<number>();
+  const raf = useRef<number | undefined>(undefined);
+  const last = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     setT(reduced ? 1 : 0);

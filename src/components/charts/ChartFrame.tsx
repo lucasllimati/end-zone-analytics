@@ -15,7 +15,7 @@ interface Props {
   subtitle?: ReactNode;
   info?: { simple: string; expert?: string; formula?: string };
   legend?: LegendItem[];
-  svgRef?: RefObject<SVGSVGElement>;
+  svgRef?: RefObject<SVGSVGElement | null>;
   rows?: () => Record<string, unknown>[];
   table?: ReactNode;
   children: ReactNode;
