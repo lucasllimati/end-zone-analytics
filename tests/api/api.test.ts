@@ -11,6 +11,8 @@ import { SEASON_GAMES, line } from '../fixtures';
 let dir: string;
 let app: FastifyInstance;
 const runner = vi.fn(async () => ({ downloaded: ['games.csv'] }));
+/** Espera por condições assíncronas (job e log operacional): tenta a cada 25 ms por até 5 s. */
+const WAIT = { timeout: 5000, interval: 25 };
 
 beforeAll(async () => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'eza-api-'));
@@ -149,16 +151,19 @@ describe('admin / sincronização', () => {
     expect(r.statusCode).toBe(202);
     const { job } = r.json();
     expect(runner).toHaveBeenCalledWith(expect.objectContaining({ mode: 'partial', datasets: ['games'], seasons: [2025] }));
-    await new Promise((res) => setTimeout(res, 20));
-    const status = (await app.inject(`/api/admin/jobs/${job.id}`)).json();
-    expect(status.status).toBe('done');
-    expect(status.downloaded).toEqual(['games.csv']);
-    // A execução fica registrada no log operacional privado.
-    await new Promise((res) => setTimeout(res, 50));
-    const ov = (await app.inject('/api/admin/overview')).json();
-    expect(ov.lastSuccess).toMatchObject({ id: job.id, status: 'done', downloaded: 1, trigger: 'admin' });
-    const events = (await app.inject(`/api/admin/events?jobId=${job.id}`)).json();
-    expect(events.map((e: { message: string }) => e.message)).toEqual(expect.arrayContaining(['Carga parcial iniciada', 'Carga concluída: 1 arquivo(s) novo(s)']));
+    // O job e o registro no log operacional terminam em segundo plano: espera a condição (não um tempo fixo),
+    // senão o teste falha em máquinas mais lentas, como os runners do GitHub Actions.
+    await vi.waitFor(async () => {
+      const status = (await app.inject(`/api/admin/jobs/${job.id}`)).json();
+      expect(status.status).toBe('done');
+      expect(status.downloaded).toEqual(['games.csv']);
+    }, WAIT);
+    await vi.waitFor(async () => {
+      const ov = (await app.inject('/api/admin/overview')).json();
+      expect(ov.lastSuccess).toMatchObject({ id: job.id, status: 'done', downloaded: 1, trigger: 'admin' });
+      const events = (await app.inject(`/api/admin/events?jobId=${job.id}`)).json();
+      expect(events.map((e: { message: string }) => e.message)).toEqual(expect.arrayContaining(['Carga parcial iniciada', 'Carga concluída: 1 arquivo(s) novo(s)']));
+    }, WAIT);
     expect((await app.inject('/api/admin/events?severity=grave')).statusCode).toBe(400);
   });
   it('falha de carga vira alerta com ação recomendada', async () => {
@@ -167,12 +172,13 @@ describe('admin / sincronização', () => {
       syncRunner: async () => { throw new Error('Limite de consultas da API do GitHub atingido (HTTP 403).'); },
     });
     const r = await failing.inject({ method: 'POST', url: '/api/admin/sync', payload: { mode: 'partial' } });
-    await new Promise((res) => setTimeout(res, 50));
-    const job = (await failing.inject(`/api/admin/jobs/${r.json().job.id}`)).json();
-    expect(job).toMatchObject({ status: 'error' });
-    const ev = (await failing.inject('/api/admin/events?severity=error')).json();
-    expect(ev[0]).toMatchObject({ component: 'pipeline', resolved: false });
-    expect(ev[0].action).toContain('GITHUB_TOKEN');
+    await vi.waitFor(async () => {
+      const job = (await failing.inject(`/api/admin/jobs/${r.json().job.id}`)).json();
+      expect(job).toMatchObject({ status: 'error' });
+      const ev = (await failing.inject('/api/admin/events?severity=error')).json();
+      expect(ev[0]).toMatchObject({ component: 'pipeline', resolved: false });
+      expect(ev[0].action).toContain('GITHUB_TOKEN');
+    }, WAIT);
     await failing.close();
   });
 });
