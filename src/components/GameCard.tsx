@@ -4,6 +4,7 @@ import { TeamLogo, TeamName } from './TeamLogo';
 import { dateBR, kickoffInstant, kickoffLocal, weekdayPt } from '../lib/format';
 import { GAME_TYPE_LABEL } from '../lib/teams';
 import { ChevronRight } from './Icons';
+import { translateGameDetail } from '../content/espnTerms';
 
 export interface LiveOverlay {
   state: 'pre' | 'in' | 'post';
@@ -46,7 +47,7 @@ export function StatusBadge({ status, detail }: { status: GameStatus; detail?: s
   return (
     <span className={`badge ${cls}`}>
       {STATUS_LABEL[status]}
-      {status === 'live' && detail ? ` · ${detail}` : ''}
+      {status === 'live' && detail ? ` · ${translateGameDetail(detail)}` : ''}
     </span>
   );
 }

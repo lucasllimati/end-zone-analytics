@@ -46,6 +46,7 @@ flowchart LR
 | Seletor de temporada | Mostra “2026 · atual”; muda a temporada usada em todas as páginas |
 | Modo Iniciante / Expert | Iniciante: explicações simples, sem jargão. Expert: colunas e métricas avançadas (EPA, CPOE…) e notas técnicas. Persistido no navegador. **O seletor só aparece nas páginas em que a troca muda algo visível** (caixas de explicação, colunas exclusivas do Expert, textos alternativos); nas demais fica oculto e o ⓘ deixa de sugerir a troca |
 | Tema claro/escuro | Botão sol/lua; persistido no navegador; logos com versão para fundo escuro |
+| Idioma dos termos (PT \| EN) | Seletor nos cartões com termos da ESPN (Game Center) e na classificação: português por padrão (V/D/E, “Conversões na 3ª descida”, decimais com vírgula) ou o original em inglês (W/L/T, “3rd down efficiency”). Persistido no navegador e aplicado a todos os cartões da página. Em qualquer idioma, passar o mouse (ou tocar) no termo mostra a tradução, o nome em inglês e uma descrição curta; o ⓘ de toda coluna e métrica do site também mostra o nome original em inglês |
 | Aviso de atualização | Só para administradores autenticados: faixa quando há dados novos, com atualização em um clique |
 | Tooltips ⓘ | Explicação de métricas e colunas, adaptada ao modo |
 | Tabelas (DataTable) | Ordenação por coluna, legenda acessível, colunas só-Expert, exportação |
@@ -153,7 +154,8 @@ Três modos:
 - Rivalidades clássicas pré-configuradas. Cobertura: desde 1999.
 
 ### 4.7 Página do jogo (`/games/:id`)
-- Ficha do jogo (data, estádio, teto, gramado, clima, **dias de descanso de cada time**, técnicos, árbitro, QBs).
+- Ficha do jogo (estádio, cidade, teto, gramado, clima em °C e km/h, público, QBs, técnicos, árbitro, **dias de descanso de cada time**). **Só aparecem as informações disponíveis** — nada de “Não disponível”. O árbitro vem da nflverse ou, em jogos recentes, da equipe de arbitragem informada pela ESPN.
+- Termos da ESPN traduzidos: estatísticas dos times (25, com explicação ao passar o mouse), destaques (“17 corridas, 41 jardas”), descrições das pontuações (“corrida de 4 jardas (ponto extra de …)”), drives (“8 jogadas, 20 jardas”) e situação ao vivo (“8:24 · 3º quarto”, “Intervalo”); seletor PT | EN para ver os originais.
 - **Expectativa do mercado:** favorito e linha, total esperado, chance de vitória (moneyline sem a margem da casa), resultado contra a linha e o total; selo “Zebra” quando o azarão vence.
 - **Árbitro:** retrospecto do árbitro principal (jogos, pontos por jogo, mandante, acima do total).
 - **Box score** (dados publicados, funciona sem a ESPN): passe, corrida, recepção, defesa, chutes, punts e retornos de cada time.

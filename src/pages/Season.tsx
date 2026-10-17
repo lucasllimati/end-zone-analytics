@@ -21,6 +21,7 @@ import { dateBR, num, pct3, signed } from '../lib/format';
 import { useApp, useModeSensitive } from '../context/AppContext';
 import type { Game, StandingRow } from '../lib/types';
 import { EfficiencyView, MarketView } from './season/SeasonInsights';
+import { TermsToggle, useTermsLang, type TermsLang } from '../components/TermsToggle';
 
 type Tab = 'standings' | 'schedule' | 'leaders' | 'playoffs' | 'power' | 'sos' | 'efficiency' | 'market';
 const TABS: { id: Tab; label: string }[] = [
@@ -76,8 +77,12 @@ export default function Season() {
 
 /* ------------------------------ Classificação ------------------------------ */
 
-/** Últimos 5 jogos: letras espaçadas e coloridas por resultado (a letra garante leitura sem depender da cor). */
-function Last5({ seq }: { seq: string }) {
+/** Letras de resultado: W/L/T (inglês, padrão da NFL) ou V/D/E (português). */
+const RESULT_LETTER: Record<TermsLang, Record<string, string>> = { en: { W: 'W', L: 'L', T: 'T' }, pt: { W: 'V', L: 'D', T: 'E' } };
+const letters = (s: string, lang: TermsLang) => s.replace(/[WLT]/g, (c) => RESULT_LETTER[lang][c]);
+
+/** Últimos 5 jogos: casas uniformes coloridas por resultado (a letra garante leitura sem depender da cor). */
+function Last5({ seq, lang }: { seq: string; lang: TermsLang }) {
   if (!seq) return <>—</>;
   const tone: Record<string, string> = { W: 'good', L: 'bad' };
   return (
@@ -86,7 +91,7 @@ function Last5({ seq }: { seq: string }) {
       <span className="last5" aria-hidden="true">
         {seq.split('').map((c, i) => (
           <span key={i} className={tone[c] ?? 'muted'}>
-            {c}
+            {RESULT_LETTER[lang][c] ?? c}
           </span>
         ))}
       </span>
@@ -94,12 +99,13 @@ function Last5({ seq }: { seq: string }) {
   );
 }
 
-export function standingColumns(expert: boolean): Column<StandingRow>[] {
+export function standingColumns(expert: boolean, lang: TermsLang = 'pt'): Column<StandingRow>[] {
+  const pt = lang === 'pt';
   return [
     { key: 'team', label: 'Time', render: (r) => <TeamChip abbr={r.team} short />, value: (r) => r.team },
-    { key: 'w', label: 'W', metric: 'w', num: true, width: '3.5rem' },
-    { key: 'l', label: 'L', metric: 'l', num: true, width: '3.5rem' },
-    { key: 't', label: 'T', metric: 't', num: true, width: '3.5rem' },
+    { key: 'w', label: pt ? 'V' : 'W', metric: 'w', num: true, width: '3.5rem' },
+    { key: 'l', label: pt ? 'D' : 'L', metric: 'l', num: true, width: '3.5rem' },
+    { key: 't', label: pt ? 'E' : 'T', metric: 't', num: true, width: '3.5rem' },
     { key: 'pct', label: 'PCT', metric: 'pct', num: true, width: '5.25rem', render: (r) => pct3(r.pct), value: (r) => r.pct },
     { key: 'pf', label: 'PF', metric: 'pf', num: true, width: '4.25rem' },
     { key: 'pa', label: 'PA', metric: 'pa', num: true, width: '4.25rem' },
@@ -108,8 +114,8 @@ export function standingColumns(expert: boolean): Column<StandingRow>[] {
     { key: 'away', label: 'Fora', metric: 'away', num: true, width: '4.75rem', render: (r) => wlt(r.away), value: (r) => r.away[0] - r.away[1] },
     { key: 'div', label: 'Div', metric: 'div', num: true, width: '4.75rem', render: (r) => wlt(r.div), value: (r) => r.div[0] - r.div[1] },
     { key: 'conf', label: 'Conf', metric: 'conf', num: true, width: '4.75rem', render: (r) => wlt(r.confRec), value: (r) => r.confRec[0] - r.confRec[1] },
-    { key: 'streak', label: 'Seq.', metric: 'streak', width: '4.5rem', render: (r) => r.streak },
-    { key: 'last5', label: 'Últ. 5', metric: 'last5', expertOnly: !expert, width: '8.25rem', render: (r) => <Last5 seq={r.last5} />, value: (r) => r.last5 },
+    { key: 'streak', label: 'Seq.', metric: 'streak', width: '4.5rem', render: (r) => letters(r.streak, lang), value: (r) => r.streak },
+    { key: 'last5', label: 'Últ. 5', metric: 'last5', expertOnly: !expert, width: '8.25rem', render: (r) => <Last5 seq={r.last5} lang={lang} />, value: (r) => r.last5 },
   ];
 }
 
@@ -118,7 +124,8 @@ function StandingsView({ rows }: { rows: StandingRow[] }) {
   const [conf, setConf] = useState<'all' | 'AFC' | 'NFC'>('all');
   const { mode } = useApp();
   useModeSensitive();
-  const cols = standingColumns(true);
+  const [lang] = useTermsLang();
+  const cols = standingColumns(true, lang);
   const filtered = conf === 'all' ? rows : rows.filter((r) => r.conf === conf);
   const divs = groupByDivision(filtered);
   const order = DIVISION_ORDER.filter((d) => divs.has(d));
@@ -127,13 +134,22 @@ function StandingsView({ rows }: { rows: StandingRow[] }) {
       <ModeNote
         beginner={
           <>
-            Cada linha é um time. <strong>W</strong> = vitórias, <strong>L</strong> = derrotas, <strong>T</strong> = empates. <strong>PCT</strong> é o aproveitamento. Passe o mouse
+            Cada linha é um time. {lang === 'pt' ? (
+              <>
+                <strong>V</strong> = vitórias, <strong>D</strong> = derrotas, <strong>E</strong> = empates (em inglês: W, L e T — troque em <strong>PT | EN</strong>).
+              </>
+            ) : (
+              <>
+                <strong>W</strong> = vitórias (wins), <strong>L</strong> = derrotas (losses), <strong>T</strong> = empates (ties).
+              </>
+            )} <strong>PCT</strong> é o aproveitamento. Passe o mouse
             (ou toque) no <strong>ⓘ</strong> de cada coluna para entender. Os 4 campeões de divisão e 3 melhores restantes de cada conferência vão aos playoffs.
           </>
         }
         expert={<>Ordenação: PCT → saldo de pontos → pontos marcados. Os desempates oficiais (confronto direto, divisão, adversários comuns, força de vitória…) não são reproduzidos integralmente.</>}
       />
       <div className="filters">
+        <TermsToggle />
         <div className="chips" role="group" aria-label="Agrupar por">
           {(
             [

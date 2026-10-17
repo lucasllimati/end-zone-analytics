@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { metric } from '../content/metrics';
 import { useApp, useModeRelevant } from '../context/AppContext';
@@ -11,6 +11,13 @@ interface Props {
   expert?: string;
   formula?: string;
   label?: string;
+  /** Linha extra no rodapé do balão (ex.: o termo original em inglês). */
+  note?: ReactNode;
+  /**
+   * Gatilho em texto no lugar do ícone ⓘ: o próprio termo, sublinhado pontilhado, abre a explicação.
+   * O nome acessível do botão é o texto visível.
+   */
+  children?: ReactNode;
 }
 
 /**
@@ -23,6 +30,15 @@ export function InfoTip(props: Props) {
   const simple = props.simple ?? def?.simple ?? '';
   const expert = props.expert ?? def?.expert ?? '';
   const formula = props.formula ?? def?.formula;
+  // Nome original em inglês (com a abreviação usada nas tabelas): ajuda quem acompanha transmissões e sites em inglês.
+  const note =
+    props.note ??
+    (def?.en ? (
+      <>
+        Em inglês: <strong>{def.en}</strong>
+        {def.short && def.short !== def.en ? ` (${def.short})` : ''}
+      </>
+    ) : null);
   const { mode } = useApp();
   // Sem seletor na página (nada muda com o modo), não faz sentido sugerir a troca.
   const modeRelevant = useModeRelevant();
@@ -77,8 +93,8 @@ export function InfoTip(props: Props) {
       <button
         ref={btn}
         type="button"
-        className="infotip-btn"
-        aria-label={`O que é ${props.label ?? title}?`}
+        className={props.children ? 'term-btn' : 'infotip-btn'}
+        aria-label={props.children ? undefined : `O que é ${props.label ?? title}?`}
         aria-expanded={open}
         aria-describedby={open ? id : undefined}
         onClick={(e) => {
@@ -94,7 +110,7 @@ export function InfoTip(props: Props) {
           hoverTimer.current = window.setTimeout(() => setOpen(false), 180);
         }}
       >
-        i
+        {props.children ?? 'i'}
       </button>
       {open &&
         createPortal(
@@ -116,6 +132,7 @@ export function InfoTip(props: Props) {
               </div>
             )}
             {formula && <div className="formula">{formula}</div>}
+            {note && <div className="infotip-note">{note}</div>}
             {modeRelevant && <span className="mode-tag">Modo {mode === 'expert' ? 'Expert' : 'Iniciante'} · troque no topo da página</span>}
           </div>,
           document.body,

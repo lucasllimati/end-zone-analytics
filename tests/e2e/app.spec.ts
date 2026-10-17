@@ -120,6 +120,20 @@ test.describe('seletor Iniciante/Expert', () => {
   });
 });
 
+test.describe('termos em português ou inglês', () => {
+  test('classificação alterna V/D/E e W/L/T, e o ⓘ mostra o nome original', async ({ page }) => {
+    await page.goto('/season');
+    const header = page.locator('table.data thead').first();
+    await expect(header).toContainText('V');
+    await expect(page.locator('table.data tbody tr').first()).toContainText(/[VD]\d/);
+    await page.locator('.filters').getByRole('button', { name: 'EN', exact: true }).click();
+    await expect(header).toContainText('W');
+    await page.locator('.filters').getByRole('button', { name: 'PT', exact: true }).click();
+    await header.getByRole('button', { name: /O que é Vitórias/ }).click();
+    await expect(page.getByRole('tooltip')).toContainText('Em inglês: Wins');
+  });
+});
+
 test.describe('fluxos de UX', () => {
   test('busca global por teclado leva ao jogador', async ({ page, isMobile }) => {
     test.skip(isMobile, 'atalho de teclado é para desktop');

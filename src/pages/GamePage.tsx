@@ -14,6 +14,8 @@ import { GAME_TYPE_LABEL, franchiseOf } from '../lib/teams';
 import { headToHead } from '../lib/games';
 import { dateBR, num, weekdayPt } from '../lib/format';
 import { BoxScore, MarketCard, RefereeCard, RestRows } from './game/GameSections';
+import { TermText, TermsToggle, useTermsLang } from '../components/TermsToggle';
+import { decimalBR, leaderTerm, scoreTypeTerm, teamStatTerm, translateGameDetail, translateLeaderValue, translateScoringText } from '../content/espnTerms';
 
 interface Detail {
   state: string;
@@ -22,8 +24,8 @@ interface Detail {
   teams: { side: 'home' | 'away'; abbr: string; score: number | null; linescores: number[] }[];
   scoringPlays: { period: number; clock: string; team: string; type: string; text: string; away: number; home: number }[];
   drives: { team: string; description: string; result: string; yards: number; plays: number; start: string; end: string; time: string; period: number; isScore: boolean }[];
-  teamStats: { label: string; away: string; home: string }[];
-  leaders: { category: string; side: 'home' | 'away'; team: string; athlete: string; value: string }[];
+  teamStats: { key?: string; label: string; away: string; home: string }[];
+  leaders: { key?: string; category: string; side: 'home' | 'away'; team: string; athlete: string; value: string }[];
   winProbability: { play: number; home: number }[];
   officials: string[];
 }
@@ -43,6 +45,7 @@ export default function GamePage() {
   const flowRef = useRef<SVGSVGElement>(null);
   const wpRef = useRef<SVGSVGElement>(null);
   const [selPlay, setSelPlay] = useState<number | null>(null);
+  const [lang] = useTermsLang();
   const h2h = useMemo(() => (g && all.data ? headToHead(all.data.filter((x) => x.date < g.date), franchiseOf(g.away), franchiseOf(g.home)) : null), [g, all.data]);
 
   if (all.loading) return <Loading height={400} />;
@@ -55,6 +58,22 @@ export default function GamePage() {
   const played = hs !== null && as !== null;
   const nick = (t: string) => map.get(t)?.nick ?? map.get(franchiseOf(t))?.nick ?? t;
   const colorOf = (t: string) => teamColor(t, t === g.home ? 1 : 0);
+
+  // Árbitro: nflverse; se ainda não estiver lá (jogos recentes), a equipe de arbitragem informada pela ESPN.
+  const referee = g.referee ?? d?.officials.find((o) => /\(Referee\)/i.test(o))?.replace(/\s*\(Referee\)/i, '') ?? null;
+  const facts: [string, string | null][] = [
+    ['Estádio', d?.venue.name ?? g.stadium],
+    ['Cidade', d?.venue.city ?? null],
+    ['Teto', g.roof ? ROOF[g.roof] ?? g.roof : null],
+    ['Gramado', g.surface ? (g.surface === 'grass' ? 'Grama natural' : `Sintético (${g.surface})`) : null],
+    ['Temperatura', g.temp !== null ? `${num(((g.temp - 32) * 5) / 9)} °C (${g.temp} °F)` : null],
+    ['Vento', g.wind !== null ? `${num(g.wind * 1.609)} km/h (${g.wind} mph)` : null],
+    ['Público', d?.venue.attendance ? num(d.venue.attendance) : null],
+    ['QB visitante', g.awayQb],
+    ['QB mandante', g.homeQb],
+    ['Técnicos', g.awayCoach || g.homeCoach ? `${g.awayCoach ?? '—'} × ${g.homeCoach ?? '—'}` : null],
+    ['Árbitro', referee],
+  ];
 
   // Evolução do placar a partir das jogadas de pontuação.
   const flow = d?.scoringPlays.length
@@ -94,7 +113,7 @@ export default function GamePage() {
               {played ? `${as} – ${hs}` : 'vs'}
             </div>
             <div className="small muted">
-              {d?.state === 'in' ? <span className="badge live">AO VIVO · {d.detail}</span> : played ? `Final${g.ot ? ' · prorrogação' : ''}` : g.time ? `${g.time} ET` : 'A definir'}
+              {d?.state === 'in' ? <span className="badge live">AO VIVO · {lang === 'en' ? d.detail : translateGameDetail(d.detail)}</span> : played ? `Final${g.ot ? ' · prorrogação' : ''}` : g.time ? `${g.time} ET` : 'A definir'}
             </div>
           </div>
         </div>
@@ -172,7 +191,10 @@ export default function GamePage() {
 
           {d && d.scoringPlays.length > 0 && (
             <section className="card">
-              <h2>Jogadas de pontuação</h2>
+              <div className="section-title">
+                <h2>Jogadas de pontuação</h2>
+                <TermsToggle />
+              </div>
               <ol className="timeline" style={{ listStyle: 'none', margin: 0 }}>
                 {d.scoringPlays.map((p, i) => (
                   <li key={i} className="timeline-item">
@@ -181,10 +203,10 @@ export default function GamePage() {
                         {p.period <= 4 ? `${p.period}º quarto` : 'Prorrogação'} · {p.clock}
                       </div>
                       <span className="row" style={{ gap: 6 }}>
-                        <TeamLogo abbr={fromEspn(p.team)} size={18} /> <strong>{p.type}</strong> — {g.away} {p.away} × {p.home} {g.home}
+                        <TeamLogo abbr={fromEspn(p.team)} size={18} /> <strong>{lang === 'en' ? scoreTypeTerm(p.type)?.en ?? p.type : p.type}</strong> — {g.away} {p.away} × {p.home} {g.home}
                       </span>
                     </button>
-                    {selPlay === i && <p className="small text-2" style={{ marginTop: 4 }}>{p.text}</p>}
+                    {selPlay === i && <p className="small text-2" style={{ marginTop: 4 }}>{lang === 'en' ? p.text : translateScoringText(p.text)}</p>}
                   </li>
                 ))}
               </ol>
@@ -206,9 +228,9 @@ export default function GamePage() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div className="row between small" style={{ flexWrap: 'nowrap', gap: 8 }}>
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {dr.description} · {dr.start} → {dr.end}
+                          {lang === 'en' ? dr.description : driveText(dr)} · {dr.start} → {dr.end}
                         </span>
-                        <span className={`badge ${dr.isScore ? 'good' : /Intercep|Fumble|Downs/.test(dr.result) ? 'live' : ''}`}>{RESULT_PT[dr.result] ?? dr.result}</span>
+                        <span className={`badge ${dr.isScore ? 'good' : /Intercep|Fumble|Downs/.test(dr.result) ? 'live' : ''}`}>{lang === 'en' ? dr.result : RESULT_PT[dr.result] ?? dr.result}</span>
                       </div>
                       <div className="meter" style={{ marginTop: 4 }} aria-hidden="true">
                         <span style={{ width: `${Math.max(2, Math.min(100, dr.yards))}%`, background: colorOf(fromEspn(dr.team)) ?? 'var(--series-1)' }} />
@@ -244,43 +266,22 @@ export default function GamePage() {
         <aside className="stack">
           <section className="card">
             <h2>Ficha do jogo</h2>
+            {/* Só aparecem as linhas com informação: dado ausente não ocupa espaço na ficha. */}
             <dl className="kv">
-              <dt>Estádio</dt>
-              <dd>{d?.venue.name ?? g.stadium ?? 'Não disponível'}</dd>
-              {d?.venue.city && (
-                <>
-                  <dt>Cidade</dt>
-                  <dd>{d.venue.city}</dd>
-                </>
-              )}
-              <dt>Teto</dt>
-              <dd>{g.roof ? ROOF[g.roof] ?? g.roof : 'Não disponível'}</dd>
-              <dt>Gramado</dt>
-              <dd>{g.surface ? (g.surface === 'grass' ? 'Grama natural' : `Sintético (${g.surface})`) : 'Não disponível'}</dd>
-              <dt>Temperatura</dt>
-              <dd>{g.temp !== null ? `${g.temp} °F (${num(((g.temp - 32) * 5) / 9)} °C)` : 'Não disponível'}</dd>
-              <dt>Vento</dt>
-              <dd>{g.wind !== null ? `${g.wind} mph` : 'Não disponível'}</dd>
+              {facts.map(([label, value]) => (
+                <Fact key={label} label={label} value={value} />
+              ))}
               <RestRows g={g} nick={nick} />
-              <dt>Público</dt>
-              <dd>{d?.venue.attendance ? num(d.venue.attendance) : 'Não disponível'}</dd>
-              <dt>QB visitante</dt>
-              <dd>{g.awayQb ?? 'Não disponível'}</dd>
-              <dt>QB mandante</dt>
-              <dd>{g.homeQb ?? 'Não disponível'}</dd>
-              <dt>Técnicos</dt>
-              <dd>
-                {g.awayCoach ?? '—'} × {g.homeCoach ?? '—'}
-              </dd>
-              <dt>Árbitro</dt>
-              <dd>{g.referee ?? 'Não disponível'}</dd>
             </dl>
           </section>
           <MarketCard g={g} nick={nick} />
-          <RefereeCard name={g.referee} />
+          <RefereeCard name={referee} />
           {d && d.teamStats.length > 0 && (
             <section className="card">
-              <h2>Estatísticas dos times</h2>
+              <div className="section-title">
+                <h2>Estatísticas dos times</h2>
+                <TermsToggle />
+              </div>
               <div className="table-wrap bare" tabIndex={0} role="region" aria-label="Tabela">
                 <table className="data">
                   <caption className="sr-only">Estatísticas comparadas</caption>
@@ -297,12 +298,12 @@ export default function GamePage() {
                   </thead>
                   <tbody>
                     {d.teamStats.map((s, i) => (
-                      <tr key={`${s.label}-${i}`}>
-                        <td>{s.away}</td>
+                      <tr key={`${s.key ?? s.label}-${i}`}>
+                        <td>{lang === 'en' ? s.away : decimalBR(s.away)}</td>
                         <td className="muted small" style={{ textAlign: 'center', whiteSpace: 'normal' }}>
-                          {s.label}
+                          <TermText term={teamStatTerm(s.key, s.label)} fallback={s.label} lang={lang} />
                         </td>
-                        <td className="num">{s.home}</td>
+                        <td className="num">{lang === 'en' ? s.home : decimalBR(s.home)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -312,15 +313,21 @@ export default function GamePage() {
           )}
           {d && d.leaders.length > 0 && (
             <section className="card">
-              <h2>Destaques</h2>
+              <div className="section-title">
+                <h2>Destaques</h2>
+                <TermsToggle />
+              </div>
               <div className="stack-sm small">
                 {d.leaders.map((l, i) => (
                   <div key={i} className="row" style={{ gap: 8, flexWrap: 'nowrap' }}>
                     <TeamLogo abbr={fromEspn(l.team)} size={18} />
                     <span style={{ minWidth: 0 }}>
-                      <strong>{l.athlete}</strong> <span className="muted">· {l.category}</span>
+                      <strong>{l.athlete}</strong>{' '}
+                      <span className="muted">
+                        · <TermText term={leaderTerm(l.key, l.category)} fallback={l.category} lang={lang} />
+                      </span>
                       <br />
-                      <span className="text-2">{l.value}</span>
+                      <span className="text-2">{lang === 'en' ? l.value : translateLeaderValue(l.value)}</span>
                     </span>
                   </div>
                 ))}
@@ -344,4 +351,22 @@ export default function GamePage() {
       </div>
     </div>
   );
+}
+
+/** Linha da ficha do jogo; sem valor, não é exibida. */
+function Fact({ label, value }: { label: string; value: string | null }) {
+  if (!value) return null;
+  return (
+    <>
+      <dt>{label}</dt>
+      <dd>{value}</dd>
+    </>
+  );
+}
+
+/** "8 jogadas, 20 jardas, 5:01" a partir dos números do drive (a descrição da ESPN vem em inglês). */
+function driveText(dr: { plays: number; yards: number; time: string }) {
+  const plays = `${dr.plays} ${dr.plays === 1 ? 'jogada' : 'jogadas'}`;
+  const yards = `${dr.yards} ${Math.abs(dr.yards) === 1 ? 'jarda' : 'jardas'}`;
+  return [plays, yards, dr.time].filter(Boolean).join(', ');
 }

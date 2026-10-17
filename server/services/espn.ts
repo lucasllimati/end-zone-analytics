@@ -56,8 +56,9 @@ export interface GameDetail {
   teams: { side: 'home' | 'away'; abbr: string; name: string; score: number | null; linescores: number[]; color: string | null }[];
   scoringPlays: { period: number; clock: string; team: string; type: string; text: string; away: number; home: number }[];
   drives: { team: string; description: string; result: string; yards: number; plays: number; start: string; end: string; time: string; period: number; isScore: boolean }[];
-  teamStats: { label: string; away: string; home: string }[];
-  leaders: { category: string; side: 'home' | 'away'; team: string; athlete: string; value: string }[];
+  /** `key` = identificador estável da ESPN (ex.: firstDowns), usado para traduzir o rótulo. */
+  teamStats: { key?: string; label: string; away: string; home: string }[];
+  leaders: { key?: string; category: string; side: 'home' | 'away'; team: string; athlete: string; value: string }[];
   winProbability: { play: number; home: number }[];
   officials: string[];
 }
@@ -71,11 +72,16 @@ export async function gameDetail(espnId: string): Promise<GameDetail> {
     const box: any[] = j.boxscore?.teams ?? [];
     const home = box.find((b) => b.homeAway === 'home' || sideOf(b.team?.id) === 'home');
     const away = box.find((b) => b !== home);
-    const statRows = (home?.statistics ?? []).map((s: any) => ({
-      label: s.label,
-      home: s.displayValue,
-      away: away?.statistics?.find((x: any) => x.name === s.name)?.displayValue ?? '—',
-    }));
+    // A ESPN repete algumas estatísticas (ex.: "interceptions" aparece duas vezes): mantém a primeira de cada.
+    const seen = new Set<string>();
+    const statRows = (home?.statistics ?? [])
+      .filter((s: any) => (s.name && seen.has(s.name) ? false : (seen.add(s.name), true)))
+      .map((s: any) => ({
+        key: s.name,
+        label: s.label,
+        home: s.displayValue,
+        away: away?.statistics?.find((x: any) => x.name === s.name)?.displayValue ?? '—',
+      }));
     return {
       id: espnId,
       state: comp.status?.type?.state ?? 'pre',
@@ -117,6 +123,7 @@ export async function gameDetail(espnId: string): Promise<GameDetail> {
       teamStats: statRows,
       leaders: (j.leaders ?? []).flatMap((t: any) =>
         (t.leaders ?? []).map((cat: any) => ({
+          key: cat.name,
           category: cat.displayName ?? cat.name,
           side: sideOf(t.team?.id),
           team: t.team?.abbreviation,

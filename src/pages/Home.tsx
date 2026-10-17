@@ -21,6 +21,7 @@ import { passerRating } from '../lib/stats';
 import { franchiseOf } from '../lib/teams';
 import { useApp, useModeSensitive } from '../context/AppContext';
 import type { Game, PlayerSeasonLine, StandingRow } from '../lib/types';
+import { useTermsLang } from '../components/TermsToggle';
 
 export default function Home() {
   const { season } = useSeason();
@@ -320,6 +321,8 @@ type StandView = 'league' | 'AFC' | 'NFC' | 'division';
 
 function StandingsPanel({ rows, loading, expert }: { rows: StandingRow[]; loading: boolean; expert: boolean }) {
   const [view, setView] = useState<StandView>('league');
+  const [lang] = useTermsLang();
+  const en = lang === 'en';
   const divisions = useMemo(() => [...new Set(rows.map((r) => r.division))].sort(), [rows]);
   const [division, setDivision] = useState<string>('');
   const div = division || divisions[0] || '';
@@ -371,14 +374,14 @@ function StandingsPanel({ rows, loading, expert }: { rows: StandingRow[]; loadin
                   #
                 </th>
                 <th scope="col">Time</th>
-                <th scope="col" className="num" title="Vitórias">
-                  V
+                <th scope="col" className="num" title={en ? 'Vitórias (wins)' : 'Vitórias'}>
+                  {en ? 'W' : 'V'}
                 </th>
-                <th scope="col" className="num" title="Derrotas">
-                  D
+                <th scope="col" className="num" title={en ? 'Derrotas (losses)' : 'Derrotas'}>
+                  {en ? 'L' : 'D'}
                 </th>
-                <th scope="col" className="num" title="Empates">
-                  E
+                <th scope="col" className="num" title={en ? 'Empates (ties)' : 'Empates'}>
+                  {en ? 'T' : 'E'}
                 </th>
                 <th scope="col" className="num" title="Aproveitamento">
                   %

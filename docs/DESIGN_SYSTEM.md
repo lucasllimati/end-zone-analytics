@@ -72,6 +72,13 @@ Raios 10/14/20 px e pílula (`980px`); espaços em `rem` (`--space-1…8`); cont
 - Linhas 2 px; marcadores ≥ 8 px com anel da superfície; barras ≤ 24 px com ponta arredondada; grade em linha fina e discreta; um único eixo Y.
 - Texto nunca usa a cor da série; cores de time passam por verificação de contraste (`useTeamColor`).
 
+## Termos em inglês
+
+- Português por padrão; o termo original fica a um passo: seletor **PT | EN** (`TermsToggle`, preferência no navegador) e explicação ao passar o mouse, focar ou tocar (`TermText`, sobre o mesmo balão do ⓘ, com “Em inglês: …”).
+- Tradução por identificador estável da fonte (ex.: `firstDowns` da ESPN), nunca pelo texto em inglês; formato desconhecido mostra o original, sem inventar.
+- Números no padrão brasileiro quando em português (`4,3`); placares, horários e frações (`7-17`, `27/51`) ficam como estão.
+- Ficha de informações mostra só o que existe: linha sem dado não aparece.
+
 ## Voz e texto
 
 - Português claro, frases curtas, sem jargão no modo Iniciante; termos da NFL em inglês com tradução/explicação.
