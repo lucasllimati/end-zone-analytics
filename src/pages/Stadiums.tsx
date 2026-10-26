@@ -11,7 +11,20 @@ import { num, percent } from '../lib/format';
 const celsius = (f: number | null | undefined) => (f === null || f === undefined ? '—' : `${num(((f - 32) * 5) / 9)} °C`);
 
 const ROOF: Record<string, string> = { outdoors: 'Aberto', dome: 'Domo', closed: 'Retrátil', open: 'Retrátil' };
-const SURF = (s: string | null) => (!s ? '—' : s === 'grass' ? 'Grama natural' : `Sintético (${s})`);
+/** Valor ausente vira "—" (curto, não estica a coluna como "Não disponível"). */
+const dash = (v: number | null | undefined, f: (v: number) => string) => (v === null || v === undefined ? '—' : f(v));
+
+/** Gramado em duas linhas: tipo e, no sintético, a marca (ex.: fieldturf), sem alargar a coluna. */
+function Surface({ s }: { s: string | null }) {
+  if (!s) return <>—</>;
+  if (s === 'grass') return <>Grama natural</>;
+  return (
+    <span className="cell-2l">
+      Sintético
+      <span className="xsmall muted">{s}</span>
+    </span>
+  );
+}
 
 export default function Stadiums() {
   const st = useAsync(() => api.stadiums(), []);
@@ -39,19 +52,18 @@ export default function Stadiums() {
         exportName="estadios"
         expert={mode === 'expert'}
         columns={[
-          { key: 'name', label: 'Estádio', render: (s) => <strong>{s.name}</strong>, value: (s) => s.name },
-          { key: 'teams', label: 'Times', render: (s) => (s.teams.length ? <span className="row" style={{ gap: 4 }}>{s.teams.map((t) => <TeamLogo key={t} abbr={t} size={20} />)}</span> : <span className="muted small">Campo neutro</span>), value: (s) => s.teams.join(',') },
-          { key: 'roof', label: 'Teto', render: (s) => (s.roof ? ROOF[s.roof] ?? s.roof : '—') },
-          { key: 'surface', label: 'Gramado', render: (s) => SURF(s.surface) },
-          { key: 'games', label: 'Jogos (1999+)', num: true },
-          { key: 'avgPts', label: 'Pontos/jogo', num: true, help: 'Média de pontos somados dos dois times.', render: (s) => num(s.avgPts ?? null, 1), value: (s) => s.avgPts ?? null },
-          { key: 'homeWinPct', label: 'Mandante', num: true, metric: 'homeWinPct', render: (s) => percent(s.homeWinPct ?? null, 0), value: (s) => s.homeWinPct ?? null },
-          { key: 'avgTemp', label: 'Temp. média', num: true, help: 'Temperatura média nos jogos com medição (céu aberto ou teto aberto).', render: (s) => celsius(s.avgTemp), value: (s) => s.avgTemp ?? null },
-          { key: 'avgWind', label: 'Vento médio', num: true, expertOnly: true, help: 'Vento médio (mph) nos jogos com medição.', render: (s) => (s.avgWind == null ? '—' : `${num(s.avgWind, 1)} mph`), value: (s) => s.avgWind ?? null },
-          { key: 'fgPct', label: 'FG%', num: true, metric: 'fgPct', render: (s) => percent(s.fgPct ?? null, 1), value: (s) => s.fgPct ?? null },
-          { key: 'superBowls', label: 'Super Bowls (1999+)', num: true },
-          { key: 'first', label: 'Primeiro', num: true },
-          { key: 'last', label: 'Último', num: true },
+          { key: 'name', label: 'Estádio', render: (s) => <strong title={s.name}>{s.name}</strong>, value: (s) => s.name },
+          { key: 'teams', label: 'Times', width: '5.5rem', render: (s) => (s.teams.length ? <span className="row" style={{ gap: 4, flexWrap: 'nowrap' }}>{s.teams.map((t) => <TeamLogo key={t} abbr={t} size={20} />)}</span> : <span className="muted small">Neutro</span>), value: (s) => s.teams.join(',') },
+          { key: 'roof', label: 'Teto', width: '5rem', render: (s) => (s.roof ? ROOF[s.roof] ?? s.roof : '—') },
+          { key: 'surface', label: 'Gramado', width: '7rem', render: (s) => <Surface s={s.surface} />, value: (s) => s.surface },
+          { key: 'games', label: 'Jogos', num: true, width: '4.5rem', help: 'Jogos disputados no estádio desde 1999.' },
+          { key: 'avgPts', label: 'Pts/jogo', num: true, width: '5.5rem', help: 'Média de pontos somados dos dois times.', render: (s) => dash(s.avgPts, (v) => num(v, 1)), value: (s) => s.avgPts ?? null },
+          { key: 'homeWinPct', label: 'Mandante', num: true, width: '6rem', metric: 'homeWinPct', render: (s) => dash(s.homeWinPct, (v) => percent(v, 0)), value: (s) => s.homeWinPct ?? null },
+          { key: 'avgTemp', label: 'Temp.', num: true, width: '5rem', help: 'Temperatura média nos jogos com medição (céu aberto ou teto aberto).', render: (s) => celsius(s.avgTemp), value: (s) => s.avgTemp ?? null },
+          { key: 'avgWind', label: 'Vento', num: true, width: '5.25rem', expertOnly: true, help: 'Vento médio nos jogos com medição.', render: (s) => dash(s.avgWind, (v) => `${num(v * 1.609)} km/h`), value: (s) => s.avgWind ?? null },
+          { key: 'fgPct', label: 'FG%', num: true, width: '5rem', metric: 'fgPct', render: (s) => dash(s.fgPct, (v) => percent(v, 1)), value: (s) => s.fgPct ?? null },
+          { key: 'superBowls', label: 'SB', num: true, width: '3.75rem', help: 'Super Bowls disputados no estádio desde 1999.', render: (s) => s.superBowls || '—', value: (s) => s.superBowls },
+          { key: 'period', label: 'Período', num: true, width: '6.5rem', help: 'Primeira e última temporada com jogos no estádio (desde 1999).', render: (s) => (s.first === s.last ? s.first : `${s.first}–${s.last}`), value: (s) => s.last },
         ]}
       />
     </div>

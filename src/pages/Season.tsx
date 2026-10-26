@@ -256,19 +256,24 @@ function ScheduleView({ games, season }: { games: Game[]; season: number }) {
 /* --------------------------------- Líderes --------------------------------- */
 
 function LeadersView({ season }: { season: number }) {
-  const [st, setSt] = useState<'REG' | 'POST'>('REG');
+  const [phase, setSt] = useState<'REG' | 'POST'>('REG');
   const stats = useAsync(() => api.playerStats(season), [season]);
+  // Playoffs só aparecem quando a temporada já tem jogos de playoffs (nada de aba que leva a uma tela vazia).
+  const hasPost = (stats.data ?? []).some((l) => l.st === 'POST');
+  const st = hasPost ? phase : 'REG';
   const lines = (stats.data ?? []).filter((l) => l.st === st);
   return (
     <div className="stack">
-      <div className="chips" role="group" aria-label="Fase">
-        <button type="button" className="chip" aria-pressed={st === 'REG'} onClick={() => setSt('REG')}>
-          Temporada regular
-        </button>
-        <button type="button" className="chip" aria-pressed={st === 'POST'} onClick={() => setSt('POST')}>
-          Playoffs
-        </button>
-      </div>
+      {hasPost && (
+        <div className="chips" role="group" aria-label="Fase">
+          <button type="button" className="chip" aria-pressed={st === 'REG'} onClick={() => setSt('REG')}>
+            Temporada regular
+          </button>
+          <button type="button" className="chip" aria-pressed={st === 'POST'} onClick={() => setSt('POST')}>
+            Playoffs
+          </button>
+        </div>
+      )}
       {stats.loading ? <Loading /> : lines.length ? <LeadersPanel lines={lines} n={10} /> : <Unavailable>Ainda não há dados de {st === 'POST' ? 'playoffs' : 'temporada regular'} para {season}.</Unavailable>}
       <p className="xsmall muted">
         Métricas de taxa exigem volume mínimo (ex.: QBs com 14+ tentativas por jogo). Estatísticas do nflverse são derivadas do play-by-play e podem diferir levemente das oficiais.

@@ -158,9 +158,11 @@ Três modos:
 - Termos da ESPN traduzidos: estatísticas dos times (25, com explicação ao passar o mouse), destaques (“17 corridas, 41 jardas”), descrições das pontuações (“corrida de 4 jardas (ponto extra de …)”), drives (“8 jogadas, 20 jardas”) e situação ao vivo (“8:24 · 3º quarto”, “Intervalo”); seletor PT | EN para ver os originais.
 - **Expectativa do mercado:** favorito e linha, total esperado, chance de vitória (moneyline sem a margem da casa), resultado contra a linha e o total; selo “Zebra” quando o azarão vence.
 - **Árbitro:** retrospecto do árbitro principal (jogos, pontos por jogo, mandante, acima do total).
-- **Box score** (dados publicados, funciona sem a ESPN): passe, corrida, recepção, defesa, chutes, punts e retornos de cada time.
+- **Box score** (dados publicados, funciona sem a ESPN): passe, corrida, recepção, defesa, chutes, punts e retornos. Em largura total abaixo das duas colunas; a partir de 1100 px os dois times aparecem lado a lado, seção a seção, com colunas idênticas; em telas menores, um time por vez com seletor.
+- **Probabilidade de vitória** dos dois times (linhas complementares), com seletor “Os dois | visitante | mandante”.
+- Jogadas de pontuação com a descrição sempre visível (traduzida).
 - Placar por quarto, **evolução do placar**, jogadas de pontuação, drives, destaques, estatísticas dos times.
-- **Probabilidade de vitória** jogada a jogada (modelo da ESPN).
+- Probabilidade de vitória jogada a jogada (modelo da ESPN).
 - “Antes deste jogo”: contexto das campanhas e confrontos.
 - Quando a ESPN não tem detalhes: aviso “Detalhes jogada a jogada indisponíveis”.
 
@@ -188,7 +190,7 @@ Abas: **Oficiais (todos os tempos)** · Temporada (1999+) · Carreira (1999+) ·
 - Médias por década e comparação entre eras.
 
 ### 4.13 Estádios (`/stadiums`)
-- Estádio, times, teto, gramado, jogos (1999+), pontos por jogo, vitórias do mandante, temperatura e vento médios, FG%, primeiro/último jogo, Super Bowls sediados (1999+).
+- Estádio, times, teto, gramado (tipo e marca do sintético), jogos (1999+), pontos por jogo, vitórias do mandante, temperatura e vento médios, FG%, Super Bowls sediados e período de uso (1999+). A tabela cabe na largura do conteúdo, sem rolagem lateral; dado ausente aparece como “—”.
 
 ### 4.13.1 Árbitros (`/referees`)
 - Árbitros principais com 16+ jogos desde 1999: período, jogos, playoffs, Super Bowls, pontos por jogo, vitórias do mandante, % acima do total, prorrogações; filtro “em atividade”.

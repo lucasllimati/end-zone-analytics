@@ -1030,3 +1030,10 @@ main .ref-list a:hover {
 .last5 > span.bad {
   background: var(--critical-soft);
 }
+
+/* Célula em duas linhas (valor principal + detalhe), para não alargar colunas de tabela. */
+.cell-2l {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.25;
+}

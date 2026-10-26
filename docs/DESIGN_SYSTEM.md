@@ -63,6 +63,9 @@ Raios 10/14/20 px e pílula (`980px`); espaços em `rem` (`--space-1…8`); cont
 | **Teto de colunas nas grades** | `.grid-2/3/4` têm no máximo 2/3/4 colunas (antes, `auto-fit` criava 4–5 em telas largas) e caem para menos colunas abaixo do mínimo |
 | **Sem cartão sozinho na última linha** | Conteúdo dimensionado para a grade (ex.: 12 recordes da franquia em 3 × 4; 7 árbitros em 4 + 3); `.balance` centraliza um cartão restante na coluna do meio; no tablet (600–1023 px), grades de 4/8/10 itens usam 2 colunas e de 5/6/9 itens, 3 |
 | **Forma uniforme para sequências** | Últimos jogos (V/D/E) em casas de 18 px com fundo suave na cor do resultado: letras largas e estreitas ocupam o mesmo espaço visual |
+| **Sem opção que leva a uma tela vazia** | Chips e abas de fase (ex.: Playoffs) só aparecem quando há dados — líderes da temporada, perfil do jogador e comparador |
+| **Tabelas sem rolagem no desktop** | Colunas com largura definida e dados compactados (período em uma coluna, detalhe em segunda linha, “—” para ausência) até caber na largura do conteúdo |
+| **Lista de opções legível** | `<option>` com fundo e texto do tema (o Windows desenha o menu do `<select>` com fundo próprio) |
 | **Auditoria** | Script de verificação (deriva de colunas, cabeçalho × números, cartões órfãos, rolagem lateral) rodado em 1440, 1024, 768 e 390 px em todas as rotas e abas |
 
 ## Gráficos (regras)

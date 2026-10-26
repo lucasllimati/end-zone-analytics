@@ -185,3 +185,18 @@ a {
 .btn .muted {
   color: var(--text-2);
 }
+
+/* Lista de opções dos <select>: o Windows desenha o menu com fundo próprio (branco) mesmo no tema escuro,
+   enquanto o texto herda a cor clara do site — ilegível. Cores explícitas a partir dos tokens do tema. */
+select option,
+select optgroup {
+  background-color: var(--surface-2, var(--surface-1));
+  color: var(--text);
+}
+select option:checked {
+  background-color: var(--accent-fill, var(--accent));
+  color: var(--accent-ink, #fff);
+}
+select option:disabled {
+  color: var(--muted);
+}

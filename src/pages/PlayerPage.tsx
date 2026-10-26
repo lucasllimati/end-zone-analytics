@@ -84,11 +84,14 @@ export default function PlayerPage() {
   const { id = '' } = useParams();
   const { mode } = useApp();
   const career = useAsync(() => api.career(id), [id]);
-  const [st, setSt] = useState<'REG' | 'POST'>('REG');
+  const [phase, setSt] = useState<'REG' | 'POST'>('REG');
   const [view, setView] = useState<'seasons' | 'games'>('seasons');
   const chartRef = useRef<SVGSVGElement>(null);
   const radarRef = useRef<SVGSVGElement>(null);
   const c = career.data;
+  // Playoffs só aparecem para quem jogou playoffs (sem chip que leva a uma tabela vazia).
+  const hasPost = useMemo(() => (c?.lines ?? []).some((l) => l.st === 'POST'), [c]);
+  const st = hasPost ? phase : 'REG';
   const lines = useMemo(() => (c?.lines ?? []).filter((l) => l.st === st).sort((a, b) => a.season - b.season), [c, st]);
   const reg = useMemo(() => (c?.lines ?? []).filter((l) => l.st === 'REG'), [c]);
   const pos = reg.at(-1)?.pos ?? c?.bio.pos ?? '—';
@@ -299,14 +302,16 @@ export default function PlayerPage() {
           <section>
             <div className="section-title">
               <h2>Temporada a temporada</h2>
-              <div className="chips">
-                <button type="button" className="chip" aria-pressed={st === 'REG'} onClick={() => setSt('REG')}>
-                  Temporada regular
-                </button>
-                <button type="button" className="chip" aria-pressed={st === 'POST'} onClick={() => setSt('POST')}>
-                  Playoffs
-                </button>
-              </div>
+              {hasPost && (
+                <div className="chips">
+                  <button type="button" className="chip" aria-pressed={st === 'REG'} onClick={() => setSt('REG')}>
+                    Temporada regular
+                  </button>
+                  <button type="button" className="chip" aria-pressed={st === 'POST'} onClick={() => setSt('POST')}>
+                    Playoffs
+                  </button>
+                </div>
+              )}
             </div>
             <ModeNote beginner={<>Cada linha é uma temporada. Ative o modo Expert para ver métricas avançadas como EPA e CPOE.</>} />
             {lines.length ? (

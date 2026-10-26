@@ -124,7 +124,7 @@ function ComparePlayers() {
     p.set('type', 'players');
     setParams(p, { replace: true });
   };
-  const [st, setSt] = useState<'REG' | 'POST'>('REG');
+  const [phase, setSt] = useState<'REG' | 'POST'>('REG');
   const [axis, setAxis] = useState<'season' | 'year'>('year');
   const ca = useAsync(() => (a ? api.career(a) : Promise.resolve(null)), [a]);
   const cb = useAsync(() => (b ? api.career(b) : Promise.resolve(null)), [b]);
@@ -132,6 +132,9 @@ function ComparePlayers() {
   const chartRef = useRef<SVGSVGElement>(null);
   const radarRef = useRef<SVGSVGElement>(null);
   const players = [ca.data, cb.data].filter(Boolean) as PlayerCareer[];
+  // Playoffs só aparecem se algum dos jogadores comparados jogou playoffs.
+  const hasPost = players.some((p) => p.lines.some((l) => l.st === 'POST'));
+  const st = hasPost ? phase : 'REG';
   const tot = players.map((p) => sumLines(p.lines.filter((l) => l.st === st)));
   const bucket = players[0] ? positionBucket(players[0].lines.filter((l) => l.st === 'REG').at(-1)?.pos ?? players[0].bio.pos) : 'QB';
   const rows = rowsFor(bucket);
@@ -167,14 +170,16 @@ function ComparePlayers() {
           {positionBucket(players[0].bio.pos) !== positionBucket(players[1].bio.pos) && (
             <Callout title="Posições diferentes">Comparar posições diferentes tem pouco significado estatístico; as métricas exibidas seguem a posição do jogador A.</Callout>
           )}
-          <div className="chips">
-            <button type="button" className="chip" aria-pressed={st === 'REG'} onClick={() => setSt('REG')}>
-              Temporada regular
-            </button>
-            <button type="button" className="chip" aria-pressed={st === 'POST'} onClick={() => setSt('POST')}>
-              Playoffs
-            </button>
-          </div>
+          {hasPost && (
+            <div className="chips">
+              <button type="button" className="chip" aria-pressed={st === 'REG'} onClick={() => setSt('REG')}>
+                Temporada regular
+              </button>
+              <button type="button" className="chip" aria-pressed={st === 'POST'} onClick={() => setSt('POST')}>
+                Playoffs
+              </button>
+            </div>
+          )}
           <div className="table-wrap" tabIndex={0} role="region" aria-label="Tabela">
             <table className="data">
               <caption className="sr-only">Comparação de carreira</caption>

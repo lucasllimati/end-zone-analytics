@@ -44,8 +44,8 @@ export default function GamePage() {
   const teamColor = useTeamColor();
   const flowRef = useRef<SVGSVGElement>(null);
   const wpRef = useRef<SVGSVGElement>(null);
-  const [selPlay, setSelPlay] = useState<number | null>(null);
   const [lang] = useTermsLang();
+  const [wpSide, setWpSide] = useState<'both' | 'away' | 'home'>('both');
   const h2h = useMemo(() => (g && all.data ? headToHead(all.data.filter((x) => x.date < g.date), franchiseOf(g.away), franchiseOf(g.home)) : null), [g, all.data]);
 
   if (all.loading) return <Loading height={400} />;
@@ -119,7 +119,7 @@ export default function GamePage() {
         </div>
       </section>
 
-      <div className="two-col">
+      <div className="two-col gc-layout">
         <div className="stack">
           {d && home && away && home.linescores.length > 0 && (
             <section className="card">
@@ -198,15 +198,13 @@ export default function GamePage() {
               <ol className="timeline" style={{ listStyle: 'none', margin: 0 }}>
                 {d.scoringPlays.map((p, i) => (
                   <li key={i} className="timeline-item">
-                    <button type="button" className="btn ghost" style={{ height: 'auto', padding: 0, textAlign: 'left', whiteSpace: 'normal', display: 'block', fontWeight: 400 }} aria-expanded={selPlay === i} onClick={() => setSelPlay(selPlay === i ? null : i)}>
-                      <div className="when">
-                        {p.period <= 4 ? `${p.period}º quarto` : 'Prorrogação'} · {p.clock}
-                      </div>
-                      <span className="row" style={{ gap: 6 }}>
-                        <TeamLogo abbr={fromEspn(p.team)} size={18} /> <strong>{lang === 'en' ? scoreTypeTerm(p.type)?.en ?? p.type : p.type}</strong> — {g.away} {p.away} × {p.home} {g.home}
-                      </span>
-                    </button>
-                    {selPlay === i && <p className="small text-2" style={{ marginTop: 4 }}>{lang === 'en' ? p.text : translateScoringText(p.text)}</p>}
+                    <div className="when">
+                      {p.period <= 4 ? `${p.period}º quarto` : 'Prorrogação'} · {p.clock}
+                    </div>
+                    <span className="row" style={{ gap: 6 }}>
+                      <TeamLogo abbr={fromEspn(p.team)} size={18} /> <strong>{lang === 'en' ? scoreTypeTerm(p.type)?.en ?? p.type : p.type}</strong> — {g.away} {p.away} × {p.home} {g.home}
+                    </span>
+                    {p.text && <p className="small text-2 scoring-text">{lang === 'en' ? p.text : translateScoringText(p.text)}</p>}
                   </li>
                 ))}
               </ol>
@@ -245,16 +243,49 @@ export default function GamePage() {
           {d && d.winProbability.length > 2 && (
             <section className="card">
               <ChartFrame
-                title={`Probabilidade de vitória: ${nick(g.home)}`}
-                subtitle="Fonte: modelo da ESPN, jogada a jogada"
-                info={{ simple: 'A chance (em %) de o time da casa vencer, estimada a cada jogada. Acima de 50% = favorito naquele momento.', expert: 'Win probability considera placar, tempo, posse, down, distância e posição de campo. Grandes saltos = jogadas de alto WPA.' }}
+                title={wpSide === 'both' ? 'Probabilidade de vitória' : `Probabilidade de vitória: ${nick(wpSide === 'home' ? g.home : g.away)}`}
+                subtitle="Eixo horizontal: número da jogada. Modelo da ESPN; as duas linhas são complementares (somam 100%)."
+                info={{ simple: 'A chance (em %) de cada time vencer, estimada a cada jogada. Quem está acima de 50% é o favorito naquele momento; os cruzamentos mostram as viradas.', expert: 'Win probability considera placar, tempo, posse, down, distância e posição de campo. Grandes saltos = jogadas de alto WPA.' }}
+                legend={
+                  wpSide === 'both'
+                    ? [
+                        { label: nick(g.away), slot: 0, color: colorOf(g.away) },
+                        { label: nick(g.home), slot: 1, color: colorOf(g.home) },
+                      ]
+                    : undefined
+                }
                 svgRef={wpRef}
+                table={<MiniTable head={['Jogada', g.away, g.home]} rows={d.winProbability.filter((_, i) => i % 10 === 0).map((w) => [String(w.play), `${num(100 - w.home)}%`, `${num(w.home)}%`])} />}
               >
-                <LineChart ref={wpRef} ariaLabel="Probabilidade de vitória" series={[{ id: 'wp', label: nick(g.home), slot: 0, color: colorOf(g.home), points: d.winProbability.map((w) => ({ x: w.play, y: w.home })) }]} xFormat={(x) => `jogada ${x}`} yFormat={(y) => `${num(y)}%`} reference={{ y: 50, label: '50%' }} area endLabels={false} />
+                <div className="segmented segmented-sm" role="group" aria-label="Time na probabilidade de vitória" style={{ marginBottom: 8 }}>
+                  {(
+                    [
+                      ['both', 'Os dois'],
+                      ['away', nick(g.away)],
+                      ['home', nick(g.home)],
+                    ] as const
+                  ).map(([k, l]) => (
+                    <button key={k} type="button" aria-pressed={wpSide === k} onClick={() => setWpSide(k)}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+                <LineChart
+                  ref={wpRef}
+                  ariaLabel="Probabilidade de vitória de cada time por jogada"
+                  series={[
+                    ...(wpSide !== 'home' ? [{ id: 'away', label: nick(g.away), slot: 0, color: colorOf(g.away), points: d.winProbability.map((w) => ({ x: w.play, y: 100 - w.home })) }] : []),
+                    ...(wpSide !== 'away' ? [{ id: 'home', label: nick(g.home), slot: 1, color: colorOf(g.home), points: d.winProbability.map((w) => ({ x: w.play, y: w.home })) }] : []),
+                  ]}
+                  xFormat={(x) => (x === 0 ? 'Início' : String(x))}
+                  yFormat={(y) => `${num(y)}%`}
+                  reference={{ y: 50, label: '50%' }}
+                  area={wpSide !== 'both'}
+                  endLabels={wpSide === 'both'}
+                />
               </ChartFrame>
             </section>
           )}
-          <BoxScore g={g} nick={nick} />
           {!d && !detail.loading && (
             <Callout title="Detalhes jogada a jogada indisponíveis">
               Placar por quarto, drives e probabilidade de vitória vêm da API em tempo real (requer o servidor da aplicação e uma conexão com a fonte). Os dados básicos do jogo continuam disponíveis.
@@ -322,12 +353,14 @@ export default function GamePage() {
                   <div key={i} className="row" style={{ gap: 8, flexWrap: 'nowrap' }}>
                     <TeamLogo abbr={fromEspn(l.team)} size={18} />
                     <span style={{ minWidth: 0 }}>
-                      <strong>{l.athlete}</strong>{' '}
-                      <span className="muted">
-                        · <TermText term={leaderTerm(l.key, l.category)} fallback={l.category} lang={lang} />
-                      </span>
+                      <strong>{l.athlete}</strong>
                       <br />
-                      <span className="text-2">{lang === 'en' ? l.value : translateLeaderValue(l.value)}</span>
+                      <span className="text-2">
+                        <span className="muted">
+                          <TermText term={leaderTerm(l.key, l.category)} fallback={l.category} lang={lang} />
+                        </span>{' '}
+                        · {lang === 'en' ? l.value : translateLeaderValue(l.value)}
+                      </span>
                     </span>
                   </div>
                 ))}
@@ -349,6 +382,8 @@ export default function GamePage() {
           <ModeNote beginner={<>“Drive” é uma posse de bola. Os resultados mostram como cada posse terminou: TD, field goal, punt ou perda da bola.</>} />
         </aside>
       </div>
+      {/* Box score em largura total: tabelas de até 8 colunas pedem espaço, e a coluna lateral termina antes. */}
+      <BoxScore g={g} nick={nick} />
     </div>
   );
 }
