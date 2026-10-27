@@ -12,7 +12,7 @@
 | 8 — Produto e operação | Redesign (linguagem Apple: tipografia do sistema, materiais translúcidos, controles segmentados; símbolo da bola oval), área `/admin` protegida, log operacional e alertas, agendador, publicação grátis no Cloudflare com cron e portão de qualidade | ✅ |
 | 9 — Profundidade dos dados | Perfil de franquia (história, técnicos, QBs, estádios, momentos, recordes, draft), estatísticas por jogo (jogo a jogo, box score), play-by-play resumido (3ª/4ª descida, red zone, sucesso, EPA cedido), elencos, linhas de aposta (zebras, contra a linha), descanso, árbitros, eficiência com ranking, times especiais, valor de draft | ✅ |
 | 10 — Segurança | Checklist de 19 pontos, OWASP Top 10, teste de invasão (pentest), correções, actions por SHA, Dependabot | ✅ |
-| 11 — Engajamento e operação | Meu time + aviso de pontuação, Game Center ao vivo (20 s), simulador de playoffs com desempates oficiais, fantasy (PPR), notícias/lesões/Wikipedia, divisões do jogador e comparador jogo a jogo, prêmios da AP, PWA, Sobre/Privacidade, metadados por rota + sitemap, relatos de erro, E2E/layout/visual no CI, Vite 8 | ✅ |
+| 11 — Engajamento e operação | Meu time + aviso de pontuação, Game Center ao vivo (30 s, com pausa por aba oculta e inatividade), simulador de playoffs com desempates oficiais, fantasy (PPR), notícias/lesões/Wikipedia, divisões do jogador e comparador jogo a jogo, prêmios da AP, PWA, Sobre/Privacidade, metadados por rota + sitemap, relatos de erro, E2E/layout/visual no CI, Vite 8 | ✅ |
 
 ## Próximos passos
 

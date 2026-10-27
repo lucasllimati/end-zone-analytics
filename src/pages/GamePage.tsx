@@ -122,7 +122,7 @@ export default function GamePage() {
                   <span className="badge live">AO VIVO · {lang === 'en' ? d.detail : translateGameDetail(d.detail)}</span>
                   {detail.updatedAt && (
                     <div className="xsmall muted" style={{ marginTop: 4 }} aria-live="polite">
-                      Atualizado às {new Date(detail.updatedAt).toLocaleTimeString('pt-BR')} · atualiza sozinho a cada 20 s
+                      Atualizado às {new Date(detail.updatedAt).toLocaleTimeString('pt-BR')} · atualiza sozinho a cada 30 s
                     </div>
                   )}
                 </>

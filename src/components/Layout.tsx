@@ -6,6 +6,7 @@ import { useManifest } from '../data/hooks';
 import { BrandLogo, Chevron, CloseIcon, MenuIcon, MoonIcon, SearchIcon, SunIcon } from './Icons';
 import { UpdateBanner } from './UpdateBanner';
 import { ScoreAlerts } from './ScoreAlerts';
+import { LivePaused } from './LivePaused';
 import { dateBR } from '../lib/format';
 
 // A busca carrega todo o conteúdo educativo (glossário, regras, playbook): só baixa na primeira vez que abre.
@@ -329,6 +330,7 @@ export function Layout() {
       </header>
       <UpdateBanner />
       <ScoreAlerts />
+      <LivePaused />
       {drawer && <Drawer onClose={() => setDrawer(false)} />}
       {searchUsed && (
         <Suspense fallback={null}>

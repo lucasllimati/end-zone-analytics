@@ -14,7 +14,7 @@ node scripts/screenshots.mjs   # capturas de tela + detector de rolagem horizont
 | Suíte | Resultado |
 |---|---|
 | TypeScript (app + servidor + Worker), modo estrito | ✅ sem erros |
-| Vitest: 14 arquivos (unitários, componentes, conteúdo, novidades, API/admin, segurança, agendador, pipeline, dados publicados) | ✅ 169/169 |
+| Vitest: 15 arquivos (unitários, componentes, conteúdo, novidades, consumo do ao vivo, API/admin, segurança, agendador, pipeline, dados publicados) | ✅ 172/172 |
 | Desempates oficiais × história (`tests/data/playoffs.test.ts`) | ✅ 24/24 temporadas (2002–2025): mesmos classificados e mesmas folgas dos playoffs reais |
 | Playwright contra o build publicado (`build:static` + `wrangler dev`, `E2E_STATIC=1`): fluxos, axe WCAG 2.1 AA, layout (`layout.spec.ts`), visual (`visual.spec.ts`), Meu time, simulador, fantasy, prêmios, recortes, SEO por rota, PWA, relato de erro | ✅ 194 passaram · 8 ignorados por design (admin não existe no site estático; atalho de teclado e seletor de temporada no celular) |
 | Teste de usabilidade por agente de QA (34 URLs × desktop/celular, ~22 fluxos, 25 buscas, 79 links, axe em 10 páginas nos dois temas) | ✅ 0 erros de JS/console, 0 links quebrados, 0 rolagem lateral; 12 bugs e 10 pontos de UX encontrados (tabela abaixo) |

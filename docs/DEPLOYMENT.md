@@ -20,6 +20,8 @@ O `build:static` termina com `scripts/prerender-meta.ts`, que grava um HTML por 
 | `SITE_URL` (definida: `https://end-zone-analytics.nfldata.workers.dev`) | URLs absolutas em `og:image`, `og:url` e canonical; gera o `sitemap.xml` e a linha `Sitemap:` do `robots.txt` |
 | `CF_ANALYTICS_TOKEN` (opcional) | Inclui o Cloudflare Web Analytics (sem cookies) e libera o script dele na CSP de `_headers` |
 
+**Limite de requisições do Worker (plano grátis: 100 mil por dia, renova à 0h UTC).** Só `/api/*` conta; páginas, `/data` e imagens são servidos sem passar pelo Worker. O placar e o Game Center consultam a cada 30 s só com jogo em andamento, nada com a aba oculta e pausam após 30 min sem interação. Na prática, cada pessoa assistindo ao vivo gasta ~120 requisições por hora de tela. Ao estourar, só `/api/*` falha até a renovação: o site continua no ar e mostra “placar ao vivo indisponível”. Se o tráfego crescer, o plano pago do Workers (US$ 5/mês) dá 10 milhões por mês.
+
 O site também é um **PWA**: `public/manifest.webmanifest`, ícones em `public/icons/` e `public/sw.js` (páginas e `/data` com rede primeiro e cópia offline; `/assets` com cache primeiro; `/api` nunca em cache). `sw.js` e o manifest saem com `Cache-Control: no-cache`.
 
 Em outra hospedagem estática, publique `dist/` com fallback de SPA para `index.html`; funciona tudo, exceto placar ao vivo e detalhes do Game Center.

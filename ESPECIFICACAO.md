@@ -167,7 +167,7 @@ Três modos:
 - Rivalidades clássicas pré-configuradas. Cobertura: desde 1999.
 
 ### 4.7 Página do jogo (`/games/:id`)
-Com o jogo em andamento, os detalhes (placar, drives, pontuações, probabilidade) **atualizam sozinhos a cada 20 s**, com o horário da última atualização.
+Com o jogo em andamento, os detalhes (placar, drives, pontuações, probabilidade) **atualizam sozinhos a cada 30 s**, com o horário da última atualização. Com a aba oculta, nada é consultado (atualiza ao voltar); depois de 30 min sem interação, as atualizações pausam até um toque ou o botão “Continuar atualizando”.
 
 - Ficha do jogo (estádio, cidade, teto, gramado, clima em °C e km/h, público, QBs, técnicos, árbitro, **dias de descanso de cada time**). **Só aparecem as informações disponíveis** — nada de “Não disponível”. O árbitro vem da nflverse ou, em jogos recentes, da equipe de arbitragem informada pela ESPN.
 - Termos da ESPN traduzidos: estatísticas dos times (25, com explicação ao passar o mouse), destaques (“17 corridas, 41 jardas”), descrições das pontuações (“corrida de 4 jardas (ponto extra de …)”), drives (“8 jogadas, 20 jardas”) e situação ao vivo (“8:24 · 3º quarto”, “Intervalo”); seletor PT | EN para ver os originais.

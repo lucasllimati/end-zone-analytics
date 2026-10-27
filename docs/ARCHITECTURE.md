@@ -45,7 +45,7 @@ Operação em produção: `docs/PUBLICACAO_SERVIDOR.md`. Rodando o servidor Node
 
 ### Peças da versão 1.4
 
-- **Placar compartilhado** (`src/data/live.ts`): um único consultor de `/api/live/scoreboard` para a página inteira (20 s com jogo ao vivo, 5 min fora; pausa com a aba oculta). O Game Center usa `useGameDetail` (20 s enquanto o jogo está em andamento).
+- **Placar compartilhado** (`src/data/live.ts`): um único consultor de `/api/live/scoreboard` para a página inteira (30 s com jogo ao vivo, 5 min fora). O Game Center usa `useGameDetail` (30 s enquanto o jogo está em andamento). Os dois param com a aba oculta e depois de 30 min sem interação (aviso “Continuar atualizando”), para caber no limite de requisições do Worker.
 - **Meu time** (`src/data/favorite.ts`, `components/MyTeam.tsx`, `components/ScoreAlerts.tsx`): favorito no navegador; o aviso de pontuação sai pelo service worker quando o app está instalado.
 - **Desempates e simulação** (`src/lib/playoffs.ts`): funções puras; `tests/data/playoffs.test.ts` confere 24 temporadas reais.
 - **Fontes externas no pipeline** (`server/etl/external.ts`, `awards.ts`, `fantasy.ts`, `transform.ts → toInjuries`).

@@ -12,13 +12,71 @@ interface LiveScoreboard {
 const ESPN_TO_NFLVERSE: Record<string, string> = { WSH: 'WAS', LAR: 'LA' };
 export const fromEspn = (a: string) => ESPN_TO_NFLVERSE[a] ?? a;
 
-/** Intervalos: 20 s com jogo em andamento; 5 min fora deles (para perceber o início de um jogo). */
-export const LIVE_POLL_MS = 20_000;
+/**
+ * Consumo de requisições (o plano grátis do Worker tem 100 mil por dia; ver docs/DEPLOYMENT.md):
+ *  - 30 s com jogo em andamento; 5 min fora deles (para perceber o início de um jogo);
+ *  - aba oculta não consulta nada; ao voltar, atualiza na hora;
+ *  - 30 min sem interação (toque, clique, tecla, rolagem) pausam as atualizações; qualquer
+ *    interação, ou o botão "Continuar atualizando", retoma.
+ */
+export const LIVE_POLL_MS = 30_000;
 const IDLE_POLL_MS = 300_000;
+export const IDLE_PAUSE_MS = 30 * 60_000;
+
+let lastActivity = Date.now();
+let paused = false;
+const pausedSubs = new Set<(p: boolean) => void>();
+/** Consultas interrompidas (aba oculta ou inatividade), retomadas na próxima interação. */
+const halted = new Set<() => void>();
+
+function setPaused(p: boolean) {
+  if (p === paused) return;
+  paused = p;
+  for (const f of pausedSubs) f(p);
+}
+
+/** Registra atividade e retoma o que estava parado. */
+export function resumeLive() {
+  lastActivity = Date.now();
+  setPaused(false);
+  const fns = [...halted];
+  halted.clear();
+  for (const f of fns) f();
+}
+
+if (typeof window !== 'undefined') {
+  for (const ev of ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll']) window.addEventListener(ev, resumeLive, { passive: true });
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && resumeLive());
+}
+
+/** Pode consultar agora? Se não, guarda `restart` para quando o visitante voltar. */
+function mayFetch(restart: () => void): boolean {
+  if (document.visibilityState === 'hidden') {
+    halted.add(restart);
+    return false;
+  }
+  if (Date.now() - lastActivity > IDLE_PAUSE_MS) {
+    setPaused(true);
+    halted.add(restart);
+    return false;
+  }
+  return true;
+}
+
+/** true quando as atualizações ao vivo estão pausadas por inatividade. */
+export function useLivePaused(): boolean {
+  const [p, setP] = useState(paused);
+  useEffect(() => {
+    pausedSubs.add(setP);
+    setP(paused);
+    return () => void pausedSubs.delete(setP);
+  }, []);
+  return p;
+}
 
 /*
  * Um único consultor do placar para a página inteira: a home, o "Meu time" e o aviso de pontuação
- * compartilham a mesma requisição. Só consulta enquanto houver alguém inscrito e a aba estiver visível.
+ * compartilham a mesma requisição.
  */
 type Listener = (m: Map<string, LiveOverlay>) => void;
 const listeners = new Set<Listener>();
@@ -27,9 +85,13 @@ let timer: number | undefined;
 let running = false;
 
 async function poll() {
-  running = true;
   window.clearTimeout(timer);
-  const sb = document.visibilityState === 'hidden' && last.size ? null : await apiGet<LiveScoreboard>('/api/live/scoreboard');
+  if (!listeners.size || !mayFetch(poll)) {
+    running = false;
+    return;
+  }
+  running = true;
+  const sb = await apiGet<LiveScoreboard>('/api/live/scoreboard');
   if (sb) {
     const m = new Map<string, LiveOverlay>();
     for (const g of sb.games) {
@@ -54,14 +116,11 @@ export function useLiveScores(enabled = true): Map<string, LiveOverlay> {
     listeners.add(setMap);
     setMap(last);
     if (!running) void poll();
-    // Ao voltar para a aba, atualiza na hora (o navegador atrasa temporizadores em abas ocultas).
-    const onVisible = () => document.visibilityState === 'visible' && void poll();
-    document.addEventListener('visibilitychange', onVisible);
     return () => {
       listeners.delete(setMap);
-      document.removeEventListener('visibilitychange', onVisible);
       if (!listeners.size) {
         window.clearTimeout(timer);
+        halted.delete(poll);
         running = false;
       }
     };
@@ -70,8 +129,8 @@ export function useLiveScores(enabled = true): Map<string, LiveOverlay> {
 }
 
 /**
- * Detalhes de um jogo (Game Center). Com o jogo em andamento, atualiza a cada 20 s sem piscar a tela:
- * os dados atuais ficam visíveis até a resposta nova chegar.
+ * Detalhes de um jogo (Game Center). Com o jogo em andamento, atualiza a cada 30 s sem piscar a tela:
+ * os dados atuais ficam visíveis até a resposta nova chegar. Segue as mesmas pausas do placar.
  */
 export function useGameDetail<T extends { state: string }>(espnId: string | null | undefined): { data: T | null; loading: boolean; updatedAt: number | null } {
   const [state, setState] = useState<{ data: T | null; loading: boolean; updatedAt: number | null }>({ data: null, loading: Boolean(espnId), updatedAt: null });
@@ -84,7 +143,10 @@ export function useGameDetail<T extends { state: string }>(espnId: string | null
     let timer: number | undefined;
     let lastState = '';
     setState({ data: null, loading: true, updatedAt: null });
-    const load = async () => {
+    const load = async (first = false) => {
+      window.clearTimeout(timer);
+      // A primeira carga sempre acontece; as atualizações respeitam aba oculta e inatividade.
+      if (!alive || (!first && !mayFetch(load))) return;
       const d = await apiGet<T>(`/api/live/game/${espnId}`);
       if (!alive) return;
       if (d) lastState = d.state;
@@ -92,10 +154,11 @@ export function useGameDetail<T extends { state: string }>(espnId: string | null
       // Uma falha no meio do jogo não interrompe: tenta de novo no próximo ciclo.
       if (lastState === 'in') timer = window.setTimeout(load, LIVE_POLL_MS);
     };
-    void load();
+    void load(true);
     return () => {
       alive = false;
       window.clearTimeout(timer);
+      halted.delete(load);
     };
   }, [espnId]);
   return state;
