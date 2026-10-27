@@ -9,13 +9,15 @@ import { LineChart } from '../components/charts/LineChart';
 import { api } from '../data/client';
 import { useAsync, useTeams } from '../data/hooks';
 import { fromEspn, useGameDetail } from '../data/live';
+import { useFavoriteTeam } from '../data/favorite';
 import { useTeamColor } from '../data/useTeamColor';
 import { GAME_TYPE_LABEL, franchiseOf } from '../lib/teams';
 import { headToHead } from '../lib/games';
 import { dateBR, num, surfaceLabel, weekdayPt } from '../lib/format';
 import { BoxScore, MarketCard, RefereeCard, RestRows } from './game/GameSections';
+import { LeadersByTeam, StatsCompare, TeamForm } from './game/GamePreview';
 import { TermText, TermsToggle, useTermsLang } from '../components/TermsToggle';
-import { decimalBR, leaderTerm, scoreTypeTerm, teamStatTerm, translateGameDetail, translateLeaderValue, translateScoringText } from '../content/espnTerms';
+import { leaderTerm, scoreTypeTerm, translateGameDetail, translateLeaderValue, translateScoringText } from '../content/espnTerms';
 
 interface Detail {
   state: string;
@@ -40,6 +42,7 @@ export default function GamePage() {
   const all = useAsync(() => api.allGames(), []);
   const g = all.data?.find((x) => x.id === id);
   const detail = useGameDetail<Detail>(g?.espn);
+  const [fav] = useFavoriteTeam();
   const { map } = useTeams();
   const teamColor = useTeamColor();
   const flowRef = useRef<SVGSVGElement>(null);
@@ -75,14 +78,43 @@ export default function GamePage() {
     ['Árbitro', referee],
   ];
 
-  const hasMain = Boolean(
-    detail.loading || !d || (home && home.linescores.length > 0) || d.scoringPlays.length || d.drives.length || d.winProbability.length > 2,
-  );
+  // Jogo ainda não disputado abre direto na prévia (antes, mostrava duas colunas enquanto carregava e
+  // depois trocava de layout). Com detalhes, a prévia só fica enquanto não houver placar, drives etc.
+  const upcoming = g.homeScore === null && d?.state !== 'in' && d?.state !== 'post';
+  const hasMain = d
+    ? Boolean((home && home.linescores.length > 0) || d.scoringPlays.length || d.drives.length || d.winProbability.length > 2)
+    : !upcoming;
 
   // Evolução do placar a partir das jogadas de pontuação.
   const flow = d?.scoringPlays.length
     ? [{ x: 0, a: 0, h: 0 }, ...d.scoringPlays.map((p, i) => ({ x: i + 1, a: p.away, h: p.home }))]
     : [];
+
+  // Blocos usados nos dois layouts (jogo em andamento/encerrado e prévia antes do jogo).
+  const fichaCard = (
+    <section className="card">
+      <h2>Ficha do jogo</h2>
+      {/* Só aparecem as linhas com informação: dado ausente não ocupa espaço na ficha. */}
+      <dl className="kv">
+        {facts.map(([label, value]) => (
+          <Fact key={label} label={label} value={value} />
+        ))}
+        <RestRows g={g} nick={nick} />
+      </dl>
+    </section>
+  );
+  const h2hCard = h2h && h2h.games.length > 0 && (
+      <section className="card">
+        <h2>Antes deste jogo</h2>
+        <p className="small text-2">
+          Desde 1999: {nick(g.away)} {h2h.aWins} × {h2h.bWins} {nick(g.home)}
+          {h2h.ties ? `, ${h2h.ties} empate(s)` : ''} em {h2h.games.length} jogos.
+        </p>
+        <Link className="btn sm" to={`/matchup?a=${franchiseOf(g.away)}&b=${franchiseOf(g.home)}`}>
+          Histórico do confronto
+        </Link>
+      </section>
+  );
 
   return (
     <div className="stack">
@@ -109,7 +141,11 @@ export default function GamePage() {
               <div style={{ fontWeight: 650, marginTop: 6 }}>
                 <TeamName abbr={x.t} />
               </div>
-              <div className="xsmall muted">{x.label}</div>
+              {/* "Meu time" na mesma linha do papel do time: não muda a altura e os dois lados ficam alinhados. */}
+              <div className="xsmall muted">
+                {x.label}
+                {fav === franchiseOf(x.t) && <span className="accent-text"> · ★ Meu time</span>}
+              </div>
             </div>
           ))}
           <div style={{ textAlign: 'center', order: 1 }}>
@@ -132,8 +168,24 @@ export default function GamePage() {
         </div>
       </section>
 
-      {/* Antes do jogo não há placar, drives nem probabilidade: os cartões ocupam a largura toda. */}
-      <div className={`two-col gc-layout${hasMain ? '' : ' gc-pre'}`}>
+      {/* Antes do jogo não há placar, drives nem probabilidade: a página vira uma prévia em duas colunas. */}
+      {!hasMain ? (
+        <div className="gc-preview">
+          <div className="stack">
+            {fichaCard}
+            {all.data && <TeamForm g={g} all={all.data} nick={nick} lang={lang} />}
+            <MarketCard g={g} nick={nick} />
+            <RefereeCard name={referee} />
+            {h2hCard}
+          </div>
+          <div className="stack">
+            {detail.loading && <Loading height={260} label="Carregando médias e destaques…" />}
+            {d && d.teamStats.length > 0 && <StatsCompare g={g} rows={d.teamStats} pre lang={lang} />}
+            {d && <LeadersByTeam g={g} leaders={d.leaders} nick={nick} lang={lang} />}
+          </div>
+        </div>
+      ) : (
+      <div className="two-col gc-layout">
         <div className="stack">
           {d && home && away && home.linescores.length > 0 && (
             <section className="card">
@@ -309,53 +361,10 @@ export default function GamePage() {
         </div>
 
         <aside className="stack">
-          <section className="card">
-            <h2>Ficha do jogo</h2>
-            {/* Só aparecem as linhas com informação: dado ausente não ocupa espaço na ficha. */}
-            <dl className="kv">
-              {facts.map(([label, value]) => (
-                <Fact key={label} label={label} value={value} />
-              ))}
-              <RestRows g={g} nick={nick} />
-            </dl>
-          </section>
+          {fichaCard}
           <MarketCard g={g} nick={nick} />
           <RefereeCard name={referee} />
-          {d && d.teamStats.length > 0 && (
-            <section className="card">
-              <div className="section-title">
-                <h2>{d.state === 'pre' ? 'Médias da temporada' : 'Estatísticas dos times'}</h2>
-                <TermsToggle />
-              </div>
-              <div className="table-wrap bare" tabIndex={0} role="region" aria-label="Tabela">
-                <table className="data">
-                  <caption className="sr-only">Estatísticas comparadas</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">{g.away}</th>
-                      <th scope="col" style={{ textAlign: 'center' }}>
-                        Estatística
-                      </th>
-                      <th scope="col" className="num">
-                        {g.home}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {d.teamStats.map((s, i) => (
-                      <tr key={`${s.key ?? s.label}-${i}`}>
-                        <td>{lang === 'en' ? s.away : decimalBR(s.away)}</td>
-                        <td className="muted small" style={{ textAlign: 'center', whiteSpace: 'normal' }}>
-                          <TermText term={teamStatTerm(s.key, s.label)} fallback={s.label} lang={lang} />
-                        </td>
-                        <td className="num">{lang === 'en' ? s.home : decimalBR(s.home)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
+          {d && d.teamStats.length > 0 && <StatsCompare g={g} rows={d.teamStats} pre={d.state === 'pre'} lang={lang} />}
           {d && d.leaders.length > 0 && (
             <section className="card">
               <div className="section-title">
@@ -381,21 +390,11 @@ export default function GamePage() {
               </div>
             </section>
           )}
-          {h2h && h2h.games.length > 0 && (
-            <section className="card">
-              <h2>Antes deste jogo</h2>
-              <p className="small text-2">
-                Desde 1999: {nick(g.away)} {h2h.aWins} × {h2h.bWins} {nick(g.home)}
-                {h2h.ties ? `, ${h2h.ties} empate(s)` : ''} em {h2h.games.length} jogos.
-              </p>
-              <Link className="btn sm" to={`/matchup?a=${franchiseOf(g.away)}&b=${franchiseOf(g.home)}`}>
-                Histórico do confronto
-              </Link>
-            </section>
-          )}
+          {h2hCard}
           {d && d.drives.length > 0 && <ModeNote beginner={<>“Drive” é uma posse de bola. Os resultados mostram como cada posse terminou: TD, field goal, punt ou perda da bola.</>} />}
         </aside>
       </div>
+      )}
       {/* Box score em largura total: tabelas de até 8 colunas pedem espaço, e a coluna lateral termina antes. */}
       <BoxScore g={g} nick={nick} />
     </div>

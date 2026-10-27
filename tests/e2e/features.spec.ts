@@ -129,3 +129,34 @@ test.describe('correções do teste de usabilidade', () => {
     await expect(page.getByRole('dialog').getByRole('option').first()).toContainText('EPA (Expected Points Added)');
   });
 });
+
+test.describe('Game Center antes do jogo (prévia)', () => {
+  test('favorito na home → próximo jogo: prévia alinhada, com "Meu time" e destaques por time', async ({ page }) => {
+    await page.goto('/');
+    const card = page.locator('section', { has: page.getByRole('heading', { name: 'Meu time' }) });
+    await card.getByRole('combobox').selectOption('MIN');
+    // Espera o cartão carregar (dados da temporada) antes de decidir se há próximo jogo.
+    await expect(card.getByRole('button', { name: 'Trocar time' })).toBeVisible();
+    const tile = card.locator('a.game-tile').first();
+    const hasNext = await tile.waitFor({ timeout: 10_000 }).then(
+      () => true,
+      () => false,
+    );
+    test.skip(!hasNext, 'sem próximo jogo na temporada');
+    await tile.click();
+    await expect(page).toHaveURL(/\/games\//);
+    // Espera o Game Center escolher o layout (prévia ou jogo em andamento).
+    await expect(page.locator('.gc-preview, .gc-layout').first()).toBeVisible({ timeout: 15_000 });
+    const preview = page.locator('.gc-preview');
+    test.skip((await preview.count()) === 0, 'o próximo jogo já começou (layout ao vivo)');
+    await expect(page.getByText('★ Meu time')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Momento dos times' })).toBeVisible();
+    // As duas colunas começam na mesma altura (antes, a margem da pilha deslocava os cartões).
+    const tops = await preview.locator(':scope > .stack').evaluateAll((cols) => cols.map((c) => Math.round(c.firstElementChild!.getBoundingClientRect().top)));
+    if (tops.length === 2 && (await page.viewportSize())!.width >= 1000) expect(Math.abs(tops[0] - tops[1])).toBeLessThanOrEqual(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+    // Valores só numéricos nos destaques ganham a unidade ("6 sacks", não "6").
+    const values = await page.locator('.leader-list li > span.small').allInnerTexts();
+    expect(values.every((v) => !/^\d+$/.test(v.trim()))).toBe(true);
+  });
+});

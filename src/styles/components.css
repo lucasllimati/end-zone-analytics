@@ -1958,17 +1958,44 @@ table.data.fixed td {
   display: none;
 }
 
-/* Game Center antes do jogo: sem coluna principal, os cartões da lateral viram uma grade larga. */
-.two-col.gc-pre {
-  grid-template-columns: minmax(0, 1fr);
-}
-.gc-pre > div:empty {
-  display: none;
-}
-.gc-pre > aside {
+/* Game Center antes do jogo (prévia): ficha, momento e mercado à esquerda; médias e destaques à direita.
+   Duas pilhas independentes: os cartões começam alinhados no topo e não sobram buracos entre eles. */
+.gc-preview {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+  gap: var(--space-5);
   align-items: start;
+}
+@media (max-width: 999px) {
+  .gc-preview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* Médias comparadas: visitante alinhado à direita, mandante à esquerda, estatística no meio. */
+table.stats-compare td:first-child,
+table.stats-compare th:first-child {
+  text-align: right;
+}
+.stat-better {
+  font-weight: 700;
+  color: var(--good-text);
+}
+/* Destaques de cada time lado a lado (empilham em telas estreitas). */
+.leaders-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: var(--space-5);
+}
+.leader-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.leader-list li {
+  display: grid;
+  gap: 1px;
 }
 
 /* Tabelas largas no celular: a coluna do nome fica fixa e um degradê na borda mostra que há mais colunas. */
@@ -2039,4 +2066,12 @@ table.data.fixed td {
     width: 20px;
     height: 20px;
   }
+}
+/* Texto curto na cor de destaque (ex.: "★ Meu time" no Game Center). */
+.accent-text {
+  color: var(--accent-strong, var(--accent));
+  font-weight: 600;
+}
+:root[data-theme='light'] .accent-text {
+  color: var(--accent);
 }
