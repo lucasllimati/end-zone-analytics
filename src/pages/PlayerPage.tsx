@@ -17,6 +17,8 @@ import type { PlayerSeasonLine } from '../lib/types';
 import { metric } from '../content/metrics';
 import { TabPanel, Tabs } from '../components/Tabs';
 import { DraftValue, GameLog, KickingSplits, ReturnsSummary } from './player/PlayerSections';
+import { PlayerSplits } from './player/PlayerSplits';
+import { AwardBadges } from '../components/AwardBadges';
 
 /** Métricas por jogo usadas no radar de percentis, por grupo de posição. */
 const RADAR: Record<string, { key: string; label: string; f: (l: PlayerSeasonLine) => number | null; low?: boolean }[]> = {
@@ -85,7 +87,7 @@ export default function PlayerPage() {
   const { mode } = useApp();
   const career = useAsync(() => api.career(id), [id]);
   const [phase, setSt] = useState<'REG' | 'POST'>('REG');
-  const [view, setView] = useState<'seasons' | 'games'>('seasons');
+  const [view, setView] = useState<'seasons' | 'games' | 'splits'>('seasons');
   const chartRef = useRef<SVGSVGElement>(null);
   const radarRef = useRef<SVGSVGElement>(null);
   const c = career.data;
@@ -196,6 +198,7 @@ export default function PlayerPage() {
                 Temporadas na base: {reg[0]?.season ?? '—'}–{latest?.season ?? '—'}
               </span>
             </div>
+            <AwardBadges playerId={b.id} />
             <div className="row" style={{ marginTop: 12 }}>
               <Link className="btn sm" to={`/compare?type=players&a=${b.id}`}>
                 Comparar com outro jogador
@@ -293,11 +296,14 @@ export default function PlayerPage() {
         tabs={[
           { id: 'seasons', label: 'Temporada a temporada' },
           { id: 'games', label: 'Jogo a jogo' },
+          { id: 'splits', label: 'Recortes e recordes' },
         ]}
       />
       <TabPanel id={view}>
         {view === 'games' ? (
           <GameLog id={b.id} name={b.name} pos={pos} expert={mode === 'expert'} />
+        ) : view === 'splits' ? (
+          <PlayerSplits id={b.id} name={b.name} pos={pos} />
         ) : (
           <section>
             <div className="section-title">

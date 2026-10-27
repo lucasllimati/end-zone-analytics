@@ -8,7 +8,7 @@ import path from 'node:path';
 import { replaceFile } from '../etl/files';
 
 export type Severity = 'info' | 'warning' | 'error' | 'critical';
-export type Component = 'pipeline' | 'sources' | 'quality' | 'auth' | 'api';
+export type Component = 'pipeline' | 'sources' | 'quality' | 'auth' | 'api' | 'client';
 
 export interface OpsEvent {
   id: string;

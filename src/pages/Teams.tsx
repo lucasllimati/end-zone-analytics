@@ -7,6 +7,7 @@ import { api } from '../data/client';
 import { useAsync, useSeason, useTeams } from '../data/hooks';
 import { computeStandings, fmtRecord } from '../lib/standings';
 import { DIVISIONS_CURRENT, DIVISION_ORDER } from '../lib/teams';
+import { PAGE_META } from '../content/pageMeta';
 
 export default function Teams() {
   const { data: teams, loading } = useTeams();
@@ -21,7 +22,7 @@ export default function Teams() {
   const divisions = DIVISION_ORDER.filter((d) => active.some((t) => DIVISIONS_CURRENT[t.abbr] === d));
   return (
     <div>
-      <Seo title="Times" description="As 32 franquias da NFL: logos, divisões, campanha da temporada, títulos e histórico." />
+      <Seo {...PAGE_META['/teams']} />
       <PageHeader eyebrow="32 franquias" title="Times" lede="Cada time tem uma página com perfil, analytics da temporada, histórico desde 1999, Super Bowls e confrontos." />
       <div className="filters">
         <div className="chips" role="group" aria-label="Conferência">

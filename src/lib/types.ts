@@ -518,6 +518,80 @@ export interface DatasetMeta {
   seasons: number[] | null;
 }
 
+/** Linha do relatório oficial de lesões (semana mais recente do time). */
+export interface InjuryEntry {
+  team: string;
+  week: number;
+  id: string | null;
+  name: string;
+  pos: string;
+  injury: string | null;
+  /** Out, Doubtful ou Questionable (null = sem status no jogo, só treino limitado). */
+  status: string | null;
+  practice: string | null;
+}
+
+/** Fantasy (PPR) de um jogador na temporada regular. */
+export interface FantasyPlayer {
+  id: string;
+  name: string;
+  pos: string;
+  team: string;
+  games: number;
+  total: number;
+  avg: number;
+  /** Desvio padrão por jogo: quanto menor, mais consistente. */
+  sd: number;
+  floor: number;
+  ceil: number;
+  /** Semanas entre os 12 melhores da posição. */
+  top12: number;
+  /** Pontos por semana (índice 0 = semana 1); null = não jogou. */
+  weeks: (number | null)[];
+}
+
+/** Pontos de fantasy cedidos por uma defesa a uma posição, por jogo (rank 1 = cede mais). */
+export interface FantasyDefense {
+  team: string;
+  pos: string;
+  games: number;
+  avg: number;
+  rank: number;
+}
+
+export interface FantasySeason {
+  season: number;
+  weeks: number;
+  players: FantasyPlayer[];
+  defense: FantasyDefense[];
+}
+
+export type AwardKey = 'mvp' | 'opoy' | 'dpoy' | 'oroy' | 'droy' | 'cpoy' | 'coy';
+
+export interface AwardWinner {
+  award: AwardKey;
+  season: number;
+  name: string;
+  team: string | null;
+  playerId: string | null;
+}
+
+export interface AwardsData {
+  source: string;
+  license: string;
+  retrievedAt: string;
+  awards: { key: AwardKey; label: string; url: string }[];
+  winners: AwardWinner[];
+  rejected: { key: AwardKey; missing: string[] }[];
+}
+
+export interface TeamWiki {
+  title: string;
+  extract: string;
+  url: string;
+  revisedAt: string | null;
+}
+
 export interface QualityCheck {
   id: string;
   dataset: string;

@@ -43,6 +43,16 @@ GitHub Actions (cron 6 h · push · manual)
 
 Operação em produção: `docs/PUBLICACAO_SERVIDOR.md`. Rodando o servidor Node (localmente ou em hospedagem própria — `docs/DEPLOYMENT.md`), a API Fastify serve tudo, inclusive o `/admin`, e o agendador interno (`server/services/scheduler.ts`) roda as cargas; execuções e eventos ficam em `ops/`.
 
+### Peças da versão 1.4
+
+- **Placar compartilhado** (`src/data/live.ts`): um único consultor de `/api/live/scoreboard` para a página inteira (20 s com jogo ao vivo, 5 min fora; pausa com a aba oculta). O Game Center usa `useGameDetail` (20 s enquanto o jogo está em andamento).
+- **Meu time** (`src/data/favorite.ts`, `components/MyTeam.tsx`, `components/ScoreAlerts.tsx`): favorito no navegador; o aviso de pontuação sai pelo service worker quando o app está instalado.
+- **Desempates e simulação** (`src/lib/playoffs.ts`): funções puras; `tests/data/playoffs.test.ts` confere 24 temporadas reais.
+- **Fontes externas no pipeline** (`server/etl/external.ts`, `awards.ts`, `fantasy.ts`, `transform.ts → toInjuries`).
+- **Erros do navegador** (`src/data/errorReport.ts` → `/api/report`).
+- **Metadados por rota** (`src/content/pageMeta.ts`, usado pelas páginas e por `scripts/prerender-meta.ts`).
+- **Divisão do bundle**: Vite 8 (Rolldown) com o grupo `react` em `codeSplitting`; a busca global (que traz todo o conteúdo educativo) só carrega na primeira abertura. JS inicial ≈ 97 KB gzip (antes 125 KB).
+
 ## Princípios
 
 1. **Contrato único:** `src/lib/types.ts` define todos os formatos publicados. Pipeline, API e frontend importam os mesmos tipos.

@@ -13,6 +13,15 @@ npx wrangler@4.144.0 deploy                       # publica (normalmente feito p
 
 `wrangler.jsonc` serve `dist/` como *static assets* (com fallback de SPA e `public/_headers`) e executa `worker/index.ts` só em `/api/*` (placar ao vivo). O GitHub Actions (`publish.yml`) faz carga, portão de qualidade, build e deploy a cada 6 h e a cada push. Passo a passo: [PUBLICACAO.md](PUBLICACAO.md).
 
+O `build:static` termina com `scripts/prerender-meta.ts`, que grava um HTML por rota pública (`dist/teams/buf.html`, `dist/super-bowl/60.html` etc., 118 rotas) com título, descrição, OpenGraph e canonical próprios. A Cloudflare serve `/teams/buf` a partir desse arquivo, e o Fastify faz o mesmo. Variáveis do build:
+
+| Variável (GitHub → Settings → Variables) | Efeito |
+|---|---|
+| `SITE_URL` (definida: `https://end-zone-analytics.nfldata.workers.dev`) | URLs absolutas em `og:image`, `og:url` e canonical; gera o `sitemap.xml` e a linha `Sitemap:` do `robots.txt` |
+| `CF_ANALYTICS_TOKEN` (opcional) | Inclui o Cloudflare Web Analytics (sem cookies) e libera o script dele na CSP de `_headers` |
+
+O site também é um **PWA**: `public/manifest.webmanifest`, ícones em `public/icons/` e `public/sw.js` (páginas e `/data` com rede primeiro e cópia offline; `/assets` com cache primeiro; `/api` nunca em cache). `sw.js` e o manifest saem com `Cache-Control: no-cache`.
+
 Em outra hospedagem estática, publique `dist/` com fallback de SPA para `index.html`; funciona tudo, exceto placar ao vivo e detalhes do Game Center.
 
 ## Hospedagem própria (avançado)

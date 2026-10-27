@@ -11,9 +11,14 @@
 | Estatísticas de times por jogo | nflverse `stats_team` | `stats_team_week_{ano}.csv` | CC-BY 4.0 | diária na temporada |
 | Play-by-play (resumo situacional) | nflverse `pbp` | `play_by_play_{ano}.csv.gz` (~19 MB por temporada, lido em fluxo; só o resumo por time fica em cache) | CC-BY 4.0 (EPA: nflfastR) | diária na temporada |
 | Elencos por temporada | nflverse `rosters` | `roster_{ano}.csv` | CC-BY 4.0 | diária na temporada |
+| Relatório de lesões | nflverse `injuries` | `injuries_{ano}.csv` (só a temporada atual; publicada a semana mais recente de cada time) | CC-BY 4.0 | diária na temporada |
+| Fantasy (PPR) | derivado de `stats_player_week` (`fantasy_points_ppr`) | — | CC-BY 4.0 | com as estatísticas por jogo |
+| Resumo dos times | Wikipedia em português (API REST `page/summary`) | `data/wiki/teams.json` | CC BY-SA 4.0, exibido com atribuição, link para o artigo e para a licença | semanal (cache em `data-raw/external`) |
+| Prêmios da AP (MVP, OPOY, DPOY, OROY, DROY, Comeback, técnico) | Listas de vencedores da Wikipedia em inglês (wikitext) | `data/awards.json` | CC BY-SA 4.0 (os fatos em si não têm proteção); conferidos com fatos conhecidos antes de publicar, e prêmio que falha fica de fora | semanal |
+| Notícias dos times | API pública do site da ESPN (`/news?team=`), só matérias marcadas com até 3 times | — (via `/api/news`) | Título e link para a matéria original; o texto não é copiado | cache de 15 min |
 | Draft | nflverse `draft_picks` (origem: Pro Football Reference) | `draft_picks.csv` (1980+) | CC-BY 4.0 via nflverse | semanal |
 | Super Bowls I–LX, recordes oficiais | Curadoria a partir do NFL Record & Fact Book | `data-curated/*.json` | Fatos históricos; texto próprio | manual |
-| Placar ao vivo, drives, probabilidade de vitória | API pública do site da ESPN | `/apis/site/v2/sports/football/nfl/*` | Uso informativo; sem garantia de disponibilidade | em tempo real (cache 30–60 s) |
+| Placar ao vivo, drives, probabilidade de vitória | API pública do site da ESPN | `/apis/site/v2/sports/football/nfl/*` | Uso informativo; sem garantia de disponibilidade | em tempo real (cache de 15 s ao vivo; 60 s a 10 min fora do jogo) |
 | Imagens de logos e fotos | CDN da ESPN / NFL (via nflverse) | URLs | Marcas e imagens dos detentores; exibidas apenas para identificação | — |
 
 Releases: <https://github.com/nflverse/nflverse-data/releases>. Documentação: <https://nflreadr.nflverse.com/>.
@@ -36,3 +41,8 @@ Releases: <https://github.com/nflverse/nflverse-data/releases>. Documentação: 
 - **Linhas de aposta** (`spread_line`, `total_line`, moneylines): linhas de fechamento publicadas pela nflverse. O site usa esses números só como medida da expectativa do mercado (zebras, “cobriu a linha”); não há recomendação de aposta nem links para casas de apostas.
 - **AV de carreira do draft:** a coluna `car_av` passou a vir vazia; o pipeline usa `w_av` (AV ponderado de carreira do PFR). A verificação de qualidade `draft-av` falha se o AV sumir de novo.
 - **Play-by-play:** cada temporada é baixada e reduzida a um resumo por time (3ª e 4ª descidas, red zone, taxa de sucesso, EPA por jogada no ataque e na defesa), guardado em `data-raw/pbp_summary_{ano}.json`. A primeira carga processa ~530 MB (alguns minutos); depois, só a temporada cuja versão remota mudou.
+
+## Fontes avaliadas e descartadas
+
+- **Wikidata para prêmios (CC0):** listas incompletas (o MVP não tinha vencedores) e com erros (Kyler Murray como jogador ofensivo do ano de 2019; ele foi novato ofensivo do ano). Substituído pelas listas da Wikipedia com conferência automática.
+- **ESPN para lesões:** exige uma consulta por jogador; o relatório oficial do nflverse é completo, licenciado e chega na mesma carga.

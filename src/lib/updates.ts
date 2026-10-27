@@ -30,7 +30,8 @@ export async function checkForUpdates(manifest: Manifest, fetchJson: FetchJson):
       try {
         const remote = await remoteAssetVersions(src.tag, fetchJson);
         const localAssets = local?.assets ?? {};
-        const names = src.seasonal ? seasons.flatMap((s) => src.assets.map((a) => assetName(a, s))) : src.assets;
+        const wanted = src.currentOnly ? seasons.slice(-1) : seasons;
+        const names = src.seasonal ? wanted.flatMap((s) => src.assets.map((a) => assetName(a, s))) : src.assets;
         const changed = names.filter((n) => remote[n] && remote[n] !== localAssets[n]);
         const changedSeasons = src.seasonal
           ? [...new Set(changed.map((n) => Number(n.match(/(\d{4})\.csv$/)?.[1])).filter(Boolean))].sort()

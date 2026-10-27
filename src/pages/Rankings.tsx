@@ -8,6 +8,7 @@ import { api } from '../data/client';
 import { useAsync } from '../data/hooks';
 import { DEFAULT_QB_WEIGHTS, QB_COMPONENTS, rankQbs, type QbWeights } from '../lib/models';
 import { num, signed } from '../lib/format';
+import { PAGE_META } from '../content/pageMeta';
 
 const PRESETS: { label: string; w: QbWeights }[] = [
   { label: 'Equilibrado (padrão)', w: DEFAULT_QB_WEIGHTS },
@@ -23,7 +24,7 @@ export default function Rankings() {
   const total = Object.values(w).reduce((a, b) => a + b, 0);
   return (
     <div className="stack">
-      <Seo title="Ranking de QBs" description="Quem é o maior quarterback? Ranking com pesos ajustáveis: títulos, playoffs, produção, eficiência, longevidade e ajuste de era." />
+      <Seo {...PAGE_META['/rankings']} />
       <PageHeader eyebrow="Modelo EZA-QB v1" title="Quem é o maior quarterback?" lede="Não existe resposta única: depende do que você valoriza. Ajuste os pesos e o ranking é recalculado na hora." />
       <Callout title="Ranking baseado em modelo, não em opinião">
         Cada componente vira um <strong>percentil</strong> (0–100) entre os {model.data?.length ?? '…'} QBs com 1.500+ tentativas desde 1999; o score é a média ponderada pelos seus pesos.

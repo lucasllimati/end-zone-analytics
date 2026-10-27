@@ -25,7 +25,7 @@ import type {
 import { getAsset, resetVersionCache, type RawFile } from './fetcher';
 import { replaceFile } from './files';
 import {
-  parseCsv, qbStarts, toBios, toDraft, toGames, toPlayerGameLines, toPlayerLines, toRoster, toTeamGameLines, toTeamLines, toTeams,
+  parseCsv, qbStarts, toBios, toDraft, toGames, toInjuries, toPlayerGameLines, toPlayerLines, toRoster, toTeamGameLines, toTeamLines, toTeams,
 } from './transform';
 import { buildReferees, buildSpecialTeams, buildUpsets, enrichStadiums, fillAllowed } from './insights';
 import { mergePbp, pbpSummaries } from './pbp';
@@ -34,6 +34,8 @@ import {
 } from './analytics';
 import { runQuality } from './quality';
 import { buildTeamProfile } from './teamProfiles';
+import { buildFantasy } from './fantasy';
+import { awards as fetchAwards, teamWiki } from './external';
 import { ACTIVE_TEAMS } from '../../src/lib/teams';
 
 export interface PipelineOptions {
@@ -149,6 +151,9 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineResult
     const files = await fetchSource('rosters', s);
     if (files.length) rosters.set(s, toRoster(parseCsv(files[0].text)));
   }
+  log('• Lesões (relatório oficial da semana)');
+  const injFiles = await fetchSource('injuries', currentSeason);
+  const injuries = injFiles.length ? toInjuries(parseCsv(injFiles[0].text)) : [];
   log('• Jogadores');
   const bios = toBios(parseCsv((await fetchSource('players'))[0].text));
   log('• Draft');
@@ -181,8 +186,14 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineResult
   const stadiums = enrichStadiums(buildStadiums(games), games, gameLines);
   const referees = buildReferees(games);
 
+  log('• Fantasy (PPR por semana, consistência e defesas)');
+  const fantasy = seasons.map((s) => buildFantasy(s, gameLines)).filter((f) => f !== null);
+  log('• Wikipedia (resumo dos times e prêmios da AP)');
+  const wiki = await teamWiki(teams, log);
+  const awardsData = await fetchAwards(lines, log);
+
   log('• Qualidade de dados');
-  const quality = runQuality({ teams, games, lines, draft, superBowls, sbIssues, teamSeasons, curatedRecords, currentSeason });
+  const quality = runQuality({ teams, games, lines, draft, superBowls, sbIssues, teamSeasons, curatedRecords, currentSeason, injuries, fantasy, awards: awardsData, wiki: wiki?.data ?? null });
 
   log('• Publicando arquivos');
   await writeJson('teams.json', teams);
@@ -208,6 +219,10 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineResult
   for (const [s, r] of rosters) await writeJson(`rosters/${s}.json`, pack(r, [...ROSTER_COLS]));
   await writeJson('models/qb-model.json', qbModel);
   await writeJson('quality.json', { checkedAt: new Date().toISOString(), checks: quality });
+  await writeJson(`injuries/${currentSeason}.json`, injuries);
+  for (const f of fantasy) await writeJson(`fantasy/${f.season}.json`, f);
+  if (wiki) await writeJson('wiki/teams.json', wiki.data);
+  if (awardsData) await writeJson('awards.json', awardsData);
 
   // Índice de jogadores + perfis de carreira em buckets.
   const index: PlayerIndexEntry[] = [];
@@ -260,6 +275,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineResult
     teams: teams.length, games: games.length, players: bios.size, playerStats: lines.length, teamStats: teamLines.length, draft: draft.length,
     playerWeek: gameLines.length, teamWeek: teamGames.length, pbp: pbp.rows.length,
     rosters: [...rosters.values()].reduce((n, r) => n + r.length, 0),
+    injuries: injuries.length,
   };
   for (const src of SOURCES) {
     const files = raw[src.key] ?? [];
@@ -276,9 +292,35 @@ export async function runPipeline(opts: PipelineOptions): Promise<PipelineResult
       retrievedAt: anyDownloaded || !prev?.datasets[src.key] ? now : prev.datasets[src.key].retrievedAt,
       sha256: sha(files.map((f) => f.hash).join('')),
       rows: rowsOf[src.key] ?? 0,
-      seasons: src.seasonal ? seasons : null,
+      seasons: src.seasonal ? (src.currentOnly ? [currentSeason] : seasons) : null,
     };
   }
+  if (wiki)
+    datasets.wikipedia = {
+      key: 'wikipedia',
+      label: 'Resumo dos times (Wikipedia em português)',
+      source: 'Wikipedia',
+      sourceUrl: 'https://pt.wikipedia.org/',
+      license: 'CC BY-SA 4.0 (texto exibido com atribuição e link para o artigo)',
+      remoteVersion: null,
+      retrievedAt: wiki.at,
+      sha256: sha(JSON.stringify(wiki.data)),
+      rows: Object.keys(wiki.data).length,
+      seasons: null,
+    };
+  if (awardsData)
+    datasets.awards = {
+      key: 'awards',
+      label: 'Prêmios da AP (MVP, jogadores e técnico do ano)',
+      source: awardsData.source,
+      sourceUrl: 'https://en.wikipedia.org/wiki/AP_NFL_Most_Valuable_Player',
+      license: `${awardsData.license} · conferido com fatos conhecidos antes de publicar`,
+      remoteVersion: null,
+      retrievedAt: awardsData.retrievedAt,
+      sha256: sha(JSON.stringify(awardsData.winners)),
+      rows: awardsData.winners.length,
+      seasons: null,
+    };
   const curatedText = JSON.stringify(sbCurated) + JSON.stringify(recCurated);
   datasets.curated = {
     key: 'curated',

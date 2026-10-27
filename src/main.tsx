@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
 import { AppProvider } from './context/AppContext';
 import { TeamsProvider } from './data/TeamsContext';
+import { installErrorReporting } from './data/errorReport';
 import './styles/tokens.css';
 import './styles/base.css';
 import './styles/components.css';
@@ -23,6 +24,14 @@ window.addEventListener('vite:preloadError', (event) => {
   event.preventDefault();
   window.location.reload();
 });
+
+installErrorReporting();
+
+// App instalável e leitura offline (public/sw.js). Só no build de produção: em desenvolvimento,
+// o cache atrapalharia o recarregamento automático.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => void navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

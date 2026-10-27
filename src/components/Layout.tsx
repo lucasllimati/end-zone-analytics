@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { NAV } from '../content/nav';
 import { useApp, useModeRelevant } from '../context/AppContext';
 import { useManifest } from '../data/hooks';
 import { BrandLogo, Chevron, CloseIcon, MenuIcon, MoonIcon, SearchIcon, SunIcon } from './Icons';
-import { SearchPalette } from './SearchPalette';
 import { UpdateBanner } from './UpdateBanner';
+import { ScoreAlerts } from './ScoreAlerts';
 import { dateBR } from '../lib/format';
+
+// A busca carrega todo o conteúdo educativo (glossário, regras, playbook): só baixa na primeira vez que abre.
+const SearchPalette = lazy(() => import('./SearchPalette').then((m) => ({ default: m.SearchPalette })));
 
 /** Atalho exibido conforme o sistema: ⌘K no macOS/iOS, Ctrl K nos demais. */
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent);
@@ -37,7 +40,13 @@ function NavDropdown({ group }: { group: (typeof NAV)[number] }) {
   useEffect(() => {
     if (!open) return;
     const onDown = (e: PointerEvent) => !ref.current?.contains(e.target as Node) && close();
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
+    // Esc fecha e devolve o foco ao botão do menu (antes ia para o <body> e o teclado perdia a posição).
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      const inside = ref.current?.contains(document.activeElement);
+      close();
+      if (inside) ref.current?.querySelector<HTMLButtonElement>('button')?.focus();
+    };
     document.addEventListener('pointerdown', onDown);
     document.addEventListener('keydown', onKey);
     return () => {
@@ -130,12 +139,14 @@ function SeasonSelect({ variant }: { variant: 'header' | 'drawer' }) {
   );
 }
 
-function ModeToggle() {
+function ModeToggle({ reserve = false }: { reserve?: boolean }) {
   const { mode, setMode } = useApp();
-  // Só aparece nas páginas em que trocar o modo muda algo visível.
-  if (!useModeRelevant()) return null;
+  // Só aparece nas páginas em que trocar o modo muda algo visível. No cabeçalho, o espaço fica reservado
+  // (invisível e fora do teclado): trocar de aba não faz o cabeçalho "pular".
+  const relevant = useModeRelevant();
+  if (!relevant && !reserve) return null;
   return (
-    <div className="mode-toggle" role="group" aria-label="Nível das explicações">
+    <div className="mode-toggle" role="group" aria-label="Nível das explicações" aria-hidden={!relevant || undefined} inert={!relevant || undefined} style={relevant ? undefined : { visibility: 'hidden' }}>
       <button type="button" aria-pressed={mode === 'beginner'} onClick={() => setMode('beginner')} title="Explicações simples, sem jargão">
         Iniciante
       </button>
@@ -217,8 +228,40 @@ function Drawer({ onClose }: { onClose: () => void }) {
   );
 }
 
+/**
+ * Temporada escolhida no seletor ↔ `?season=` na URL: sobrevive ao F5, a links internos (que não
+ * levam a query) e pode ser compartilhada. A temporada atual não aparece na URL.
+ */
+function useSeasonInUrl() {
+  const { season, setSeason } = useApp();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const lastUrl = useRef<string | null>(new URLSearchParams(location.search).get('season'));
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const inUrl = params.get('season');
+    // A URL mudou para outra temporada (link compartilhado, voltar/avançar): a URL manda.
+    if (inUrl !== lastUrl.current && inUrl && Number(inUrl) !== season) {
+      lastUrl.current = inUrl;
+      setSeason(Number(inUrl));
+      return;
+    }
+    const want = season === null ? null : String(season);
+    if (inUrl === want) return;
+    if (want) params.set('season', want);
+    else params.delete('season');
+    lastUrl.current = want;
+    const qs = params.toString();
+    navigate({ pathname: location.pathname, search: qs ? `?${qs}` : '', hash: location.hash }, { replace: true });
+  }, [season, location.pathname, location.search, location.hash, navigate, setSeason]);
+}
+
 export function Layout() {
-  const { theme, toggleTheme, setSearchOpen } = useApp();
+  const { theme, toggleTheme, searchOpen, setSearchOpen } = useApp();
+  useSeasonInUrl();
+  // Depois de aberta uma vez, a busca fica montada (reabre sem novo carregamento).
+  const [searchUsed, setSearchUsed] = useState(false);
+  if (searchOpen && !searchUsed) setSearchUsed(true);
   const [drawer, setDrawer] = useState(false);
   // Efeito de borda de rolagem: a sombra do cabeçalho só aparece com conteúdo passando por baixo.
   const [scrolled, setScrolled] = useState(false);
@@ -273,7 +316,7 @@ export function Layout() {
             </button>
             <SeasonSelect variant="header" />
             <span className="hide-md">
-              <ModeToggle />
+              <ModeToggle reserve />
             </span>
             <button type="button" className="icon-btn" onClick={toggleTheme} aria-label={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}>
               {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
@@ -285,8 +328,13 @@ export function Layout() {
         </div>
       </header>
       <UpdateBanner />
+      <ScoreAlerts />
       {drawer && <Drawer onClose={() => setDrawer(false)} />}
-      <SearchPalette />
+      {searchUsed && (
+        <Suspense fallback={null}>
+          <SearchPalette />
+        </Suspense>
+      )}
       <main id="conteudo" tabIndex={-1}>
         <div className="container">
           <Outlet />
@@ -319,6 +367,9 @@ export function Layout() {
               Book). Atualizado em {m.data ? dateBR(m.data.generatedAt) : '—'}. <Link to="/data">Fontes e qualidade dos dados</Link>.
             </p>
             <p>Projeto independente, sem afiliação com a NFL. Nomes e logos de times são marcas registradas de seus detentores e aparecem apenas para identificação.</p>
+            <p className="footer-links">
+              <Link to="/about">Sobre</Link> · <Link to="/privacy">Privacidade</Link> · <Link to="/data">Dados</Link>
+            </p>
           </div>
         </div>
       </footer>

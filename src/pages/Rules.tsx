@@ -5,6 +5,7 @@ import { HorizontalField } from '../components/Field';
 import { ADVANCED, OFFICIALS } from '../content/rules';
 import { PENALTIES } from '../content/penalties';
 import { penaltyOutcome } from '../lib/penalty';
+import { PAGE_META } from '../content/pageMeta';
 
 export default function Rules() {
   const loc = useLocation();
@@ -16,7 +17,7 @@ export default function Rules() {
   const list = PENALTIES.filter((p) => side === 'all' || p.side === side || p.side === 'Ambos');
   return (
     <div className="stack">
-      <Seo title="Regras e faltas" description="Regras avançadas da NFL, tabela completa de penalidades com visualização no campo e a equipe de arbitragem." />
+      <Seo {...PAGE_META['/rules']} />
       <PageHeader eyebrow="Nível 2" title="Regras, faltas e arbitragem" lede={<>Depois do <Link to="/learn">básico</Link>, os detalhes: o que é uma recepção, como funciona o relógio, prorrogação, replay e cada falta com o efeito no campo.</>} />
 
       <section className="grid grid-2">

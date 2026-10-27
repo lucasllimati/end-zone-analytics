@@ -10,6 +10,7 @@ import { useAsync } from '../data/hooks';
 import { ERAS } from '../content/history';
 import { num, percent } from '../lib/format';
 import type { LeagueTrend } from '../lib/types';
+import { PAGE_META } from '../content/pageMeta';
 
 const TREND_METRICS: { key: keyof LeagueTrend; label: string; info: string; pct?: boolean; digits?: number; metric?: string }[] = [
   { key: 'ppg', label: 'Pontos por time por jogo', info: 'Média de pontos marcados por cada time em um jogo da temporada regular.', digits: 1, metric: 'ppg' },
@@ -47,7 +48,7 @@ export default function History() {
   const current = ERAS.find((e) => e.id === era)!;
   return (
     <div className="stack">
-      <Seo title="História da NFL" description="A história da NFL de 1920 até hoje: eras, mudanças de regras, Super Bowl e como o jogo evoluiu em números." />
+      <Seo {...PAGE_META['/history']} />
       <PageHeader eyebrow="1920 – hoje" title="História da NFL" lede="Mais de um século de futebol americano profissional: das cidades pequenas de Ohio ao maior evento esportivo dos EUA." />
       <section>
         <div className="chips" role="group" aria-label="Eras">

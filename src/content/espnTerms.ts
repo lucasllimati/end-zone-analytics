@@ -37,6 +37,15 @@ export const TEAM_STATS: Record<string, Term> = {
   fumblesLost: { pt: 'Fumbles perdidos', en: 'Fumbles lost', desc: 'Bolas soltas recuperadas pelo adversário.' },
   defensiveTouchdowns: { pt: 'TDs de defesa e times especiais', en: 'Defensive / Special Teams TDs', desc: 'Touchdowns marcados pela defesa (interceptação ou fumble) ou em retornos de chute.' },
   possessionTime: { pt: 'Tempo de posse', en: 'Possession', desc: 'Tempo total com a bola no ataque (de 60 minutos de jogo).' },
+  // Antes do jogo, a ESPN manda as médias da temporada de cada time (chaves próprias).
+  totalPointsPerGame: { pt: 'Pontos por jogo', en: 'Points Per Game', desc: 'Média de pontos marcados por jogo na temporada.' },
+  yardsPerGame: { pt: 'Jardas por jogo', en: 'Total Yards (per game)', desc: 'Média de jardas totais (passe + corrida) por jogo na temporada.' },
+  passingYardsPerGame: { pt: 'Jardas de passe por jogo', en: 'Yards Passing', desc: 'Média de jardas de passe por jogo na temporada.' },
+  rushingYardsPerGame: { pt: 'Jardas corridas por jogo', en: 'Yards Rushing', desc: 'Média de jardas corridas por jogo na temporada.' },
+  totalPointsPerGameAllowed: { pt: 'Pontos sofridos por jogo', en: 'Points Allowed Per Game', desc: 'Média de pontos que a defesa cedeu por jogo na temporada.' },
+  yardsPerGameAllowed: { pt: 'Jardas cedidas por jogo', en: 'Yards Allowed', desc: 'Média de jardas totais que a defesa cedeu por jogo.' },
+  passingYardsPerGameAllowed: { pt: 'Jardas de passe cedidas por jogo', en: 'Pass Yards Allowed', desc: 'Média de jardas de passe cedidas por jogo.' },
+  rushingYardsPerGameAllowed: { pt: 'Jardas corridas cedidas por jogo', en: 'Rush Yards Allowed', desc: 'Média de jardas corridas cedidas por jogo.' },
 };
 
 /** Categorias de destaques (leaders[].leaders[].name). */
@@ -70,6 +79,9 @@ export const decimalBR = (v: string) => (/^-?\d+\.\d+$/.test(v.trim()) ? v.repla
 /** "17/27, 107 YDS, 2 INT" → "17/27, 107 jardas, 2 INT"; "17 CAR, 41 YDS, 1 TD" → "17 corridas, 41 jardas, 1 TD". */
 export function translateLeaderValue(v: string): string {
   return v
+    // Números no padrão brasileiro: "1,504" → "1.504"; "3.5" → "3,5".
+    .replace(/\b(\d{1,3}),(\d{3})\b/g, '$1.$2')
+    .replace(/^(\d+)\.(\d+)$/, '$1,$2')
     .replace(/\bYDS\b/g, 'jardas')
     .replace(/(\d+) CAR\b/g, (_m, n) => `${n} ${n === '1' ? 'corrida' : 'corridas'}`)
     .replace(/(\d+) REC\b/g, (_m, n) => `${n} ${n === '1' ? 'recepção' : 'recepções'}`);

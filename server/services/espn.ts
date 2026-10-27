@@ -22,7 +22,7 @@ export interface LiveGame {
 }
 
 export async function scoreboard(): Promise<{ week: number | null; season: number | null; games: LiveGame[] }> {
-  return cache.get('scoreboard', 30_000, async () => {
+  return cache.get('scoreboard', 15_000, async () => {
     const j = await get(`${BASE}/scoreboard`);
     return {
       week: j.week?.number ?? null,
@@ -64,7 +64,7 @@ export interface GameDetail {
 }
 
 export async function gameDetail(espnId: string): Promise<GameDetail> {
-  return cache.get(`game:${espnId}`, 60_000, async () => {
+  return cache.get(`game:${espnId}`, 15_000, async () => {
     const j = await get(`${BASE}/summary?event=${encodeURIComponent(espnId)}`);
     const comp = j.header?.competitions?.[0] ?? {};
     const competitors: any[] = comp.competitors ?? [];
@@ -135,4 +135,54 @@ export async function gameDetail(espnId: string): Promise<GameDetail> {
       officials: (j.gameInfo?.officials ?? []).map((o: any) => `${o.displayName}${o.position?.displayName ? ` (${o.position.displayName})` : ''}`),
     } satisfies GameDetail;
   }) as Promise<GameDetail>;
+}
+
+export interface NewsItem {
+  headline: string;
+  description: string | null;
+  published: string;
+  url: string;
+  image: string | null;
+}
+
+/** Abreviações da ESPN que diferem das do nflverse. */
+const ESPN_ABBR: Record<string, string> = { WSH: 'WAS', LAR: 'LA' };
+
+/** ID ESPN de cada time (a lista muda raramente: cache de um dia). */
+async function espnTeamIds(): Promise<Map<string, string>> {
+  return cache.get('teams', 86_400_000, async () => {
+    const j = await get(`${BASE}/teams`);
+    const out = new Map<string, string>();
+    for (const t of j.sports?.[0]?.leagues?.[0]?.teams ?? []) {
+      const abbr = String(t.team?.abbreviation ?? '');
+      if (abbr && t.team?.id) out.set(ESPN_ABBR[abbr] ?? abbr, String(t.team.id));
+    }
+    return out;
+  }) as Promise<Map<string, string>>;
+}
+
+/**
+ * Notícias do time (ESPN). O filtro por time da ESPN também traz matérias sobre a liga inteira
+ * (ex.: odds dos 32 times): ficam só as marcadas com no máximo 3 times, incluindo este.
+ */
+export async function teamNews(abbr: string): Promise<NewsItem[]> {
+  return cache.get(`news:${abbr}`, 15 * 60_000, async () => {
+    const id = (await espnTeamIds()).get(abbr);
+    if (!id) return [];
+    const j = await get(`${BASE}/news?team=${id}&limit=50`);
+    return (j.articles ?? [])
+      .filter((a: any) => {
+        const teams = (a.categories ?? []).filter((c: any) => c.type === 'team');
+        return teams.length > 0 && teams.length <= 3 && teams.some((c: any) => String(c.teamId) === id);
+      })
+      .slice(0, 6)
+      .map((a: any) => ({
+        headline: String(a.headline ?? ''),
+        description: a.description ?? null,
+        published: a.published ?? a.lastModified ?? '',
+        url: a.links?.web?.href ?? '',
+        image: a.images?.[0]?.url ?? null,
+      }))
+      .filter((a: NewsItem) => a.headline && a.url.startsWith('https://www.espn.com/'));
+  }) as Promise<NewsItem[]>;
 }

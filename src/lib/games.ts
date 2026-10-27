@@ -65,7 +65,7 @@ export function headToHead(all: Game[], a: string, b: string): HeadToHead {
     const last = res[res.length - 1];
     let n = 0;
     for (let i = res.length - 1; i >= 0 && res[i] === last; i--) n++;
-    out.streak = last === 'T' ? `Empate (${n})` : `${last} venceu ${n} seguido${n > 1 ? 's' : ''}`;
+    out.streak = last === 'T' ? `Empate (${n})` : n > 1 ? `${last} venceu os últimos ${n}` : `${last} venceu o último`;
   }
   return out;
 }

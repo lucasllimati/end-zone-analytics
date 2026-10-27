@@ -29,6 +29,8 @@ Todas as respostas são JSON. Valores ausentes são `null`. Erros seguem `{ "err
 | GET | `/api/rankings/qb?championships=20&…` | Ranking de QBs com pesos |
 | GET | `/api/live/scoreboard` | Placar da semana (ao vivo) |
 | GET | `/api/live/game/{espnId}` | Quartos, drives, pontuações, probabilidade de vitória. Só IDs de jogos da base (`/data/live-ids.json`); outros → 404 sem consultar a ESPN |
+| GET | `/api/news/{abbr}` | Até 6 notícias recentes do time (ESPN). Só as 32 siglas ativas; outras → 404 sem consultar a ESPN. Cache de 15 min |
+| POST | `/api/report` | Relato de erro do navegador `{ message, stack?, path, source }` (`source`: window, promise ou react). JSON de até 4 KB, 10 por minuto por IP, caminho sem query string; responde 204. No servidor vai para o log operacional (componente “Navegador”); no site publicado, para o log do Worker (Observability) |
 | GET | `/api/admin/session` | Estado da sessão (`authenticated`, `method`, `tokenConfigured`) — público, sem segredos |
 | POST | `/api/admin/login`, `/api/admin/logout` | Login com `{ token }` (cookie de sessão) / encerrar sessão |
 | GET | `/api/admin/check?force=1` | Há dados novos nas fontes? 🔒 |
@@ -41,7 +43,7 @@ Todas as respostas são JSON. Valores ausentes são `null`. Erros seguem `{ "err
 
 **Proteções de autenticação:** login limitado a 5 tentativas/min por IP; trava global após 20 tokens errados em 15 min (login **ou** Bearer, de qualquer IP), durante a qual nem o token certo é aceito; IP real só lido de `X-Forwarded-For` quando `TRUST_PROXY` > 0. Todas as tentativas recusadas e bloqueios ficam na auditoria (`/api/admin/events?component=auth`).
 
-**Site publicado (Worker):** as respostas de `/api/live/*` levam `Content-Security-Policy: default-src 'none'`, `X-Frame-Options: DENY`, `Cross-Origin-Resource-Policy: same-origin`, HSTS e `nosniff`, e são servidas do cache da borda (30 s placar, 60 s jogo).
+**Site publicado (Worker):** as respostas de `/api/live/*` levam `Content-Security-Policy: default-src 'none'`, `X-Frame-Options: DENY`, `Cross-Origin-Resource-Policy: same-origin`, HSTS e `nosniff`, e são servidas do cache da borda: placar 15 s; jogo 15 s em andamento, 60 s antes e 10 min depois; notícias 15 min. `/api/report` só aceita POST com `Content-Type: application/json` vindo do próprio site (cabeçalho `Origin`), até 4 KB e 10 por minuto por IP (o IP não vai para o log).
 
 ## Exemplos
 

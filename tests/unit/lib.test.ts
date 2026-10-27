@@ -9,7 +9,7 @@ import { PENALTIES } from '../../src/content/penalties';
 import { checkForUpdates } from '../../src/lib/updates';
 import { DEFAULT_QB_WEIGHTS, powerRankings, rankQbs } from '../../src/lib/models';
 import { computeStandings } from '../../src/lib/standings';
-import { score } from '../../src/components/SearchPalette';
+import { score } from '../../src/lib/search';
 import { draftFranchise } from '../../src/lib/teams';
 import type { Manifest, QbModelEntry } from '../../src/lib/types';
 import { SEASON_GAMES, game } from '../fixtures';

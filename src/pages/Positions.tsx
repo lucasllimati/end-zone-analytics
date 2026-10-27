@@ -4,6 +4,7 @@ import { ModeNote, PageHeader, Seo } from '../components/Bits';
 import { DiagramField } from '../components/Field';
 import { FORMATIONS, POSITIONS, type Unit } from '../content/positions';
 import { useApp, useModeSensitive } from '../context/AppContext';
+import { PAGE_META } from '../content/pageMeta';
 
 const UNITS: { id: Unit; label: string }[] = [
   { id: 'offense', label: 'Ataque' },
@@ -27,7 +28,7 @@ export default function Positions() {
   };
   return (
     <div className="stack">
-      <Seo title="Posições" description="Todas as posições do futebol americano explicadas em um campo interativo: ataque, defesa e times especiais." />
+      <Seo {...PAGE_META['/positions']} />
       <PageHeader eyebrow="Aprenda" title="Posições" lede="Passe o mouse, toque ou use Tab nos jogadores do campo para ver a função de cada posição." />
       <div className="chips" role="group" aria-label="Unidade">
         {UNITS.map((u) => (

@@ -541,6 +541,9 @@ kbd,
   padding: 2px 0;
   text-decoration: none;
 }
+.site-footer .footer-links a {
+  display: inline;
+}
 .site-footer a:hover {
   color: var(--text);
   text-decoration: underline;
@@ -1701,6 +1704,10 @@ a.score-card:hover {
 .prose ul {
   padding-left: 20px;
 }
+/* Cartão de texto: a largura vem da grade (2 colunas já dão linhas confortáveis de ler). */
+.card.prose {
+  max-width: none;
+}
 
 .kv {
   display: grid;
@@ -1900,5 +1907,116 @@ table.data.fixed td {
   }
   .box-toggle {
     display: none;
+  }
+}
+
+/* Lista de notícias (Meu time, página do time): título em destaque, data e fonte embaixo. */
+.news-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.news-list li {
+  display: grid;
+  gap: 2px;
+}
+.news-list a {
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.35;
+}
+.news-list a:hover {
+  color: var(--accent);
+}
+/* Par de cartões opcionais: se só um existir, ocupa a largura toda; se nenhum, a grade some. */
+.grid-2.pair > :only-child {
+  grid-column: 1 / -1;
+}
+.grid-2.pair:empty {
+  display: none;
+}
+
+/* Game Center antes do jogo: sem coluna principal, os cartões da lateral viram uma grade larga. */
+.two-col.gc-pre {
+  grid-template-columns: minmax(0, 1fr);
+}
+.gc-pre > div:empty {
+  display: none;
+}
+.gc-pre > aside {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
+  align-items: start;
+}
+
+/* Tabelas largas no celular: a coluna do nome fica fixa e um degradê na borda mostra que há mais colunas. */
+.table-scroll {
+  position: relative;
+}
+.table-scroll::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 28px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 2;
+}
+.table-scroll::after {
+  right: 0;
+  background: linear-gradient(to left, var(--fade-edge, rgba(0, 0, 0, 0.45)), transparent);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+.table-scroll[data-more]::after {
+  opacity: 1;
+}
+@media (max-width: 760px) {
+  table.data .sticky-col {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--surface-1);
+    box-shadow: 1px 0 0 var(--border);
+  }
+}
+:root[data-theme='light'] .table-scroll {
+  --fade-edge: rgba(0, 0, 0, 0.12);
+}
+
+/* Telas de toque: área de toque de ~40 px sem mudar o desenho (o ⓘ continua pequeno, a área em volta cresce). */
+@media (pointer: coarse) {
+  .palette .hint {
+    display: none;
+  }
+  .infotip-btn {
+    position: relative;
+  }
+  .infotip-btn::after {
+    content: '';
+    position: absolute;
+    inset: -12px;
+  }
+  .chip,
+  .segmented button,
+  .btn.sm,
+  .icon-btn {
+    min-height: 40px;
+  }
+  .icon-btn {
+    min-width: 40px;
+  }
+  table.data .sort-btn {
+    min-height: 32px;
+  }
+  .footer-cols a {
+    padding-block: 9px;
+  }
+  input[type='checkbox'] {
+    width: 20px;
+    height: 20px;
   }
 }

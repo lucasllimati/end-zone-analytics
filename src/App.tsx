@@ -1,6 +1,7 @@
 import { Component, lazy, Suspense, type ReactNode } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout';
+import { reportError } from './data/errorReport';
 import { Loading } from './components/States';
 
 // Divisão de código por página: cada rota é carregada sob demanda.
@@ -30,6 +31,10 @@ const Strategy = lazy(() => import('./pages/Strategy'));
 const Glossary = lazy(() => import('./pages/Glossary'));
 const Explorer = lazy(() => import('./pages/Explorer'));
 const DataCenter = lazy(() => import('./pages/DataCenter'));
+const About = lazy(() => import('./pages/About'));
+const Fantasy = lazy(() => import('./pages/Fantasy'));
+const Awards = lazy(() => import('./pages/Awards'));
+const Privacy = lazy(() => import('./pages/Privacy'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 /** A área administrativa não entra no build estático público (VITE_PUBLIC_STATIC=1): o Vite remove o chunk. */
 const ADMIN_ENABLED = import.meta.env.VITE_PUBLIC_STATIC !== '1';
@@ -39,6 +44,9 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
   state = { error: null as Error | null };
   static getDerivedStateFromError(error: Error) {
     return { error };
+  }
+  componentDidCatch(error: Error) {
+    reportError(error, 'react');
   }
   render() {
     if (this.state.error)
@@ -92,6 +100,10 @@ export function App() {
         <Route path="glossary" element={page(<Glossary />)} />
         <Route path="explorer" element={page(<Explorer />)} />
         <Route path="data" element={page(<DataCenter />)} />
+        <Route path="fantasy" element={page(<Fantasy />)} />
+        <Route path="awards" element={page(<Awards />)} />
+        <Route path="about" element={page(<About />)} />
+        <Route path="privacy" element={page(<Privacy />)} />
         {Admin && <Route path="admin" element={page(<Admin />)} />}
         <Route path="*" element={page(<NotFound />)} />
       </Route>

@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { InfoTip } from './InfoTip';
 import { ExportMenu } from './ExportMenu';
 import { metric as metricDef } from '../content/metrics';
@@ -41,6 +41,36 @@ interface Props<T> {
 }
 
 /**
+ * Indica se há colunas escondidas à direita (ou já roladas à esquerda): o contêiner mostra um degradê
+ * na borda, para ninguém achar que a tabela acabou na última coluna visível.
+ */
+function useScrollEdges() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = useState({ more: false, scrolled: false });
+  const update = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    const more = el.scrollWidth - el.clientWidth - el.scrollLeft > 4;
+    const scrolled = el.scrollLeft > 4;
+    setEdges((e) => (e.more === more && e.scrolled === scrolled ? e : { more, scrolled }));
+  }, []);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    update();
+    el.addEventListener('scroll', update, { passive: true });
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
+    ro?.observe(el);
+    if (el.firstElementChild) ro?.observe(el.firstElementChild);
+    return () => {
+      el.removeEventListener('scroll', update);
+      ro?.disconnect();
+    };
+  }, [update]);
+  return { ref, ...edges };
+}
+
+/**
  * Tabela de dados: ordenação acessível (aria-sort), ⓘ em cada coluna, exportação CSV/JSON
  * e paginação progressiva ("mostrar mais") para listas longas.
  */
@@ -73,6 +103,9 @@ export function DataTable<T>({ rows, columns, rowKey, caption, initialSort, expo
     );
 
   const visible = sorted.slice(0, limit);
+  // Primeira coluna de texto (nome, time): fica fixa ao rolar a tabela para o lado no celular.
+  const stickyKey = cols.find((c) => !c.num)?.key;
+  const scroll = useScrollEdges();
   const fixed = cols.some((c) => c.width);
   // Largura mínima = soma das colunas fixas + 10rem para cada coluna flexível (abaixo disso, rolagem horizontal).
   const minWidth = fixed
@@ -86,7 +119,8 @@ export function DataTable<T>({ rows, columns, rowKey, caption, initialSort, expo
           <ExportMenu name={exportName} rows={exportRows} />
         </div>
       )}
-      <div className={`table-wrap${bare ? ' bare' : ''}`} tabIndex={0} role="region" aria-label={caption}>
+      <div className="table-scroll" data-more={scroll.more || undefined} data-scrolled={scroll.scrolled || undefined}>
+      <div ref={scroll.ref} className={`table-wrap${bare ? ' bare' : ''}`} tabIndex={0} role="region" aria-label={caption}>
         <table className={fixed ? 'data fixed' : 'data'} style={minWidth ? { minWidth } : undefined}>
           <caption className="sr-only">{caption}</caption>
           {fixed && (
@@ -112,7 +146,7 @@ export function DataTable<T>({ rows, columns, rowKey, caption, initialSort, expo
                   <th
                     key={c.key}
                     scope="col"
-                    className={c.num ? 'num' : undefined}
+                    className={[c.num ? 'num' : '', c.key === stickyKey ? 'sticky-col' : ''].join(' ').trim() || undefined}
                     aria-sort={active ? (sort!.dir === 'asc' ? 'ascending' : 'descending') : undefined}
                     title={def?.label}
                   >
@@ -146,7 +180,7 @@ export function DataTable<T>({ rows, columns, rowKey, caption, initialSort, expo
               <tr key={rowKey(r)} className={rowClass?.(r, i)}>
                 {rank && <td className="rank num">{i + 1}</td>}
                 {cols.map((c) => (
-                  <td key={c.key} className={[c.num ? 'num' : '', c.className ?? ''].join(' ').trim() || undefined}>
+                  <td key={c.key} className={[c.num ? 'num' : '', c.key === stickyKey ? 'sticky-col' : '', c.className ?? ''].join(' ').trim() || undefined}>
                     {c.render ? c.render(r, i) : String((r as Record<string, unknown>)[c.key] ?? '—')}
                   </td>
                 ))}
@@ -161,6 +195,7 @@ export function DataTable<T>({ rows, columns, rowKey, caption, initialSort, expo
             )}
           </tbody>
         </table>
+      </div>
       </div>
       {sorted.length > limit && (
         <div style={{ textAlign: 'center', marginTop: 12 }}>

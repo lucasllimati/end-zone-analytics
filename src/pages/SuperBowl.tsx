@@ -12,6 +12,7 @@ import { useAsync, useTeams } from '../data/hooks';
 import { useTeamColor } from '../data/useTeamColor';
 import { dateBR } from '../lib/format';
 import type { SuperBowl } from '../lib/types';
+import { PAGE_META } from '../content/pageMeta';
 
 export default function SuperBowlPage() {
   const sbs = useAsync(() => api.superBowls(), []);
@@ -53,7 +54,7 @@ export default function SuperBowlPage() {
   if (sbs.loading || !stats) return <Loading height={400} />;
   return (
     <div className="stack">
-      <Seo title="Super Bowl" description="Todos os Super Bowls, do I ao LX: campeões, placares, MVPs, estádios, recordes e linha do tempo." />
+      <Seo {...PAGE_META['/super-bowl']} />
       <PageHeader eyebrow={`${list.length} edições`} title="Super Bowl" lede="A final da NFL desde a temporada de 1966. Clique em uma edição para ver detalhes, ou em uma barra do gráfico." />
       <ModeNote beginner={<>O Super Bowl é jogado em fevereiro e leva o número romano da edição. A “temporada” é o ano em que ela começou: o Super Bowl LX (fevereiro de 2026) encerrou a temporada 2025.</>} />
       <div className="tiles">

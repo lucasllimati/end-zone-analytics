@@ -8,12 +8,13 @@ import { Loading, Unavailable } from '../components/States';
 import { TeamChip, TeamLogo, TeamName } from '../components/TeamLogo';
 import { BarList } from '../components/charts/BarList';
 import { InfoTip } from '../components/InfoTip';
+import { MyTeam } from '../components/MyTeam';
 import {
   BallIcon, BookIcon, ChartIcon, ChevronLeft, ChevronRight, ShieldIcon, StarIcon, TrophyIcon,
 } from '../components/Icons';
 import { api } from '../data/client';
 import { useAsync, useManifest, useSeason, useTeams } from '../data/hooks';
-import { useLiveScores } from '../data/live';
+import { useLiveScores, withLiveFinals } from '../data/live';
 import { computeStandings, fmtRecord } from '../lib/standings';
 import { currentWeek, headToHead } from '../lib/games';
 import { dateBR, num, pct3, relativeTime, signed } from '../lib/format';
@@ -22,6 +23,7 @@ import { franchiseOf } from '../lib/teams';
 import { useApp, useModeSensitive } from '../context/AppContext';
 import type { Game, PlayerSeasonLine, StandingRow } from '../lib/types';
 import { useTermsLang } from '../components/TermsToggle';
+import { PAGE_META } from '../content/pageMeta';
 
 export default function Home() {
   const { season } = useSeason();
@@ -30,7 +32,10 @@ export default function Home() {
   useModeSensitive();
   const teams = useTeams();
   const live = useLiveScores();
-  const games = useAsync(() => (season ? api.seasonGames(season) : Promise.resolve([])), [season]);
+  const loaded = useAsync(() => (season ? api.seasonGames(season) : Promise.resolve([])), [season]);
+  // Só o array muda quando um placar final chega: classificação e simulador não recalculam à toa.
+  const merged = useMemo(() => (loaded.data ? withLiveFinals(loaded.data, live) : loaded.data), [loaded.data, live]);
+  const games = { ...loaded, data: merged };
   const stats = useAsync(() => (season ? api.playerStats(season) : Promise.resolve([])), [season]);
   const sbs = useAsync(() => api.superBowls(), []);
   const all = useAsync(() => api.allGames(), []);
@@ -64,7 +69,7 @@ export default function Home() {
 
   return (
     <div className="home">
-      <Seo title="" description="Estatísticas, classificação, jogos, Super Bowls, recordes e explicações da NFL para iniciantes e especialistas." />
+      <Seo {...PAGE_META['/']} />
 
       <section className="hero" aria-labelledby="h-hero">
         <div className="hero-copy">
@@ -109,6 +114,8 @@ export default function Home() {
           </>
         )}
       </section>
+
+      {games.data && <MyTeam games={games.data} standings={standings} live={live} season={season} />}
 
       <section aria-labelledby="h-semana" className="home-section">
         <div className="section-title">

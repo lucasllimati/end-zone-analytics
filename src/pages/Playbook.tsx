@@ -3,6 +3,7 @@ import { ModeNote, PageHeader, Seo } from '../components/Bits';
 import { PlayAnimator } from '../components/PlayAnimator';
 import { PLAYS, PLAY_CATEGORIES } from '../content/playbook';
 import { useApp, useModeSensitive } from '../context/AppContext';
+import { PAGE_META } from '../content/pageMeta';
 
 export default function Playbook() {
   const [params, setParams] = useSearchParams();
@@ -11,7 +12,7 @@ export default function Playbook() {
   const play = PLAYS.find((p) => p.id === params.get('play')) ?? PLAYS[0];
   return (
     <div className="stack">
-      <Seo title="Playbook" description="Jogadas de corrida, rotas de passe, play action, RPO e coberturas defensivas (Cover 0 a Cover 6) animadas e explicadas." />
+      <Seo {...PAGE_META['/playbook']} />
       <PageHeader eyebrow="Aprenda" title="Playbook interativo" lede="Escolha uma jogada para ver a animação: rotas, bloqueios, leitura do quarterback e o objetivo de cada conceito." />
       <div className="two-col">
         <div className="stack-sm">

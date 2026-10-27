@@ -4,7 +4,7 @@
  */
 import { parse } from 'csv-parse/sync';
 import type {
-  DraftPick, Game, GameType, PlayerBio, PlayerGameLine, PlayerSeasonLine, RosterEntry, SeasonType, Team, TeamGameLine, TeamSeasonLine,
+  DraftPick, Game, GameType, InjuryEntry, PlayerBio, PlayerGameLine, PlayerSeasonLine, RosterEntry, SeasonType, Team, TeamGameLine, TeamSeasonLine,
 } from '../../src/lib/types';
 import { ACTIVE_TEAMS, franchiseOf } from '../../src/lib/teams';
 
@@ -395,4 +395,36 @@ export function toRoster(rows: Row[]): RosterEntry[] {
     });
   }
   return [...m.values()];
+}
+
+/**
+ * Relatório oficial de lesões (injuries_{ano}.csv): fica só a semana mais recente de cada time e só quem
+ * tem status no relatório (Out, Doubtful, Questionable) ou treinou com limitação.
+ */
+export function toInjuries(rows: Row[]): InjuryEntry[] {
+  const latest = new Map<string, number>();
+  for (const r of rows) {
+    const w = num(r.week);
+    if (r.team && w !== null) latest.set(r.team, Math.max(latest.get(r.team) ?? 0, w));
+  }
+  const out: InjuryEntry[] = [];
+  for (const r of rows) {
+    const week = num(r.week);
+    const status = str(r.report_status);
+    const practice = str(r.practice_status);
+    if (!r.team || week !== latest.get(r.team)) continue;
+    if (!status && (!practice || /^Full/i.test(practice))) continue;
+    out.push({
+      team: r.team,
+      week,
+      id: str(r.gsis_id),
+      name: str(r.full_name) ?? '—',
+      pos: r.position || '—',
+      injury: str(r.report_primary_injury) ?? str(r.practice_primary_injury),
+      status,
+      practice,
+    });
+  }
+  const order: Record<string, number> = { Out: 0, Doubtful: 1, Questionable: 2 };
+  return out.sort((a, b) => a.team.localeCompare(b.team) || (order[a.status ?? ''] ?? 3) - (order[b.status ?? ''] ?? 3) || a.name.localeCompare(b.name));
 }

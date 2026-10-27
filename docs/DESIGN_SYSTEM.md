@@ -65,6 +65,8 @@ Raios 10/14/20 px e pílula (`980px`); espaços em `rem` (`--space-1…8`); cont
 | **Forma uniforme para sequências** | Últimos jogos (V/D/E) em casas de 18 px com fundo suave na cor do resultado: letras largas e estreitas ocupam o mesmo espaço visual |
 | **Sem opção que leva a uma tela vazia** | Chips e abas de fase (ex.: Playoffs) só aparecem quando há dados — líderes da temporada, perfil do jogador e comparador |
 | **Tabelas sem rolagem no desktop** | Colunas com largura definida e dados compactados (período em uma coluna, detalhe em segunda linha, “—” para ausência) até caber na largura do conteúdo |
+| **Par de cartões opcionais** | `.grid-2.pair`: se só um cartão tem conteúdo (ex.: notícias sem lesões), ele ocupa a largura toda; sem nenhum, a grade some |
+| **Conteúdo externo identificado** | Notícias em inglês dizem “ESPN (em inglês) ↗”; textos da Wikipedia trazem título do artigo, link e licença |
 | **Lista de opções legível** | `<option>` com fundo e texto do tema (o Windows desenha o menu do `<select>` com fundo próprio) |
 | **Auditoria** | Script de verificação (deriva de colunas, cabeçalho × números, cartões órfãos, rolagem lateral) rodado em 1440, 1024, 768 e 390 px em todas as rotas e abas |
 

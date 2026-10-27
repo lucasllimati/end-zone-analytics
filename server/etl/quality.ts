@@ -3,7 +3,7 @@
  * Cada verificação retorna pass/warn/fail com detalhe legível. Falhas não bloqueiam a publicação,
  * mas ficam visíveis no Centro de Dados e no manifest.
  */
-import type { CuratedRecord, DraftPick, Game, PlayerSeasonLine, QualityCheck, SuperBowl, Team, TeamSeason } from '../../src/lib/types';
+import type { AwardsData, CuratedRecord, DraftPick, FantasySeason, Game, InjuryEntry, PlayerSeasonLine, QualityCheck, SuperBowl, Team, TeamSeason, TeamWiki } from '../../src/lib/types';
 import { franchiseOf } from '../../src/lib/teams';
 import { isPlayed } from '../../src/lib/standings';
 import { passerRating } from '../../src/lib/stats';
@@ -26,6 +26,11 @@ export interface QualityInput {
   teamSeasons: TeamSeason[];
   curatedRecords: (CuratedRecord & { season?: number; verify?: string; knownDivergences?: { player: string; season: number; source: number; official: number; note: string }[] })[];
   currentSeason: number;
+  /** Fontes complementares (opcionais: ausentes quando a fonte falhou e não há cópia anterior). */
+  injuries?: InjuryEntry[];
+  fantasy?: FantasySeason[];
+  awards?: AwardsData | null;
+  wiki?: Record<string, TeamWiki> | null;
 }
 
 export function runQuality(q: QualityInput): QualityCheck[] {
@@ -135,6 +140,25 @@ export function runQuality(q: QualityInput): QualityCheck[] {
     }
   }
   out.push(check('records-crosscheck', 'records', 'Recordes de temporada (1999+) conferem com o nflverse', recordIssues));
+  // Fontes complementares: falhas viram alerta (as páginas escondem a seção sem dados).
+  if (q.awards !== undefined) {
+    const a = q.awards;
+    out.push(check('awards-known', 'awards', 'Prêmios da AP conferem com fatos conhecidos (prêmio que falha fica fora)', a ? a.rejected.map((r) => `${r.key}: ${r.missing.join(', ')}`) : ['fonte indisponível'], true));
+    const lastMvp = a?.winners.filter((w) => w.award === 'mvp').reduce((m, w) => Math.max(m, w.season), 0) ?? 0;
+    out.push(check('awards-recent', 'awards', 'Lista de MVPs chega à temporada passada', a && lastMvp < q.currentSeason - 1 ? [`último MVP: ${lastMvp}`] : [], true));
+  }
+  if (q.wiki !== undefined) out.push(check('wiki-teams', 'wikipedia', 'Resumo da Wikipedia para as 32 franquias', !q.wiki ? ['fonte indisponível'] : q.teams.filter((t) => t.active && !q.wiki![t.abbr]).map((t) => t.abbr), true));
+  if (q.fantasy) {
+    const cur = q.fantasy.find((f) => f.season === q.currentSeason);
+    const bad = q.fantasy.flatMap((f) => f.players.filter((p) => p.weeks.length !== f.weeks || p.avg > 60).map((p) => `${f.season} ${p.name}`));
+    out.push(check('fantasy-sane', 'fantasy', 'Fantasy: semanas completas e médias plausíveis (até 60 pontos por jogo)', bad));
+    out.push(check('fantasy-defense', 'fantasy', 'Fantasy: ranking de defesas cobre os 32 times por posição', cur && cur.defense.filter((d) => d.pos === 'QB').length !== 32 ? [`${cur.defense.filter((d) => d.pos === 'QB').length} times`] : []));
+  }
+  if (q.injuries) {
+    const unknown = q.injuries.filter((i) => !q.teams.some((t) => t.abbr === i.team)).map((i) => i.team);
+    out.push(check('injuries-teams', 'injuries', 'Lesões: todos os times do relatório existem', [...new Set(unknown)]));
+  }
+
   out.push(
     check('records-divergence', 'records', 'Estatísticas do nflverse não superam recordes oficiais (divergências de contagem)', recordNotes, true,
       recordKnown.length ? `Sem divergências novas. Conhecida(s) e documentada(s): ${recordKnown.join('; ')}` : 'Sem problemas'),

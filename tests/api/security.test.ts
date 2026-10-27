@@ -125,3 +125,49 @@ describe('API do servidor', () => {
     expect((await app.inject('/api/live/game/999999999')).statusCode).toBe(404);
   });
 });
+
+describe('relato de erro e notícias (Worker)', () => {
+  it('/api/report só aceita POST JSON pequeno do próprio site, com limite por IP', async () => {
+    vi.resetModules();
+    const { default: worker } = await import('../../worker/index');
+    const env = { ASSETS: { fetch: async () => new Response('') } };
+    const post = (body: string, headers: Record<string, string> = {}) =>
+      worker.fetch(new Request('https://x.dev/api/report', { method: 'POST', body, headers: { 'content-type': 'application/json', 'cf-connecting-ip': '198.51.100.20', ...headers } }), env);
+    const ok = JSON.stringify({ message: 'falhou', path: '/teams/buf', source: 'window' });
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect((await post(ok)).status).toBe(204);
+    expect(log.mock.calls[0][0]).toContain('client_error');
+    expect((await post(ok, { origin: 'https://evil.example' })).status).toBe(403);
+    expect((await post(ok, { 'content-type': 'text/plain' })).status).toBe(415);
+    expect((await post('x'.repeat(5000))).status).toBe(413);
+    expect((await post('{nao-json')).status).toBe(400);
+    expect((await worker.fetch(new Request('https://x.dev/api/report'), env)).status).toBe(405);
+    const codes: number[] = [];
+    for (let i = 0; i < 12; i++) codes.push((await post(ok, { 'cf-connecting-ip': '198.51.100.21' })).status);
+    expect(codes.filter((c) => c === 429).length).toBe(2);
+    log.mockRestore();
+  });
+
+  it('/api/news só aceita os 32 times (nada de buscas arbitrárias na ESPN)', async () => {
+    vi.resetModules();
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 200 }));
+    const { default: worker } = await import('../../worker/index');
+    const env = { ASSETS: { fetch: async () => new Response('') } };
+    for (const bad of ['XYZ', 'buf', 'B%2F', '..']) expect((await worker.fetch(new Request(`https://x.dev/api/news/${bad}`), env)).status, bad).toBe(404);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+});
+
+describe('relato de erro e notícias (servidor)', () => {
+  it('/api/report valida o corpo e registra no log operacional; /api/news recusa times inexistentes', async () => {
+    const app = await make(0);
+    const bad = await app.inject({ method: 'POST', url: '/api/report', payload: { message: 'x', path: 'http://evil', source: 'window' } });
+    expect(bad.statusCode).toBe(400);
+    const big = await app.inject({ method: 'POST', url: '/api/report', payload: { message: 'x'.repeat(6000), path: '/', source: 'window' } });
+    expect(big.statusCode).toBe(413);
+    const ok = await app.inject({ method: 'POST', url: '/api/report', payload: { message: 'quebrou', path: '/x?token=1', source: 'react' } });
+    expect(ok.statusCode).toBe(204);
+    expect((await app.inject('/api/news/XYZ')).statusCode).toBe(404);
+  });
+});

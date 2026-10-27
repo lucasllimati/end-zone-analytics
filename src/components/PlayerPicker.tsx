@@ -1,7 +1,7 @@
 import { useId, useMemo, useState } from 'react';
 import { api } from '../data/client';
 import { useAsync } from '../data/hooks';
-import { norm } from './SearchPalette';
+import { norm } from '../lib/search';
 import type { PlayerIndexEntry } from '../lib/types';
 
 /** Campo de busca com sugestões (combobox acessível) para escolher um jogador. */

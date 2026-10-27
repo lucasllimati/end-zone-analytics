@@ -10,6 +10,8 @@ export interface SourceDef {
   /** Nome do asset; `{season}` é substituído pela temporada. */
   assets: string[];
   seasonal: boolean;
+  /** Só a temporada atual interessa (ex.: relatório de lesões): temporadas antigas não são baixadas nem verificadas. */
+  currentOnly?: boolean;
   license: string;
   docs: string;
 }
@@ -99,6 +101,16 @@ export const SOURCES: SourceDef[] = [
     seasonal: true,
     license: 'CC-BY 4.0',
     docs: 'https://nflreadr.nflverse.com/reference/load_rosters.html',
+  },
+  {
+    key: 'injuries',
+    label: 'Relatório oficial de lesões',
+    tag: 'injuries',
+    assets: ['injuries_{season}.csv'],
+    seasonal: true,
+    currentOnly: true,
+    license: 'CC-BY 4.0',
+    docs: 'https://nflreadr.nflverse.com/reference/load_injuries.html',
   },
   {
     key: 'draft',

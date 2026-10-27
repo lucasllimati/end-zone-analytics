@@ -5,6 +5,7 @@ const PAGES = [
   '/', '/season', '/season?tab=schedule', '/season?tab=playoffs', '/season?tab=power', '/teams', '/teams/kc', '/players', '/players/00-0033873',
   '/compare', '/matchup', '/super-bowl', '/super-bowl/51', '/records', '/rankings', '/draft', '/hall-of-fame', '/history', '/stadiums',
   '/learn', '/rules', '/positions', '/playbook', '/strategy', '/glossary', '/explorer', '/data', '/games/2025_22_SEA_NE', '/admin',
+  '/fantasy', '/fantasy?tab=season', '/fantasy?tab=matchups', '/awards', '/about', '/privacy', '/season?tab=simulator',
 ];
 
 /** Falha o teste se houver erro de JavaScript ou erro de console. */
@@ -33,7 +34,7 @@ test.describe('todas as páginas', () => {
 });
 
 test.describe('acessibilidade (axe, WCAG 2.1 AA)', () => {
-  for (const url of ['/', '/season', '/teams/kc', '/players/00-0033873', '/learn', '/rules', '/positions', '/glossary', '/data', '/admin', '/compare', '/games/2025_22_SEA_NE', '/referees', '/season?tab=efficiency', '/season?tab=market', '/stadiums']) {
+  for (const url of ['/', '/season', '/teams/kc', '/players/00-0033873', '/learn', '/rules', '/positions', '/glossary', '/data', '/admin', '/compare', '/games/2025_22_SEA_NE', '/referees', '/season?tab=efficiency', '/season?tab=market', '/stadiums', '/fantasy', '/fantasy?tab=matchups', '/awards', '/about', '/privacy', '/season?tab=simulator']) {
     test(`sem violações sérias ou críticas: ${url}`, async ({ page }) => {
       await page.goto(url);
       await page.waitForLoadState('networkidle');
@@ -111,7 +112,9 @@ test.describe('seletor Iniciante/Expert', () => {
     for (const url of ['/teams', '/compare', '/hall-of-fame']) {
       await page.goto(url);
       await page.waitForLoadState('networkidle');
-      await expect(toggle, url).toHaveCount(0);
+      // O espaço fica reservado (o cabeçalho não "pula"), mas o seletor não aparece nem recebe foco.
+      await expect(toggle, url).toBeHidden();
+      await expect(page.getByRole('button', { name: 'Expert' }), url).toHaveCount(0);
     }
     for (const url of ['/glossary', '/players/00-0034857', '/season']) {
       await page.goto(url);

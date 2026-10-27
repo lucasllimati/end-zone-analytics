@@ -4,6 +4,7 @@ import { PageHeader, Seo } from '../components/Bits';
 import { DownSimulator } from '../components/DownSimulator';
 import { STRATEGY } from '../content/strategy';
 import { useApp, useModeSensitive } from '../context/AppContext';
+import { PAGE_META } from '../content/pageMeta';
 
 export default function Strategy() {
   const { mode } = useApp();
@@ -14,7 +15,7 @@ export default function Strategy() {
   }, [loc.hash]);
   return (
     <div className="stack">
-      <Seo title="Estratégia" description="Estratégia no futebol americano: gerenciamento do relógio, decisões de 4º down, red zone, blitz, coberturas e mais." />
+      <Seo {...PAGE_META['/strategy']} />
       <PageHeader eyebrow="Nível avançado" title="Estratégia" lede="Por que os técnicos tomam cada decisão. Troque para o modo Expert para a explicação técnica de cada tema." />
       <div className="grid grid-2">
         {STRATEGY.map((s) => (

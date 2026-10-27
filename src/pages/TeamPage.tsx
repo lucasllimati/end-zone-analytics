@@ -19,6 +19,7 @@ import { RIVALRIES } from '../content/rivalries';
 import type { Game, TeamSeason } from '../lib/types';
 import { TeamEfficiency } from './team/TeamEfficiency';
 import { TeamRoster } from './team/TeamRoster';
+import { FavoriteButton, TeamAwards, TeamInjuries, TeamNews, TeamWikiCard } from './team/TeamExtras';
 import { DivisionTable, DraftSection, FranchiseHistory, FranchiseRecords, Matchups, PointsChart, RecentForm } from './team/TeamSections';
 
 type Tab = 'overview' | 'efficiency' | 'schedule' | 'players' | 'records' | 'history' | 'matchups' | 'draft' | 'similar';
@@ -115,10 +116,11 @@ export default function TeamPage() {
             <div className="row" style={{ marginTop: 10, gap: 6 }}>
               <span className="dot" style={{ background: team.color, width: 14, height: 14 }} title="Cor primária" />
               <span className="dot" style={{ background: team.color2, width: 14, height: 14 }} title="Cor secundária" />
-              <span className="badge gold">{titles.length} Super Bowl{titles.length === 1 ? '' : 's'}</span>
+              {titles.length > 0 && <span className="badge gold">{titles.length} Super Bowl{titles.length === 1 ? '' : 's'}</span>}
               <Link className="btn sm" to={`/compare?type=teams&a=${code}`}>
                 Comparar
               </Link>
+              <FavoriteButton code={code} nick={team.nick} />
             </div>
           </PageHeader>
         </div>
@@ -161,6 +163,10 @@ export default function TeamPage() {
             ) : (
               <Unavailable>Ainda não há jogos disputados por este time em {season}.</Unavailable>
             )}
+            <div className="grid grid-2 pair">
+              <TeamNews code={code} />
+              <TeamInjuries code={code} season={season} />
+            </div>
             <ModeNote
               beginner={<>O saldo de pontos (pontos marcados menos sofridos) costuma dizer mais sobre a força de um time do que apenas vitórias e derrotas.</>}
               expert={<>EPA/jogada considera dropbacks (passes + sacks) e corridas do ataque. Defesa: o dataset de times não traz EPA permitido.</>}
@@ -238,7 +244,9 @@ export default function TeamPage() {
         {tab === 'draft' && (profile.loading ? <Loading /> : profile.data ? <DraftSection profile={profile.data} code={code} /> : <Unavailable>Draft indisponível.</Unavailable>)}
         {tab === 'history' && (
           <div className="stack">
+            <TeamWikiCard code={code} />
             {profile.data && <FranchiseHistory profile={profile.data} code={code} />}
+            <TeamAwards team={team} />
             {apps.length > 0 && (
               <section>
                 <h2>Super Bowls</h2>

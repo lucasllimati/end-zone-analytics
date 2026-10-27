@@ -5,6 +5,7 @@ import { Loading, Unavailable } from '../components/States';
 import { api } from '../data/client';
 import { useAsync, useManifest } from '../data/hooks';
 import { num, percent } from '../lib/format';
+import { PAGE_META } from '../content/pageMeta';
 
 export default function Referees() {
   const refs = useAsync(() => api.referees(), []);
@@ -23,7 +24,7 @@ export default function Referees() {
   };
   return (
     <div className="stack">
-      <Seo title="Árbitros" description="Árbitros principais da NFL desde 1999: jogos apitados, pontos por jogo, vitórias do mandante e jogos acima do total esperado." />
+      <Seo {...PAGE_META['/referees']} />
       <PageHeader
         eyebrow="Estatísticas"
         title="Árbitros"

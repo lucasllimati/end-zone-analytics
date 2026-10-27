@@ -11,6 +11,7 @@ import { useAsync, useManifest } from '../data/hooks';
 import { metric } from '../content/metrics';
 import { num } from '../lib/format';
 import type { LeaderEntryShape } from '../data/shapes';
+import { PAGE_META } from '../content/pageMeta';
 
 type Tab = 'official' | 'season' | 'career' | 'post' | 'team' | 'game' | 'st';
 
@@ -79,7 +80,7 @@ export default function Records() {
   const groups = { career: 'Carreira', season: 'Temporada', team: 'Times', game: 'Jogos' } as const;
   return (
     <div className="stack">
-      <Seo title="Recordes" description="Recordes da NFL: carreira, temporada, playoffs, times e jogos. Oficiais e calculados desde 1999." />
+      <Seo {...PAGE_META['/records']} />
       <PageHeader eyebrow="Recordes" title="Recordes da NFL" lede="Recordes oficiais de todos os tempos (curadoria) e rankings calculados a partir dos dados detalhados desde 1999." />
       {alerts.map((a) => (
         <Callout key={a.label} title={a.broken ? '🏆 NOVO RECORDE DA NFL (a confirmar)' : `Em ritmo de recorde em ${current}`}>

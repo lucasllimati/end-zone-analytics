@@ -4,7 +4,7 @@ import { ModeNote, PageHeader, Seo } from '../components/Bits';
 import { DataTable } from '../components/DataTable';
 import { Loading } from '../components/States';
 import { TabPanel, Tabs } from '../components/Tabs';
-import { TeamChip, TeamLogo } from '../components/TeamLogo';
+import { DraftTeamLogo, TeamChip } from '../components/TeamLogo';
 import { ChartFrame, MiniTable } from '../components/charts/ChartFrame';
 import { ScatterChart } from '../components/charts/ScatterChart';
 import { api } from '../data/client';
@@ -13,6 +13,7 @@ import { num, percent } from '../lib/format';
 import { positionBucket } from '../lib/stats';
 import { draftFranchise } from '../lib/teams';
 import { MATURE, expectedCurve } from '../lib/draft';
+import { PAGE_META } from '../content/pageMeta';
 
 export default function Draft() {
   const draft = useAsync(() => api.draft(), []);
@@ -77,7 +78,7 @@ export default function Draft() {
 
   return (
     <div className="stack">
-      <Seo title="Draft" description="Draft da NFL desde 1980: todas as escolhas, melhores jogadores por rodada e o valor de cada pick." />
+      <Seo {...PAGE_META['/draft']} />
       <PageHeader eyebrow="Draft" title="Draft da NFL" lede="Todas as escolhas desde 1980, quem rendeu mais em cada rodada e quanto vale, em média, cada posição no draft." />
       <ModeNote
         beginner={<>No draft, os times escolhem jogadores universitários; os piores times da temporada anterior escolhem primeiro. “AV” é uma nota que resume o valor do jogador na carreira.</>}
@@ -127,7 +128,7 @@ export default function Draft() {
               columns={[
                 { key: 'pick', label: 'Pick', num: true },
                 { key: 'round', label: 'Rod.', num: true },
-                { key: 'team', label: 'Time', render: (d) => <TeamLogo abbr={d.team} size={20} />, value: (d) => d.team },
+                { key: 'team', label: 'Time', render: (d) => <DraftTeamLogo code={d.team} season={d.season} />, value: (d) => draftFranchise(d.team, d.season) ?? d.team },
                 { key: 'name', label: 'Jogador', render: (d) => (d.id ? <Link to={`/players/${d.id}`}>{d.name}</Link> : d.name), value: (d) => d.name },
                 { key: 'pos', label: 'Pos.' },
                 { key: 'college', label: 'Universidade', render: (d) => d.college ?? '—' },
@@ -154,7 +155,7 @@ export default function Draft() {
                   ariaLabel="AV de carreira por número de escolha"
                   xLabel="Número da escolha"
                   yLabel="AV de carreira"
-                  points={mature.filter((_, i) => i % 3 === 0).map((d) => ({ key: `${d.season}-${d.pick}`, x: d.pick, y: d.carAv!, label: `${d.name} (${d.season})`, detail: `${d.pos} · ${d.team}` }))}
+                  points={mature.filter((_, i) => i % 3 === 0).map((d) => ({ key: `${d.season}-${d.pick}`, x: d.pick, y: d.carAv!, label: `${d.name} (${d.season})`, detail: `${d.pos} · ${draftFranchise(d.team, d.season) ?? d.team}` }))}
                   trend={curve.filter((c) => c.x % 4 === 1)}
                 />
               </ChartFrame>
@@ -171,7 +172,7 @@ export default function Draft() {
                   { key: 'name', label: 'Jogador', render: (r) => (r.d.id ? <Link to={`/players/${r.d.id}`}>{r.d.name}</Link> : r.d.name), value: (r) => r.d.name },
                   { key: 'season', label: 'Draft', render: (r) => r.d.season, value: (r) => r.d.season },
                   { key: 'pick', label: 'Pick', num: true, render: (r) => `${r.d.round}ª · #${r.d.pick}`, value: (r) => r.d.pick },
-                  { key: 'team', label: 'Time', render: (r) => <TeamLogo abbr={r.d.team} size={20} />, value: (r) => r.d.team },
+                  { key: 'team', label: 'Time', render: (r) => <DraftTeamLogo code={r.d.team} season={r.d.season} />, value: (r) => draftFranchise(r.d.team, r.d.season) ?? r.d.team },
                   { key: 'av', label: 'AV', metric: 'carAv', num: true, render: (r) => r.d.carAv, value: (r) => r.d.carAv },
                   { key: 'dvs', label: 'Draft Value Score', num: true, help: 'AV de carreira menos o AV esperado para aquele número de escolha. Quanto maior, maior o "achado".', render: (r) => `+${num(r.dvs, 1)}`, value: (r) => r.dvs },
                 ]}
@@ -191,7 +192,7 @@ export default function Draft() {
                   { key: 'season', label: 'Draft', render: (r) => r.d.season, value: (r) => r.d.season },
                   { key: 'pick', label: 'Pick', num: true, render: (r) => `#${r.d.pick}`, value: (r) => r.d.pick },
                   { key: 'pos', label: 'Pos.', render: (r) => r.d.pos, value: (r) => r.d.pos },
-                  { key: 'team', label: 'Time', render: (r) => <TeamLogo abbr={r.d.team} size={20} />, value: (r) => r.d.team },
+                  { key: 'team', label: 'Time', render: (r) => <DraftTeamLogo code={r.d.team} season={r.d.season} />, value: (r) => draftFranchise(r.d.team, r.d.season) ?? r.d.team },
                   { key: 'av', label: 'AV', metric: 'carAv', num: true, render: (r) => r.d.carAv, value: (r) => r.d.carAv },
                   { key: 'dvs', label: 'Contra o esperado', num: true, help: 'AV de carreira menos o AV esperado para aquele número de escolha.', render: (r) => num(r.dvs, 1), value: (r) => r.dvs },
                 ]}

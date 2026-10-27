@@ -6,13 +6,13 @@ import { TeamLogo, TeamName } from '../components/TeamLogo';
 import { InfoTip } from '../components/InfoTip';
 import { ChartFrame, MiniTable } from '../components/charts/ChartFrame';
 import { LineChart } from '../components/charts/LineChart';
-import { api, apiGet } from '../data/client';
+import { api } from '../data/client';
 import { useAsync, useTeams } from '../data/hooks';
-import { fromEspn } from '../data/live';
+import { fromEspn, useGameDetail } from '../data/live';
 import { useTeamColor } from '../data/useTeamColor';
 import { GAME_TYPE_LABEL, franchiseOf } from '../lib/teams';
 import { headToHead } from '../lib/games';
-import { dateBR, num, weekdayPt } from '../lib/format';
+import { dateBR, num, surfaceLabel, weekdayPt } from '../lib/format';
 import { BoxScore, MarketCard, RefereeCard, RestRows } from './game/GameSections';
 import { TermText, TermsToggle, useTermsLang } from '../components/TermsToggle';
 import { decimalBR, leaderTerm, scoreTypeTerm, teamStatTerm, translateGameDetail, translateLeaderValue, translateScoringText } from '../content/espnTerms';
@@ -39,7 +39,7 @@ export default function GamePage() {
   const { id = '' } = useParams();
   const all = useAsync(() => api.allGames(), []);
   const g = all.data?.find((x) => x.id === id);
-  const detail = useAsync(() => (g?.espn ? apiGet<Detail>(`/api/live/game/${g.espn}`) : Promise.resolve(null)), [g?.espn]);
+  const detail = useGameDetail<Detail>(g?.espn);
   const { map } = useTeams();
   const teamColor = useTeamColor();
   const flowRef = useRef<SVGSVGElement>(null);
@@ -65,7 +65,7 @@ export default function GamePage() {
     ['Estádio', d?.venue.name ?? g.stadium],
     ['Cidade', d?.venue.city ?? null],
     ['Teto', g.roof ? ROOF[g.roof] ?? g.roof : null],
-    ['Gramado', g.surface ? (g.surface === 'grass' ? 'Grama natural' : `Sintético (${g.surface})`) : null],
+    ['Gramado', surfaceLabel(g.surface) ? [surfaceLabel(g.surface)!.kind, surfaceLabel(g.surface)!.brand].filter(Boolean).join(' · ') : null],
     ['Temperatura', g.temp !== null ? `${num(((g.temp - 32) * 5) / 9)} °C (${g.temp} °F)` : null],
     ['Vento', g.wind !== null ? `${num(g.wind * 1.609)} km/h (${g.wind} mph)` : null],
     ['Público', d?.venue.attendance ? num(d.venue.attendance) : null],
@@ -74,6 +74,10 @@ export default function GamePage() {
     ['Técnicos', g.awayCoach || g.homeCoach ? `${g.awayCoach ?? '—'} × ${g.homeCoach ?? '—'}` : null],
     ['Árbitro', referee],
   ];
+
+  const hasMain = Boolean(
+    detail.loading || !d || (home && home.linescores.length > 0) || d.scoringPlays.length || d.drives.length || d.winProbability.length > 2,
+  );
 
   // Evolução do placar a partir das jogadas de pontuação.
   const flow = d?.scoringPlays.length
@@ -113,13 +117,23 @@ export default function GamePage() {
               {played ? `${as} – ${hs}` : 'vs'}
             </div>
             <div className="small muted">
-              {d?.state === 'in' ? <span className="badge live">AO VIVO · {lang === 'en' ? d.detail : translateGameDetail(d.detail)}</span> : played ? `Final${g.ot ? ' · prorrogação' : ''}` : g.time ? `${g.time} ET` : 'A definir'}
+              {d?.state === 'in' ? (
+                <>
+                  <span className="badge live">AO VIVO · {lang === 'en' ? d.detail : translateGameDetail(d.detail)}</span>
+                  {detail.updatedAt && (
+                    <div className="xsmall muted" style={{ marginTop: 4 }} aria-live="polite">
+                      Atualizado às {new Date(detail.updatedAt).toLocaleTimeString('pt-BR')} · atualiza sozinho a cada 20 s
+                    </div>
+                  )}
+                </>
+              ) : played ? `Final${g.ot ? ' · prorrogação' : ''}` : g.time ? `${g.time} ET` : 'A definir'}
             </div>
           </div>
         </div>
       </section>
 
-      <div className="two-col gc-layout">
+      {/* Antes do jogo não há placar, drives nem probabilidade: os cartões ocupam a largura toda. */}
+      <div className={`two-col gc-layout${hasMain ? '' : ' gc-pre'}`}>
         <div className="stack">
           {d && home && away && home.linescores.length > 0 && (
             <section className="card">
@@ -310,7 +324,7 @@ export default function GamePage() {
           {d && d.teamStats.length > 0 && (
             <section className="card">
               <div className="section-title">
-                <h2>Estatísticas dos times</h2>
+                <h2>{d.state === 'pre' ? 'Médias da temporada' : 'Estatísticas dos times'}</h2>
                 <TermsToggle />
               </div>
               <div className="table-wrap bare" tabIndex={0} role="region" aria-label="Tabela">
@@ -379,7 +393,7 @@ export default function GamePage() {
               </Link>
             </section>
           )}
-          <ModeNote beginner={<>“Drive” é uma posse de bola. Os resultados mostram como cada posse terminou: TD, field goal, punt ou perda da bola.</>} />
+          {d && d.drives.length > 0 && <ModeNote beginner={<>“Drive” é uma posse de bola. Os resultados mostram como cada posse terminou: TD, field goal, punt ou perda da bola.</>} />}
         </aside>
       </div>
       {/* Box score em largura total: tabelas de até 8 colunas pedem espaço, e a coluna lateral termina antes. */}

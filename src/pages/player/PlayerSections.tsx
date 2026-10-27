@@ -51,7 +51,7 @@ function logColumns(pos: string): Column<Log>[] {
 }
 
 /** Placar e resultado do jogo do ponto de vista do time do jogador. */
-function resultOf(g: Game | undefined, team: string) {
+export function resultOf(g: Game | undefined, team: string) {
   if (!g || g.homeScore === null || g.awayScore === null) return null;
   const home = franchiseOf(g.home) === franchiseOf(team);
   const pf = home ? g.homeScore : g.awayScore;

@@ -5,8 +5,8 @@
 import { isPacked, unpack } from '../lib/pack';
 import { bucketFile, gameLogFile } from '../lib/buckets';
 import type {
-  CuratedRecord, DraftPick, Game, LeagueTrend, Manifest, PlayerCareer, PlayerGameLine, PlayerIndexEntry, PlayerSeasonLine,
-  QbModelEntry, QualityCheck, RefereeSummary, RosterEntry, Stadium, SuperBowl, Team, TeamProfile, TeamSeason, TeamSeasonLine,
+  AwardsData, CuratedRecord, DraftPick, FantasySeason, Game, InjuryEntry, LeagueTrend, Manifest, PlayerCareer, PlayerGameLine, PlayerIndexEntry, PlayerSeasonLine,
+  QbModelEntry, QualityCheck, RefereeSummary, RosterEntry, Stadium, SuperBowl, Team, TeamProfile, TeamSeason, TeamSeasonLine, TeamWiki,
 } from '../lib/types';
 import type { ComputedRecordsShape } from './shapes';
 
@@ -88,6 +88,10 @@ export const api = {
       }[]
     >('history/changes.json'),
   playerIndex: () => load<PlayerIndexEntry[]>('players/index.json'),
+  injuries: (season: number) => load<InjuryEntry[]>(`injuries/${season}.json`),
+  fantasy: (season: number) => load<FantasySeason>(`fantasy/${season}.json`),
+  awards: () => load<AwardsData>('awards.json'),
+  teamWiki: () => load<Record<string, TeamWiki>>('wiki/teams.json'),
   teamProfile: (code: string) => load<TeamProfile>(`teams/${code}.json`),
   async career(id: string): Promise<PlayerCareer | null> {
     const bucket = await load<Record<string, { bio: PlayerCareer['bio']; similar: PlayerCareer['similar']; lines: unknown }>>(bucketFile(id));

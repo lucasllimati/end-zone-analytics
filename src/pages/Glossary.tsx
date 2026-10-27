@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { PageHeader, Seo } from '../components/Bits';
 import { GLOSSARY, glossaryById } from '../content/glossary';
-import { norm } from '../components/SearchPalette';
+import { norm } from '../lib/search';
 import { useApp, useModeSensitive } from '../context/AppContext';
+import { PAGE_META } from '../content/pageMeta';
 
 const CATS = ['Todos', 'Jogo', 'Ataque', 'Defesa', 'Times especiais', 'Regras', 'Analytics'] as const;
 
@@ -22,7 +23,7 @@ export default function Glossary() {
   }, [q, cat]);
   return (
     <div className="stack">
-      <Seo title="Glossário" description="Glossário de futebol americano: definições simples e avançadas, exemplos e termos relacionados." />
+      <Seo {...PAGE_META['/glossary']} />
       <PageHeader eyebrow="Aprenda" title="Glossário" lede={`${GLOSSARY.length} termos com definição simples, definição avançada, exemplo e relações.`} />
       <div className="filters">
         <label className="field" style={{ flex: '1 1 260px' }}>

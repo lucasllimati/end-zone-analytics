@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import { Callout, PageHeader, Seo } from '../components/Bits';
 import { DataTable } from '../components/DataTable';
 import { Loading } from '../components/States';
-import { TeamLogo } from '../components/TeamLogo';
+import { DraftTeamLogo } from '../components/TeamLogo';
+import { draftFranchise } from '../lib/teams';
 import { BarList } from '../components/charts/BarList';
 import { api } from '../data/client';
 import { useAsync } from '../data/hooks';
+import { PAGE_META } from '../content/pageMeta';
 
 export default function HallOfFame() {
   const draft = useAsync(() => api.draft(), []);
@@ -22,7 +24,7 @@ export default function HallOfFame() {
   const rows = pos ? hof.filter((d) => d.pos === pos) : hof;
   return (
     <div className="stack">
-      <Seo title="Hall of Fame" description="Membros do Pro Football Hall of Fame escolhidos no draft desde 1980: posição, rodada, time e estatísticas de carreira." />
+      <Seo {...PAGE_META['/hall-of-fame']} />
       <PageHeader eyebrow="Pro Football Hall of Fame" title="Hall of Fame" lede="O Hall da Fama do futebol americano profissional fica em Canton, Ohio — onde a NFL foi fundada, em 1920." />
       <Callout title="Cobertura desta página">
         Esta lista mostra os <strong>{hof.length} membros do Hall of Fame escolhidos no draft desde 1980</strong> (dados do nflverse/PFR). Jogadores de antes de 1980, não draftados (ex.: Kurt Warner) e
@@ -61,7 +63,7 @@ export default function HallOfFame() {
         columns={[
           { key: 'name', label: 'Jogador', render: (d) => (d.id ? <Link to={`/players/${d.id}`}>{d.name}</Link> : <strong>{d.name}</strong>), value: (d) => d.name },
           { key: 'pos', label: 'Pos.' },
-          { key: 'team', label: 'Time que draftou', render: (d) => <TeamLogo abbr={d.team} size={20} />, value: (d) => d.team },
+          { key: 'team', label: 'Time que draftou', render: (d) => <DraftTeamLogo code={d.team} season={d.season} />, value: (d) => draftFranchise(d.team, d.season) ?? d.team },
           { key: 'season', label: 'Draft', num: true },
           { key: 'pick', label: 'Escolha', num: true, render: (d) => `${d.round}ª · #${d.pick}`, value: (d) => d.pick },
           { key: 'college', label: 'Universidade', render: (d) => d.college ?? '—' },

@@ -4,6 +4,7 @@ import { PageHeader, Seo } from '../components/Bits';
 import { DownSimulator } from '../components/DownSimulator';
 import { HorizontalField } from '../components/Field';
 import { BASICS, GAME_FLOW, SCORING } from '../content/rules';
+import { PAGE_META } from '../content/pageMeta';
 
 export default function Learn() {
   const loc = useLocation();
@@ -12,7 +13,7 @@ export default function Learn() {
   }, [loc.hash]);
   return (
     <div className="stack">
-      <Seo title="Comece aqui: a NFL em 10 minutos" description="Guia para iniciantes: objetivo do jogo, downs, como se pontua, posições e faltas, com exemplos visuais e simulador." />
+      <Seo {...PAGE_META['/learn']} />
       <PageHeader
         eyebrow="Para iniciantes"
         title="A NFL em 10 minutos"

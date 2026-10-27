@@ -3,7 +3,9 @@
  * - Arquivos (site + /data/*.json) são servidos direto pelos "static assets" da Cloudflare, sem passar por aqui.
  * - Só /api/* executa este código (run_worker_first no wrangler.jsonc): placar ao vivo e detalhes de jogos (ESPN).
  */
-import { gameDetail, scoreboard } from '../server/services/espn';
+import { parseClientReport, REPORT_MAX_BYTES } from '../server/services/clientReport';
+import { gameDetail, scoreboard, teamNews } from '../server/services/espn';
+import { ACTIVE_TEAMS } from '../src/lib/teams';
 
 interface Env {
   ASSETS: { fetch(request: Request): Promise<Response> };
@@ -74,15 +76,52 @@ function liveIds(request: Request, env: Env): Promise<Set<string> | null> {
   return knownIds;
 }
 
+/** Limite por instância do Worker (melhor esforço): cada IP envia no máximo 10 relatos por minuto. */
+const reportHits = new Map<string, { n: number; since: number }>();
+function tooMany(ip: string): boolean {
+  const now = Date.now();
+  if (reportHits.size > 5000) reportHits.clear();
+  const h = reportHits.get(ip);
+  if (!h || now - h.since > 60_000) {
+    reportHits.set(ip, { n: 1, since: now });
+    return false;
+  }
+  return ++h.n > 10;
+}
+
+/**
+ * Erro do navegador → log do Worker (Cloudflare → Workers → Observability). Só aceita POST JSON pequeno
+ * vindo do próprio site; o IP é usado só para o limite de frequência e não vai para o log.
+ */
+async function report(request: Request): Promise<Response> {
+  if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 0, 405);
+  const origin = request.headers.get('origin');
+  if (origin && origin !== new URL(request.url).origin) return json({ error: 'forbidden' }, 0, 403);
+  if (!(request.headers.get('content-type') ?? '').includes('application/json')) return json({ error: 'unsupported_media_type' }, 0, 415);
+  if (tooMany(request.headers.get('cf-connecting-ip') ?? 'local')) return json({ error: 'too_many_requests' }, 0, 429);
+  const text = await request.text();
+  if (text.length > REPORT_MAX_BYTES) return json({ error: 'payload_too_large' }, 0, 413);
+  let r = null;
+  try {
+    r = parseClientReport(JSON.parse(text));
+  } catch {
+    /* JSON inválido */
+  }
+  if (!r) return json({ error: 'bad_request' }, 0, 400);
+  console.error(JSON.stringify({ type: 'client_error', ...r }));
+  return new Response(null, { status: 204, headers: API_HEADERS });
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx?: Ctx): Promise<Response> {
     const { pathname } = new URL(request.url);
+    if (pathname === '/api/report') return report(request);
     if (request.method !== 'GET' && request.method !== 'HEAD') return json({ error: 'method_not_allowed' }, 0, 405);
 
     if (pathname === '/api/live/scoreboard') {
       return cached(request, ctx, async () => {
         try {
-          return json(await scoreboard(), 30);
+          return json(await scoreboard(), 15);
         } catch {
           return json({ error: 'upstream_unavailable', message: 'Placar ao vivo indisponível no momento.' }, 0, 502);
         }
@@ -97,9 +136,24 @@ export default {
       if (!ids || !ids.has(game[1])) return json({ error: 'not_found', message: 'Jogo não encontrado.' }, 0, 404);
       return cached(request, ctx, async () => {
         try {
-          return json(await gameDetail(game[1]), 60);
+          // Em andamento: cache curto (o Game Center atualiza a cada 20 s). Encerrado: muda pouco, cache maior.
+          const d = await gameDetail(game[1]);
+          return json(d, d.state === 'in' ? 15 : d.state === 'post' ? 600 : 60);
         } catch {
           return json({ error: 'upstream_unavailable', message: 'Detalhes do jogo indisponíveis no momento.' }, 0, 502);
+        }
+      });
+    }
+
+    const news = pathname.match(/^\/api\/news\/([A-Z]{2,3})$/);
+    if (news) {
+      // Só os 32 times: qualquer outro valor viraria uma chave de cache nova e uma chamada à ESPN.
+      if (!(ACTIVE_TEAMS as readonly string[]).includes(news[1])) return json({ error: 'not_found' }, 0, 404);
+      return cached(request, ctx, async () => {
+        try {
+          return json(await teamNews(news[1]), 900);
+        } catch {
+          return json({ error: 'upstream_unavailable', message: 'Notícias indisponíveis no momento.' }, 0, 502);
         }
       });
     }

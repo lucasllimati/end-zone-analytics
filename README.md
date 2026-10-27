@@ -6,11 +6,14 @@
 
 Dados, história, estatísticas e educação sobre a NFL — para quem nunca viu um jogo e para especialistas.
 
-- **Temporada:** classificação, calendário, placares ao vivo, playoffs, líderes, power ranking, força de tabela, **eficiência dos 32 times** (ataque, defesa, times especiais e situações — 3ª/4ª descida, red zone — com ranking na liga) e **zebras e expectativa do mercado**.
+- **Meu time:** escolha um time favorito e veja na página inicial o próximo jogo (ou o placar ao vivo), a posição na divisão, lesões e notícias; aviso opcional quando ele pontuar.
+- **Temporada:** **simulador de playoffs** (chances por Monte Carlo, “e se?” e os critérios oficiais de desempate, conferidos com os playoffs reais de 2002–2025), classificação, calendário, placares ao vivo, playoffs, líderes, power ranking, força de tabela, **eficiência dos 32 times** (ataque, defesa, times especiais e situações — 3ª/4ª descida, red zone — com ranking na liga) e **zebras e expectativa do mercado**.
 - **Game Center:** placar por quarto, drives, probabilidade de vitória, **box score completo**, linha de aposta e resultado contra ela, descanso de cada time e o perfil do árbitro.
 - **Times:** perfil de cada franquia com últimos jogos, eficiência, **elenco completo**, recordes da franquia, história (técnicos, QBs, estádios, momentos marcantes), confrontos e desempenho por situação, contra a linha e draft.
-- **Jogadores:** carreira desde 1999, **jogo a jogo** e melhores jogos, percentis (inclusive kickers e punters), FGs por distância, retornos, métricas de recebedor (participação nos alvos, WOPR) e valor de draft.
+- **Fantasy (PPR):** ranking semanal, consistência (média, desvio, piso, teto, semanas no top 12) e quanto cada defesa cede por posição, com os melhores confrontos da rodada.
+- **Jogadores:** carreira desde 1999, **jogo a jogo**, **recortes** (casa/fora, vitórias/derrotas, contra cada adversário), recordes pessoais, prêmios da AP, melhores jogos, percentis (inclusive kickers e punters), FGs por distância, retornos, métricas de recebedor (participação nos alvos, WOPR) e valor de draft.
 - **História e liga:** todos os Super Bowls (I–LX), recordes (inclusive times especiais e maiores zebras), draft desde 1980 (quem drafta melhor, valor por posição), Hall of Fame, estádios (clima, mandante, FG%), **árbitros** e a evolução do jogo.
+- **Prêmios:** MVP e demais prêmios da AP, temporada a temporada. **App instalável** (PWA) com leitura offline. Páginas **Sobre** e **Privacidade**.
 - **Aprenda:** a NFL em 10 minutos, simulador de down & distance, regras e faltas, posições interativas, playbook animado, estratégia e glossário.
 - **Modo Iniciante / Expert** (só aparece onde muda algo) e o botão **ⓘ** em cada número, coluna e gráfico.
 - **Dados reais e rastreáveis** (nflverse, CC-BY 4.0: calendário, estatísticas por temporada e por jogo, play-by-play, elencos, draft). Dado ausente aparece como “Não disponível”, nunca como zero. Fontes, cobertura e qualidade em `/data`.
@@ -45,8 +48,10 @@ npm run dev            # site em http://localhost:5173 (API em :8787)
 
 ```bash
 npm run qa         # tipos + testes unitários/API/segurança/dados + revisão ortográfica
-npm run test:e2e   # navegação, UX e acessibilidade (Playwright + axe), desktop e celular
+npm run test:e2e   # navegação, UX, acessibilidade (axe), layout e visual (Playwright), desktop e celular
 ```
+
+No GitHub, os testes de navegador rodam contra o build publicado (`wrangler dev`) antes de cada deploy e em cada pull request (ver [TESTING.md](docs/TESTING.md)).
 
 ## Publicação
 

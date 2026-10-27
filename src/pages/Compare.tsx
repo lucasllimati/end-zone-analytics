@@ -18,6 +18,7 @@ import { fmtRecord } from '../lib/standings';
 import { ACTIVE_TEAMS } from '../lib/teams';
 import type { PlayerCareer, PlayerSeasonLine, QbModelEntry, TeamSeason } from '../lib/types';
 import { metric } from '../content/metrics';
+import { PAGE_META } from '../content/pageMeta';
 
 type Kind = 'players' | 'teams' | 'seasons';
 
@@ -35,7 +36,7 @@ export default function Compare() {
   const kind = (params.get('type') as Kind) || 'players';
   return (
     <div>
-      <Seo title="Comparador" description="Compare jogadores, times e temporadas lado a lado, com gráficos, percentis e ajuste de era." />
+      <Seo {...PAGE_META['/compare']} />
       <PageHeader eyebrow="Comparador" title="Compare lado a lado" lede="Jogador × jogador, time × time e temporada × temporada, com totais, gráficos e explicação de cada métrica." />
       <Tabs
         label="Tipo de comparação"
@@ -277,6 +278,7 @@ function ComparePlayers() {
               )}
             </div>
           </div>
+          <GameByGame players={players} stats={stats} />
         </>
       )}
     </div>
@@ -547,5 +549,65 @@ function CompareSeasons() {
       )}
       <p className="xsmall muted">{metric('epaPlay').simple}</p>
     </div>
+  );
+}
+
+/* --------------------------- Jogo a jogo (dois jogadores) --------------------------- */
+
+/** Mesma estatística, semana a semana, com a temporada de cada jogador escolhida à parte. */
+function GameByGame({ players, stats }: { players: PlayerCareer[]; stats: { key: keyof PlayerSeasonLine; label: string }[] }) {
+  const logs = useAsync(() => Promise.all(players.map((p) => api.gameLog(p.bio.id))), [players.map((p) => p.bio.id).join()]);
+  const options = [...stats, { key: 'fptsPpr' as const, label: 'Fantasy (PPR)' }];
+  const [statKey, setStatKey] = useState<string>(options[0].key as string);
+  const stat = options.find((s) => s.key === statKey) ?? options[0];
+  const [picked, setPicked] = useState<(number | null)[]>([null, null]);
+  const chartRef = useRef<SVGSVGElement>(null);
+  if (logs.loading) return <Loading height={200} label="Carregando jogo a jogo…" />;
+  if (!logs.data || logs.data.some((l) => !l.length)) return null;
+  const seasonsOf = (i: number) => [...new Set(logs.data![i].filter((l) => l.st === 'REG').map((l) => l.season))].sort((a, b) => b - a);
+  const seasonFor = (i: number) => picked[i] ?? seasonsOf(i)[0];
+  const lines = players.map((_, i) => logs.data![i].filter((l) => l.st === 'REG' && l.season === seasonFor(i)).sort((a, b) => a.week - b.week));
+  const value = (l: (typeof lines)[number][number]) => (l[stat.key as keyof typeof l] as number) ?? 0;
+  const weeks = [...new Set(lines.flatMap((ls) => ls.map((l) => l.week)))].sort((a, b) => a - b);
+  return (
+    <section className="card">
+      <ChartFrame
+        title={`${stat.label}, jogo a jogo`}
+        subtitle="Temporada regular. Escolha a temporada de cada jogador: dá para comparar épocas diferentes."
+        info={{ simple: 'Cada ponto é um jogo. Semanas sem ponto: o jogador não atuou (folga, lesão ou suspensão).' }}
+        legend={players.map((p, i) => ({ label: `${p.bio.name} (${seasonFor(i)})`, slot: i }))}
+        svgRef={chartRef}
+        table={<MiniTable head={['Semana', ...players.map((p, i) => `${p.bio.name} (${seasonFor(i)})`)]} rows={weeks.map((w) => [String(w), ...lines.map((ls) => { const l = ls.find((x) => x.week === w); return l ? value(l) : '—'; })])} />}
+      >
+        <div className="row" style={{ marginBottom: 8, gap: 12 }}>
+          <div className="chips">
+            {options.map((s) => (
+              <button key={s.key as string} type="button" className="chip" aria-pressed={s.key === stat.key} onClick={() => setStatKey(s.key as string)}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+          {players.map((p, i) => (
+            <label key={p.bio.id} className="field">
+              <span className="sr-only">Temporada de {p.bio.name}</span>
+              <select className="select" value={seasonFor(i)} onChange={(e) => setPicked((x) => x.map((v, j) => (j === i ? Number(e.target.value) : v)))} aria-label={`Temporada de ${p.bio.name}`}>
+                {seasonsOf(i).map((s) => (
+                  <option key={s} value={s}>
+                    {p.bio.name.split(' ').at(-1)} · {s}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </div>
+        <LineChart
+          ref={chartRef}
+          ariaLabel={`${stat.label} jogo a jogo`}
+          xFormat={(x) => `sem. ${x}`}
+          series={players.map((p, i) => ({ id: p.bio.id, label: p.bio.name, slot: i, points: lines[i].map((l) => ({ x: l.week, y: value(l) })) }))}
+          yZero
+        />
+      </ChartFrame>
+    </section>
   );
 }

@@ -82,6 +82,21 @@ export function teamSlug(abbr: string): string {
  * e alguns mudam de franquia conforme a época: STL (Cardinals até 1987, Rams desde 1995), HOU (Oilers até 1996,
  * Texans desde 2002) e BAL (Colts até 1983, Ravens desde 1996).
  */
+/** Nome da franquia na época do draft, quando era outro (códigos do Pro Football Reference). */
+export function draftHistoricName(code: string, season: number): string | null {
+  switch (code) {
+    case 'BAL': return season <= 1983 ? 'Baltimore Colts' : null;
+    case 'HOU': return season <= 1996 ? 'Houston Oilers' : null;
+    case 'STL': return season <= 1987 ? 'St. Louis Cardinals' : 'St. Louis Rams';
+    case 'PHO': return 'Phoenix Cardinals';
+    case 'RAI': return 'Los Angeles Raiders';
+    case 'OAK': return 'Oakland Raiders';
+    case 'SDG': return 'San Diego Chargers';
+    case 'RAM': return 'Los Angeles Rams';
+    default: return null;
+  }
+}
+
 export function draftFranchise(code: string, season: number): string | null {
   switch (code) {
     case 'GNB': return 'GB';

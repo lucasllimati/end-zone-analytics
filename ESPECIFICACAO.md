@@ -1,7 +1,7 @@
 # End Zone Analytics — Especificação funcional
 
 Documento de referência de **todas as páginas, funcionalidades e dados** da plataforma.
-Reflete o estado atual do código (v1.3 — perfis de franquia, estatísticas por jogo, play-by-play resumido, elencos, expectativa do mercado, árbitros e revisão de segurança com teste de invasão). Site no ar: <https://end-zone-analytics.nfldata.workers.dev>. Itens marcados como **[Planejado]** ainda não existem.
+Reflete o estado atual do código (v1.4 — Meu time, simulador de playoffs, fantasy, prêmios, notícias e lesões, PWA e testes de navegador no CI; v1.3 — perfis de franquia, estatísticas por jogo, play-by-play resumido, elencos, expectativa do mercado, árbitros e revisão de segurança com teste de invasão). Site no ar: <https://end-zone-analytics.nfldata.workers.dev>. Itens marcados como **[Planejado]** ainda não existem.
 
 > Documentos técnicos complementares: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/DATA_MODEL.md](docs/DATA_MODEL.md), [docs/DATA_SOURCES.md](docs/DATA_SOURCES.md), [docs/API.md](docs/API.md), [docs/SECURITY.md](docs/SECURITY.md), [docs/ROADMAP.md](docs/ROADMAP.md).
 
@@ -99,6 +99,7 @@ flowchart LR
 - **Faixa de confiabilidade:** atualização relativa, último jogo registrado, link para fontes.
 - **Jogos da semana:** cards com logos, placar, estado (agendado, ao vivo, intervalo, finalizado, adiado, cancelado, resultado indisponível) e horário no fuso local; navegação por botões e teclado. Jogo não disputado mostra “×”, nunca 0 × 0.
 - **Painéis:** Classificação (Liga, AFC, NFC, Divisão; PF/PA/Div no modo Expert), Destaques da temporada (líder em passe, corrida, recepção e defesa, com critério e fonte; EPA/CPOE no Expert), Entenda o jogo (conteúdo editorial próprio).
+- **Meu time** (logo abaixo do hero): sem favorito, um seletor com os 32 times; com favorito, nome, campanha, posição na divisão e sequência, último jogo, próximo jogo (ou placar ao vivo), quantos jogadores estão fora no relatório de lesões, 3 notícias e a opção “Avisar quando o time pontuar” (notificação do navegador, opt-in, com o site aberto). Guardado só no navegador (`eza-team`, `eza-notify`).
 - **Jogo em destaque**, **Líderes da temporada**, **Último Super Bowl**, **Mais títulos**, **Explore mais**.
 
 ### 4.2 Temporada (`/season`)
@@ -110,22 +111,24 @@ Abas (estado na URL `?tab=`):
 | Calendário | Todos os jogos semana a semana, placar, ao vivo quando aplicável, link para o jogo |
 | Líderes | Líderes por estatística (passe, corrida, recepção, defesa, chutes) |
 | Playoffs | Chave interativa da temporada; aviso “Playoffs ainda não disputados” |
+| Simulador | Só com temporada regular em andamento. “Se a temporada acabasse hoje” (seeds 1–7 por conferência com os desempates oficiais), chances de playoffs, de vencer a divisão e de folga (2.000 temporadas simuladas; chance de cada jogo pela linha de aposta ou, sem linha, pelo saldo por jogo) e “E se?”: escolher o vencedor dos jogos restantes, semana a semana |
 | Power ranking | Modelo transparente: Power Score (soma ponderada de z-scores), campanha, saldo/jogo, SOS, EPA/jogada, forma (4 jogos); seção “Como é calculado?” |
 | Força de tabela | SOS jogado, SOS restante, jogos restantes; destaque “Tabela mais difícil até agora” |
 | Eficiência | Ataque, defesa, times especiais e **situações** (3ª descida, 4ª descida — conversão e decisão de ir —, red zone, taxa de sucesso, EPA por jogada cedido; do play-by-play) de cada time com o ranking na liga (EPA por jogada, jardas e EPA cedidos, jogadas de 20+, first downs, turnovers, FG% de 40+, punt líquido, retornos); gráfico ataque × defesa |
 | Zebras e expectativa | Favoritos que venceram/cobriram, % acima do total, vantagem de descanso; maiores zebras da temporada; tabela por time (contra a linha, como favorito/azarão, over-under, após folga) |
 
-Observação: a classificação usa critério de desempate **simplificado** (informado na tela).
+Observação: a tabela da aba Classificação usa critério de desempate **simplificado** (informado na tela); o Simulador usa os critérios **oficiais** (`src/lib/playoffs.ts`), conferidos em teste com os classificados e as folgas reais de 2002–2025.
 
 ### 4.3 Times (`/teams`) e Perfil do time (`/teams/:abbr`)
 - Lista: 32 franquias ativas por conferência/divisão, com logo, cores e campanha da temporada selecionada.
 - Perfil — abas:
-  - **Visão geral:** últimos 5 resultados, próximo jogo, tabela da divisão (time destacado), gráfico de pontos marcados/sofridos por jogo, “Vitórias por temporada”, Super Bowls, rivais.
+  - Cabeçalho com o botão **Seguir time / Meu time** (favorito).
+  - **Visão geral:** notícias do time (ESPN, em inglês, com link) e relatório oficial de lesões da semana (Fora, Improvável, Dúvida, treino), cada um só quando há conteúdo; últimos 5 resultados, próximo jogo, tabela da divisão (time destacado), gráfico de pontos marcados/sofridos por jogo, “Vitórias por temporada”, Super Bowls, rivais.
   - **Eficiência:** cada métrica de ataque, defesa, times especiais e situações (3ª/4ª descida, red zone, sucesso) da temporada com o ranking na liga.
   - **Jogos** da temporada selecionada.
   - **Elenco:** destaques da temporada e elenco completo (ataque, defesa, times especiais) com número, posição, idade, altura, peso, experiência, universidade, draft e situação; idade e experiência médias, novatos.
   - **Recordes:** líderes da franquia na temporada regular (carreira no time ou uma temporada), 10 estatísticas, top 5.
-  - **História:** ficha (nomes/cidades, ex.: OAK → LV; estádios com nomes de patrocínio), momentos marcantes (melhor/pior temporada, maiores sequências, maiores vitórias e derrotas), técnicos (campanha jogo a jogo, inclusive interinos), QBs titulares, Super Bowls e temporada a temporada.
+  - **História:** resumo do time na Wikipedia em português (com atribuição CC BY-SA), prêmios da AP de jogadores e técnicos do time, ficha (nomes/cidades, ex.: OAK → LV; estádios com nomes de patrocínio), momentos marcantes (melhor/pior temporada, maiores sequências, maiores vitórias e derrotas), técnicos (campanha jogo a jogo, inclusive interinos), QBs titulares, Super Bowls e temporada a temporada.
   - **Confrontos:** desempenho por situação (casa, fora, divisão, até 8 pontos, prorrogação, coberto/ao ar livre, após folga, descanso curto, playoffs), contra a expectativa do mercado (ATS, favorito/azarão, over-under, por temporada, maiores zebras a favor) e retrospecto contra cada adversário com link para o histórico.
   - **Draft:** escolhas desde 1980, Hall of Fame draftados, melhores escolhas por AV e a classe mais recente (códigos antigos, ex.: Oilers → TEN, mapeados para a franquia atual).
   - **Times semelhantes** (similaridade).
@@ -142,7 +145,17 @@ Observação: a classificação usa critério de desempate **simplificado** (inf
   - Gráfico de evolução e radar por percentil (QB, RB, WR/TE, defensores, kickers e punters).
   - **Jogadores semelhantes** (similaridade estatística).
 
+- Perfil: selos de prêmios da AP (ex.: “MVP 2024”) e a aba **Recortes e recordes**: casa/fora, vitórias/derrotas, temporada regular/playoffs, desempenho contra cada adversário (médias por jogo e fantasy) e recordes pessoais em um jogo, com link para o jogo; período carreira ou temporada.
+
+### 4.4.1 Fantasy (`/fantasy`)
+Pontuação PPR (nflverse `fantasy_points_ppr`), filtro por posição (QB, RB, WR, TE). Abas: **Ranking da semana** (seletor de semana), **Consistência** (total, média, desvio, piso, teto, semanas no top 12) e **Confrontos** (pontos cedidos por defesa e posição, com ranking; melhores confrontos dos próximos jogos).
+
+### 4.4.2 Prêmios (`/awards`)
+MVP, jogador ofensivo e defensivo do ano, novatos ofensivo e defensivo, volta por cima do ano (Comeback) e técnico do ano (AP), temporada a temporada, “mais vezes premiados” e fonte. Vencedores ligados ao perfil do jogador (1999+).
+
 ### 4.5 Comparador (`/compare`)
+Jogador × jogador inclui o **jogo a jogo**: a mesma estatística semana a semana, com a temporada de cada jogador escolhida à parte.
+
 Três modos:
 - **Jogadores:** lado a lado (atalhos prontos: Brady × Mahomes, Brady × Manning, Mahomes × Allen, Moss × Fitzgerald, J. J. Watt × Aaron Donald), totais e por jogo, radar, **ajuste de era**, longevidade, playoffs, participações em Super Bowl.
 - **Times:** campanha desde 1999, pontos marcados/sofridos por jogo, EPA por jogada, melhor temporada.
@@ -154,6 +167,8 @@ Três modos:
 - Rivalidades clássicas pré-configuradas. Cobertura: desde 1999.
 
 ### 4.7 Página do jogo (`/games/:id`)
+Com o jogo em andamento, os detalhes (placar, drives, pontuações, probabilidade) **atualizam sozinhos a cada 20 s**, com o horário da última atualização.
+
 - Ficha do jogo (estádio, cidade, teto, gramado, clima em °C e km/h, público, QBs, técnicos, árbitro, **dias de descanso de cada time**). **Só aparecem as informações disponíveis** — nada de “Não disponível”. O árbitro vem da nflverse ou, em jogos recentes, da equipe de arbitragem informada pela ESPN.
 - Termos da ESPN traduzidos: estatísticas dos times (25, com explicação ao passar o mouse), destaques (“17 corridas, 41 jardas”), descrições das pontuações (“corrida de 4 jardas (ponto extra de …)”), drives (“8 jogadas, 20 jardas”) e situação ao vivo (“8:24 · 3º quarto”, “Intervalo”); seletor PT | EN para ver os originais.
 - **Expectativa do mercado:** favorito e linha, total esperado, chance de vitória (moneyline sem a margem da casa), resultado contra a linha e o total; selo “Zebra” quando o azarão vence.
@@ -214,6 +229,9 @@ Abas: **Oficiais (todos os tempos)** · Temporada (1999+) · Carreira (1999+) ·
 | Playbook (`/playbook`) | 29 jogadas e coberturas **animadas**: “Funciona contra”, “Ponto fraco”; explicação técnica no modo Expert |
 | Estratégia (`/strategy`) | Relógio, 4º down, red zone e mais; **teste uma decisão de 4º down** |
 | Glossário (`/glossary`) | Termos do básico ao avançado, busca, termos relacionados, link direto por âncora |
+
+### 4.16.1 Sobre (`/about`) e Privacidade (`/privacy`)
+Sobre: o que é, fontes, independência (sem vínculo com NFL, ESPN ou casas de apostas). Privacidade: o que fica no navegador (tabela de chaves), medição de audiência sem cookies (quando ativada), relatos de erro, serviços de terceiros e publicidade. Links no rodapé.
 
 ### 4.17 Fontes e qualidade dos dados (`/data`, pública)
 Última atualização publicada, cobertura, verificações, como os números chegam ao site (coleta → transformação → validação → publicação), fontes e licenças, limitações conhecidas, tabela de qualidade e API pública. Sem controles de carga, tokens ou histórico operacional.
@@ -391,7 +409,8 @@ Critério de pronto: `npm run qa` e `npm run test:e2e` sem falhas; `npm audit` s
 
 | Prioridade | Item |
 |---|---|
-| P1 | E2E no CI (hoje o CI roda `qa`, build e auditoria; E2E é local) |
-| P2 | Pré-renderização (SSG) das páginas públicas para SEO; regressão visual automatizada por screenshot |
-| P2 | Time favorito; filtros compartilháveis em todas as tabelas; onboarding de 3 passos |
-| Futuro | SQLite/DuckDB; play-by-play completo (mapas de campo, probabilidade de vitória própria); simulador de playoffs; prêmios; dados pré-1999 |
+| P1 | Domínio próprio + medição de audiência (variável `CF_ANALYTICS_TOKEN`), pré-requisitos para anúncios |
+| P2 | Filtros compartilháveis em todas as tabelas; onboarding de 3 passos; notificações com o site fechado (Web Push) |
+| Futuro | SQLite/DuckDB; play-by-play completo (mapas de campo, probabilidade de vitória própria); dados pré-1999 |
+
+Entregue na versão 1.4: E2E, layout e regressão visual no CI; metadados por rota (título, descrição, OpenGraph absoluto, canonical) e sitemap; relatos de erro do navegador; Meu time; Game Center ao vivo; simulador de playoffs; fantasy; notícias, lesões e Wikipedia; divisões do jogador e comparador jogo a jogo; prêmios; PWA; Sobre e Privacidade; Vite 8.

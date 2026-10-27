@@ -8,6 +8,12 @@
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
   Cross-Origin-Opener-Policy: same-origin
 
+# Service worker e manifest: sempre conferidos (uma versão nova do site precisa chegar logo).
+/sw.js
+  Cache-Control: no-cache
+/manifest.webmanifest
+  Cache-Control: no-cache
+
 # Arquivos com hash no nome nunca mudam.
 /assets/*
   Cache-Control: public, max-age=31536000, immutable

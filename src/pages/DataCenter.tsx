@@ -4,6 +4,7 @@ import { Loading } from '../components/States';
 import { api } from '../data/client';
 import { useAsync, useManifest } from '../data/hooks';
 import { dateBR, relativeTime } from '../lib/format';
+import { PAGE_META } from '../content/pageMeta';
 
 /** Site estático (Cloudflare Pages): sem a API completa, os dados são servidos como arquivos JSON. */
 const STATIC_SITE = import.meta.env.VITE_PUBLIC_STATIC === '1';
@@ -30,7 +31,7 @@ export default function DataCenter() {
 
   return (
     <div className="stack">
-      <Seo title="Fontes e qualidade dos dados" description="De onde vem cada número do End Zone Analytics: fontes abertas, licenças, cobertura, limitações e verificações de qualidade." />
+      <Seo {...PAGE_META['/data']} />
       <PageHeader
         eyebrow="Transparência"
         title="Fontes e qualidade dos dados"

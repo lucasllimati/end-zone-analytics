@@ -23,6 +23,7 @@ export const NAV: NavGroup[] = [
       { to: '/season?tab=sos', label: 'Força de tabela', desc: 'Quem teve o caminho mais difícil' },
       { to: '/season?tab=efficiency', label: 'Eficiência dos times', desc: 'Ataque, defesa e times especiais com ranking' },
       { to: '/season?tab=market', label: 'Zebras e expectativa', desc: 'Quem superou o previsto pelo mercado' },
+      { to: '/season?tab=simulator', label: 'Simulador de playoffs', desc: 'Chances de cada time e “e se?” com os desempates oficiais' },
     ],
   },
   {
@@ -53,6 +54,7 @@ export const NAV: NavGroup[] = [
       { to: '/explorer', label: 'Explorador de dados', desc: 'Monte rankings, tabelas e gráficos' },
       { to: '/history#evolucao', label: 'Evolução do jogo', desc: 'Pontos, passes e corridas por temporada' },
       { to: '/referees', label: 'Árbitros', desc: 'Quem apita e o perfil dos jogos' },
+      { to: '/fantasy', label: 'Fantasy', desc: 'Ranking semanal, consistência e confrontos (PPR)' },
     ],
   },
   {
@@ -61,6 +63,7 @@ export const NAV: NavGroup[] = [
     items: [
       { to: '/super-bowl', label: 'Super Bowl', desc: 'Todas as edições, do I ao LX' },
       { to: '/records', label: 'Recordes', desc: 'Carreira, temporada, jogo e times' },
+      { to: '/awards', label: 'Prêmios', desc: 'MVP e prêmios da AP, ano a ano' },
       { to: '/history', label: 'História da NFL', desc: 'Eras, mudanças e evolução do jogo' },
     ],
   },

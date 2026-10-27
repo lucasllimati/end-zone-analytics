@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent } from 'react';
+import { useEffect, useRef, type KeyboardEvent } from 'react';
 
 interface Props<T extends string> {
   tabs: { id: T; label: string }[];
@@ -10,6 +10,16 @@ interface Props<T extends string> {
 /** Abas acessíveis (padrão WAI-ARIA: setas esquerda/direita, Home/End). */
 export function Tabs<T extends string>({ tabs, value, onChange, label }: Props<T>) {
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
+  const list = useRef<HTMLDivElement>(null);
+  // No celular a faixa de abas rola para o lado: a aba ativa fica centralizada (antes podia abrir fora da tela).
+  // Só a faixa rola; a página não se move.
+  const active = tabs.findIndex((t) => t.id === value);
+  useEffect(() => {
+    const el = list.current;
+    const btn = refs.current[active];
+    if (!el || !btn || el.scrollWidth <= el.clientWidth) return;
+    el.scrollLeft = btn.offsetLeft - el.offsetLeft - (el.clientWidth - btn.offsetWidth) / 2;
+  }, [active]);
   const onKey = (e: KeyboardEvent, i: number) => {
     let n = i;
     if (e.key === 'ArrowRight') n = (i + 1) % tabs.length;
@@ -22,7 +32,7 @@ export function Tabs<T extends string>({ tabs, value, onChange, label }: Props<T
     refs.current[n]?.focus();
   };
   return (
-    <div className="tabs" role="tablist" aria-label={label}>
+    <div ref={list} className="tabs" role="tablist" aria-label={label}>
       {tabs.map((t, i) => (
         <button
           key={t.id}

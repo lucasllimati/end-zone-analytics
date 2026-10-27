@@ -6,7 +6,8 @@ import { TeamLogo } from '../components/TeamLogo';
 import { api } from '../data/client';
 import { useAsync, useManifest } from '../data/hooks';
 import { useApp } from '../context/AppContext';
-import { num, percent } from '../lib/format';
+import { num, percent, surfaceLabel } from '../lib/format';
+import { PAGE_META } from '../content/pageMeta';
 
 const celsius = (f: number | null | undefined) => (f === null || f === undefined ? '—' : `${num(((f - 32) * 5) / 9)} °C`);
 
@@ -16,12 +17,13 @@ const dash = (v: number | null | undefined, f: (v: number) => string) => (v === 
 
 /** Gramado em duas linhas: tipo e, no sintético, a marca (ex.: fieldturf), sem alargar a coluna. */
 function Surface({ s }: { s: string | null }) {
-  if (!s) return <>—</>;
-  if (s === 'grass') return <>Grama natural</>;
+  const l = surfaceLabel(s);
+  if (!l) return <>—</>;
+  if (!l.brand) return <>{l.kind}</>;
   return (
     <span className="cell-2l">
-      Sintético
-      <span className="xsmall muted">{s}</span>
+      {l.kind}
+      <span className="xsmall muted">{l.brand}</span>
     </span>
   );
 }
@@ -36,7 +38,7 @@ export default function Stadiums() {
   const rows = (st.data ?? []).filter((s) => !onlyCurrent || (s.last >= current - 1 && s.teams.length > 0));
   return (
     <div className="stack">
-      <Seo title="Estádios" description="Estádios da NFL: times, teto, gramado, clima, pontos por jogo, vantagem do mandante, aproveitamento de field goals e Super Bowls desde 1999." />
+      <Seo {...PAGE_META['/stadiums']} />
       <PageHeader eyebrow="Estádios" title="Estádios da NFL" lede="Onde os jogos acontecem: teto, gramado, clima, placar médio, vantagem do mandante e aproveitamento dos chutes, desde 1999 (inclui jogos internacionais e campos neutros)." />
       <ModeNote
         beginner={<>Estádios com domo ou teto retrátil protegem do frio e do vento — o que favorece passes e chutes. Gramado sintético costuma deixar o jogo mais rápido.</>}

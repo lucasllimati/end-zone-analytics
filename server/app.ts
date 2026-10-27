@@ -13,7 +13,7 @@ import { z } from 'zod';
 import { DATA_DIR, DIST_DIR, OPS_DIR, config } from './config';
 import { DataStore } from './services/dataStore';
 import { TtlCache } from './services/ttlCache';
-import { gameDetail, scoreboard } from './services/espn';
+import { gameDetail, scoreboard, teamNews } from './services/espn';
 import { currentJob, getJob, listJobs, startSync, type Runner } from './services/jobs';
 import { AdminAuth, LoginThrottle } from './services/auth';
 import { OpsLog, recommendedAction, type Notifier } from './services/ops';
@@ -23,9 +23,10 @@ import { openapi } from './openapi';
 import { SOURCES } from '../src/lib/sources';
 import { checkForUpdates } from '../src/lib/updates';
 import { computeStandings } from '../src/lib/standings';
-import { franchiseOf } from '../src/lib/teams';
+import { ACTIVE_TEAMS, franchiseOf } from '../src/lib/teams';
 import { DEFAULT_QB_WEIGHTS, rankQbs, type QbWeights } from '../src/lib/models';
 import type { PlayerSeasonLine, UpdateCheckResult } from '../src/lib/types';
+import { parseClientReport, REPORT_MAX_BYTES } from './services/clientReport';
 
 export interface AppOptions {
   dataDir?: string;
@@ -236,6 +237,29 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
     return { model: 'EZA-QB v1 (dados 1999+)', weights: w, rows: rankQbs(await store.qbModel(), w).slice(0, 50) };
   });
 
+  app.get('/api/news/:abbr', async (req, reply) => {
+    const abbr = (req.params as { abbr: string }).abbr;
+    // Só os 32 times (o servidor não vira proxy de buscas arbitrárias na ESPN).
+    if (!(ACTIVE_TEAMS as readonly string[]).includes(abbr)) return reply.code(404).send(notFound('Time'));
+    try {
+      reply.header('Cache-Control', 'public, max-age=900');
+      return await teamNews(abbr);
+    } catch (e) {
+      req_log(app, e);
+      return reply.code(502).send({ error: 'upstream_unavailable', message: 'Notícias indisponíveis no momento.' });
+    }
+  });
+
+  /* --------------------------- Erros do navegador --------------------------- */
+  // Visível em /admin (componente "Navegador"). Limite de tamanho e de frequência: não vira canal de spam.
+  app.post('/api/report', { bodyLimit: REPORT_MAX_BYTES, config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (req, reply) => {
+    const r = parseClientReport(req.body);
+    if (!r) return reply.code(400).send({ error: 'bad_request' });
+    void ops.event({ severity: 'warning', component: 'client', message: `Erro no navegador: ${r.message}`, detail: `${r.path} (${r.source})${r.stack ? `
+${r.stack}` : ''}` }).catch(() => {});
+    return reply.code(204).send();
+  });
+
   /* -------------------------------- Ao vivo -------------------------------- */
   app.get('/api/live/scoreboard', async (_req, reply) => {
     try {
@@ -384,7 +408,7 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
     const q = z
       .object({
         severity: z.enum(['info', 'warning', 'error', 'critical']).optional(),
-        component: z.enum(['pipeline', 'sources', 'quality', 'auth', 'api']).optional(),
+        component: z.enum(['pipeline', 'sources', 'quality', 'auth', 'api', 'client']).optional(),
         jobId: z.string().uuid().optional(),
         days: z.coerce.number().int().min(1).max(365).optional(),
       })
@@ -416,11 +440,15 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
         maxAge: '1h',
         setHeaders: (res, file) => {
           if (file.includes(`${path.sep}assets${path.sep}`)) res.header('Cache-Control', 'public, max-age=31536000, immutable');
+          else if (file.endsWith('sw.js') || file.endsWith('.webmanifest')) res.header('Cache-Control', 'no-cache');
         },
       });
       // SPA: rotas do frontend caem no index.html.
       app.setNotFoundHandler((req, reply) => {
         if (req.raw.url?.startsWith('/api/') || req.raw.url?.startsWith('/data/')) return reply.code(404).send({ error: 'not_found' });
+        // Rotas com HTML próprio (gerado por scripts/prerender-meta.ts: título e descrição da página).
+        const route = (req.raw.url ?? '/').split('?')[0].replace(/\/$/, '');
+        if (/^(\/[a-z0-9-]+)+$/.test(route) && fs.existsSync(path.join(DIST_DIR, `${route}.html`))) return reply.type('text/html').sendFile(`${route.slice(1)}.html`, DIST_DIR);
         return reply.type('text/html').sendFile('index.html', DIST_DIR);
       });
     }

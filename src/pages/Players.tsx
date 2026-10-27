@@ -6,9 +6,10 @@ import { Loading } from '../components/States';
 import { TeamChip } from '../components/TeamLogo';
 import { api } from '../data/client';
 import { useAsync, useSeason } from '../data/hooks';
-import { norm } from '../components/SearchPalette';
+import { norm } from '../lib/search';
 import { positionBucket } from '../lib/stats';
 import { ACTIVE_TEAMS, franchiseOf } from '../lib/teams';
+import { PAGE_META } from '../content/pageMeta';
 
 const GROUPS = [
   { id: '', label: 'Todas' },
@@ -51,7 +52,7 @@ export default function Players() {
 
   return (
     <div>
-      <Seo title="Jogadores" description="Busque qualquer jogador da NFL desde 1999: estatísticas por temporada, carreira, comparação e jogadores semelhantes." />
+      <Seo {...PAGE_META['/players']} />
       <PageHeader eyebrow="Busca de jogadores" title="Jogadores" lede="Todos os jogadores com estatísticas desde 1999. Filtre por nome, posição e time; clique para ver a carreira completa." />
       <div className="filters">
         <label className="field" style={{ flex: '1 1 240px' }}>

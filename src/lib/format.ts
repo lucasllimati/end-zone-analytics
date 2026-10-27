@@ -132,3 +132,14 @@ export function kickoffLocal(date: string | null | undefined, timeET: string | n
   const get = (k: string) => parts.find((p) => p.type === k)?.value ?? '';
   return `${get('hour')}:${get('minute')} ${get('timeZoneName')}`.trim();
 }
+
+/** Marcas de gramado sintético como vêm do nflverse (`a_turf`, `fieldturf`…) → nome legível. */
+const TURF: Record<string, string> = { a_turf: 'A-Turf', fieldturf: 'FieldTurf', sportturf: 'SportTurf', matrixturf: 'Matrix Turf', astroturf: 'AstroTurf', astroplay: 'AstroPlay', dessograss: 'Desso (grama híbrida)' };
+
+/** Tipo de gramado e marca: "grass" → Grama natural; "a_turf" → Sintético, A-Turf. */
+export function surfaceLabel(s: string | null | undefined): { kind: string; brand: string | null } | null {
+  if (!s) return null;
+  const key = s.trim().toLowerCase();
+  if (key === 'grass') return { kind: 'Grama natural', brand: null };
+  return { kind: 'Sintético', brand: TURF[key] ?? s };
+}

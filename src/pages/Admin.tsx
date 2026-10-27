@@ -53,7 +53,7 @@ interface OpsEvent {
   id: string;
   at: string;
   severity: 'info' | 'warning' | 'error' | 'critical';
-  component: 'pipeline' | 'sources' | 'quality' | 'auth' | 'api';
+  component: 'pipeline' | 'sources' | 'quality' | 'auth' | 'api' | 'client';
   jobId: string | null;
   message: string;
   detail: string | null;
@@ -67,7 +67,7 @@ const SEV: Record<OpsEvent['severity'], { cls: string; label: string }> = {
   error: { cls: 'bad', label: 'Erro' },
   critical: { cls: 'bad', label: 'Crítico' },
 };
-const COMPONENT: Record<OpsEvent['component'], string> = { pipeline: 'Pipeline', sources: 'Fontes', quality: 'Qualidade', auth: 'Acesso', api: 'API' };
+const COMPONENT: Record<OpsEvent['component'], string> = { pipeline: 'Pipeline', sources: 'Fontes', quality: 'Qualidade', auth: 'Acesso', api: 'API', client: 'Navegador' };
 const fmt = (iso: string | null | undefined) => (iso ? dateBR(iso, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—');
 const dur = (ms: number | null) => (ms === null ? '—' : ms < 60_000 ? `${(ms / 1000).toFixed(1)} s` : `${(ms / 60_000).toFixed(1)} min`);
 

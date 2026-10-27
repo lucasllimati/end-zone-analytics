@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useTeams } from '../data/hooks';
-import { HISTORICAL_NAMES, franchiseOf, teamSlug } from '../lib/teams';
+import { HISTORICAL_NAMES, draftFranchise, draftHistoricName, franchiseOf, teamSlug } from '../lib/teams';
 
 /**
  * Alguns logos originais têm 4096 px (~500 KB). O redimensionador da CDN da ESPN entrega a imagem
@@ -36,7 +36,8 @@ export function TeamLogo({ abbr, size = 28 }: Props) {
         className="team-logo team-mono"
         role="img"
         aria-label={name}
-        style={{ width: size, height: size, background: team?.color ?? '#555', fontSize: size * 0.9 }}
+        // Fonte proporcional ao número de letras: a sigla cabe no círculo (antes, 3 letras estouravam).
+        style={{ width: size, height: size, background: team?.color ?? '#555', fontSize: size * (abbr.length > 2 ? 0.34 : 0.42), overflow: 'hidden' }}
       >
         {abbr}
       </span>
@@ -81,5 +82,23 @@ export function TeamChip({ abbr, short = false, size = 22, link = true }: { abbr
     </Link>
   ) : (
     <span className="team-chip">{inner}</span>
+  );
+}
+
+/**
+ * Time que fez a escolha no draft (códigos do Pro Football Reference): logo da franquia atual e, quando
+ * a franquia tinha outro nome na época, ele aparece na dica e para leitores de tela
+ * (ex.: John Elway, 1983 → "Baltimore Colts, hoje Indianapolis Colts").
+ */
+export function DraftTeamLogo({ code, season, size = 20 }: { code: string; season: number; size?: number }) {
+  const { map } = useTeams();
+  const franchise = draftFranchise(code, season) ?? code;
+  const old = draftHistoricName(code, season);
+  const label = old ? `${old}, hoje ${map.get(franchise)?.name ?? franchise}` : (map.get(franchise)?.name ?? franchise);
+  return (
+    <span title={label} style={{ display: 'inline-flex' }}>
+      <TeamLogo abbr={franchise} size={size} />
+      {old && <span className="sr-only">{label}</span>}
+    </span>
   );
 }

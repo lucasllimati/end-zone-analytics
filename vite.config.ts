@@ -38,10 +38,12 @@ export default defineConfig({
     target: 'es2022',
     // Source maps só fora do build público: publicados, entregariam o código-fonte inteiro (o repositório é privado).
     sourcemap: process.env.VITE_PUBLIC_STATIC !== '1',
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        manualChunks: {
-          react: ['react', 'react-dom', 'react-router-dom'],
+        // React, react-dom (inclusive react-dom/client e scheduler) e o roteador num chunk próprio:
+        // muda pouco entre versões e fica no cache do navegador.
+        codeSplitting: {
+          groups: [{ name: 'react', test: /node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/ }],
         },
       },
     },

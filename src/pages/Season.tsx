@@ -12,7 +12,7 @@ import { ChartFrame, MiniTable } from '../components/charts/ChartFrame';
 import { BarList } from '../components/charts/BarList';
 import { api } from '../data/client';
 import { useAsync, useSeason } from '../data/hooks';
-import { useLiveScores } from '../data/live';
+import { useLiveScores, withLiveFinals } from '../data/live';
 import { computeStandings, fmtRecord, groupByDivision, isPlayed } from '../lib/standings';
 import { currentWeek, playoffBracket } from '../lib/games';
 import { POWER_WEIGHTS, powerRankings, strengthOfSchedule } from '../lib/models';
@@ -22,13 +22,15 @@ import { useApp, useModeSensitive } from '../context/AppContext';
 import type { Game, StandingRow } from '../lib/types';
 import { EfficiencyView, MarketView } from './season/SeasonInsights';
 import { TermsToggle, useTermsLang, type TermsLang } from '../components/TermsToggle';
+import { PlayoffSimulator } from './season/PlayoffSimulator';
 
-type Tab = 'standings' | 'schedule' | 'leaders' | 'playoffs' | 'power' | 'sos' | 'efficiency' | 'market';
+type Tab = 'standings' | 'schedule' | 'leaders' | 'playoffs' | 'simulator' | 'power' | 'sos' | 'efficiency' | 'market';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'standings', label: 'Classificação' },
   { id: 'schedule', label: 'Calendário' },
   { id: 'leaders', label: 'Líderes' },
   { id: 'playoffs', label: 'Playoffs' },
+  { id: 'simulator', label: 'Simulador' },
   { id: 'power', label: 'Power ranking' },
   { id: 'sos', label: 'Força de tabela' },
   { id: 'efficiency', label: 'Eficiência' },
@@ -39,10 +41,18 @@ const wlt = (r: [number, number, number]) => fmtRecord(r);
 
 export default function Season() {
   const [params, setParams] = useSearchParams();
-  const tab = (params.get('tab') as Tab) || 'standings';
   const { season, isCurrent } = useSeason();
-  const games = useAsync(() => (season ? api.seasonGames(season) : Promise.resolve([] as Game[])), [season]);
+  const loaded = useAsync(() => (season ? api.seasonGames(season) : Promise.resolve([] as Game[])), [season]);
+  const live = useLiveScores(isCurrent);
+  // Só o array muda quando um placar final chega: classificação e simulador não recalculam à toa.
+  const merged = useMemo(() => (loaded.data ? withLiveFinals(loaded.data, live) : loaded.data), [loaded.data, live]);
+  const games = { ...loaded, data: merged };
   const standings = useMemo(() => (games.data && season ? computeStandings(games.data, season) : []), [games.data, season]);
+  // Simulador só com temporada regular em andamento (sem aba que leva a uma tela vazia).
+  const canSimulate = Boolean(games.data?.some((g) => g.type === 'REG' && g.homeScore === null) && games.data?.some((g) => g.type === 'REG' && g.homeScore !== null));
+  const tabs = TABS.filter((t) => t.id !== 'simulator' || canSimulate);
+  const asked = (params.get('tab') as Tab) || 'standings';
+  const tab = tabs.some((t) => t.id === asked) || games.loading ? asked : 'standings';
 
   return (
     <div>
@@ -52,7 +62,7 @@ export default function Season() {
         title={`Temporada ${season ?? ''}`}
         lede="Tudo da temporada em um lugar. Troque o ano no seletor do topo para viajar no tempo (dados detalhados desde 1999)."
       />
-      <Tabs label="Seções da temporada" tabs={TABS} value={tab} onChange={(t) => setParams({ tab: t }, { replace: true })} />
+      <Tabs label="Seções da temporada" tabs={tabs} value={tab} onChange={(t) => setParams({ tab: t }, { replace: true })} />
       <TabPanel id={tab}>
         {games.loading ? (
           <Loading height={300} />
@@ -64,6 +74,7 @@ export default function Season() {
             {tab === 'schedule' && <ScheduleView games={games.data} season={season!} />}
             {tab === 'leaders' && <LeadersView season={season!} />}
             {tab === 'playoffs' && <PlayoffsView games={games.data} season={season!} standings={standings} />}
+            {tab === 'simulator' && canSimulate && <PlayoffSimulator games={games.data} season={season!} standings={standings} />}
             {tab === 'power' && <PowerView games={games.data} season={season!} standings={standings} />}
             {tab === 'sos' && <SosView games={games.data} season={season!} standings={standings} />}
             {tab === 'efficiency' && <EfficiencyView season={season!} standings={standings} />}
@@ -238,8 +249,9 @@ function ScheduleView({ games, season }: { games: Game[]; season: number }) {
       </div>
       {[...byDate.entries()].map(([d, gs]) => (
         <section key={d}>
-          <h3 className="small muted" style={{ textTransform: 'capitalize' }}>
-            {dateBR(d, { weekday: 'long', day: '2-digit', month: 'long' })}
+          {/* Só a primeira letra maiúscula ("Quinta-feira, 22 de outubro"), como se escreve em português. */}
+          <h3 className="small muted">
+            {((s) => s.charAt(0).toUpperCase() + s.slice(1))(dateBR(d, { weekday: 'long', day: '2-digit', month: 'long' }))}
           </h3>
           <div className="grid grid-3">
             {gs.map((g) => (

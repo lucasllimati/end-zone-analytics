@@ -13,6 +13,7 @@ import { derived, positionBucket, sumLines } from '../lib/stats';
 import { num } from '../lib/format';
 import { ACTIVE_TEAMS, franchiseOf } from '../lib/teams';
 import type { PlayerSeasonLine, TeamSeason } from '../lib/types';
+import { PAGE_META } from '../content/pageMeta';
 
 const PLAYER_METRICS = ['passYds', 'passTd', 'int', 'cmpPct', 'ypa', 'rating', 'epaPerDb', 'cpoe', 'rushYds', 'rushTd', 'ypc', 'rec', 'tgt', 'recYds', 'recTd', 'ypr', 'yac', 'scrimYds', 'totalTd', 'tackles', 'sacks', 'tfl', 'qbHits', 'defInt', 'pd', 'ff', 'fgm', 'fgPct', 'fg50', 'gwfgm', 'puntNet', 'ptIn20', 'prYds', 'krYds', 'stTd', 'tgtShare', 'airShare', 'wopr', 'pass20', 'rush20', 'rec20', 'passFd', 'rushFd', 'recFd', 'fpts', 'fptsPpr'];
 const TEAM_METRICS = ['w', 'pf', 'pa', 'diff', 'ppg', 'papg', 'passYds', 'rushYds', 'epaPlay', 'sacks', 'giveaways'];
@@ -113,7 +114,7 @@ export default function Explorer() {
 
   return (
     <div className="stack">
-      <Seo title="Explorador de dados" description="Monte seus próprios rankings da NFL: escolha temporadas, posição, time e métrica e exporte o resultado." />
+      <Seo {...PAGE_META['/explorer']} />
       <PageHeader eyebrow="Analytics" title="Explorador de dados" lede="Escolha o conjunto de dados, o período, filtros e a métrica. O ranking, a tabela e o gráfico são gerados na hora — e o link da página guarda sua análise para compartilhar." />
       <div className="chips" aria-label="Exemplos">
         {EXAMPLES.map((e) => (

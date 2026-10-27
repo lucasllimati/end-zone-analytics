@@ -11,6 +11,7 @@ import { PLAYS } from '../content/playbook';
 import { STRATEGY } from '../content/strategy';
 import { BASICS, ADVANCED } from '../content/rules';
 import { TeamLogo } from './TeamLogo';
+import { norm, score } from '../lib/search';
 import type { PlayerIndexEntry, SuperBowl } from '../lib/types';
 
 interface Item {
@@ -21,28 +22,29 @@ interface Item {
   hay: string;
   team?: string;
   weight?: number;
+  /** Título alternativo também pontuado (jogadores: sobrenome primeiro, para "allen" achar Josh Allen). */
+  alt?: string;
 }
 
-export const norm = (s: string) =>
-  s
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase();
-
-/** Pontuação de relevância: prefixo > início de palavra > contém; todos os termos precisam aparecer. */
-export function score(item: { title: string; hay: string; weight?: number }, q: string): number {
-  const terms = norm(q).split(/\s+/).filter(Boolean);
-  const title = norm(item.title);
-  let s = 0;
-  for (const t of terms) {
-    if (title.startsWith(t)) s += 30;
-    else if (title.includes(` ${t}`)) s += 20;
-    else if (title.includes(t)) s += 12;
-    else if (item.hay.includes(t)) s += 4;
-    else return 0;
-  }
-  return s + (item.weight ?? 0);
-}
+/** Como um brasileiro procuraria o termo (a busca também acha pelo nome em inglês). */
+const SYNONYMS: Record<string, string> = {
+  down: 'descida tentativa',
+  'first-down': 'primeira descida primeiro down',
+  touchdown: 'gol ponto anotação',
+  'field-goal': 'chute gol de campo',
+  'extra-point': 'ponto extra chute',
+  interception: 'roubo de bola',
+  fumble: 'bola solta perda',
+  sack: 'derrubada do quarterback',
+  turnover: 'perda de posse',
+  punt: 'chute de devolução',
+  kickoff: 'chute inicial pontapé',
+  coverage: 'marcação individual zona',
+  offside: 'impedimento',
+  'false-start': 'saída falsa',
+  blitz: 'pressão',
+  clock: 'tempo cronômetro',
+};
 
 export function SearchPalette() {
   const { searchOpen, setSearchOpen } = useApp();
@@ -51,6 +53,7 @@ export function SearchPalette() {
   const [sel, setSel] = useState(0);
   const [players, setPlayers] = useState<PlayerIndexEntry[]>([]);
   const [sbs, setSbs] = useState<SuperBowl[]>([]);
+  const [awarded, setAwarded] = useState<Set<string>>(new Set());
   const input = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
@@ -61,6 +64,7 @@ export function SearchPalette() {
     setTimeout(() => input.current?.focus(), 0);
     api.playerIndex().then(setPlayers).catch(() => {});
     api.superBowls().then(setSbs).catch(() => {});
+    api.awards().then((a) => setAwarded(new Set(a.winners.map((w) => w.playerId).filter((x): x is string => Boolean(x))))).catch(() => {});
   }, [searchOpen]);
 
   const staticItems = useMemo<Item[]>(() => {
@@ -68,7 +72,7 @@ export function SearchPalette() {
     for (const g of NAV) for (const it of g.items) out.push({ id: `p-${it.to}`, title: it.label, kind: 'Página', to: it.to, hay: norm(`${it.desc} ${g.label}`), weight: 3 });
     for (const t of teams.filter((x) => x.active))
       out.push({ id: `t-${t.abbr}`, title: t.name, kind: 'Time', to: `/teams/${t.abbr.toLowerCase()}`, hay: norm(`${t.abbr} ${t.nick} ${t.division}`), team: t.abbr, weight: 5 });
-    for (const g of GLOSSARY) out.push({ id: `g-${g.id}`, title: g.term, kind: 'Glossário', to: `/glossary#${g.id}`, hay: norm(g.simple) });
+    for (const g of GLOSSARY) out.push({ id: `g-${g.id}`, title: g.term, kind: 'Glossário', to: `/glossary#${g.id}`, hay: norm(`${SYNONYMS[g.id] ?? ''} ${g.simple}`), weight: 2 });
     for (const p of PENALTIES) out.push({ id: `pen-${p.id}`, title: `${p.name} (${p.pt})`, kind: 'Falta', to: `/rules#falta-${p.id}`, hay: norm(p.simple) });
     for (const p of POSITIONS) out.push({ id: `pos-${p.id}`, title: `${p.abbr} — ${p.name}`, kind: 'Posição', to: `/positions?pos=${p.id}`, hay: norm(`${p.pt} ${p.simple}`) });
     for (const p of PLAYS) out.push({ id: `play-${p.id}`, title: p.name, kind: 'Playbook', to: `/playbook?play=${p.id}`, hay: norm(`${p.category} ${p.simple}`) });
@@ -87,23 +91,29 @@ export function SearchPalette() {
       hay: norm(`${s.winnerName} ${s.loserName} ${s.mvp} ${s.stadium} ${s.city} super bowl ${s.number}`),
       team: s.winner,
     }));
-    const pool = [...staticItems, ...sbItems];
-    const ranked = pool
-      .map((i) => ({ i, s: score(i, q) }))
+    // Jogadores entram na mesma ordenação (antes ficavam sempre no topo: "EPA" abria um jogador).
+    // Peso: em atividade e carreira longa sobem — "allen" traz Josh Allen antes de nomes menos conhecidos.
+    const newest = players.reduce((m, p) => Math.max(m, p.last ?? 0), 0);
+    const ps: Item[] =
+      q.trim().length >= 2
+        ? players.map((p) => ({
+            id: `pl-${p.id}`,
+            title: p.name,
+            kind: `Jogador · ${p.pos} · ${p.first}–${p.last}`,
+            to: `/players/${p.id}`,
+            hay: '',
+            team: p.team ?? undefined,
+            alt: p.name.split(' ').reverse().join(' '),
+            weight: ((p.last ?? 0) >= newest - 1 ? 6 : 0) + Math.min(8, (p.last ?? 0) - (p.first ?? 0)) + (awarded.has(p.id) ? 10 : 0),
+          }))
+        : [];
+    return [...staticItems, ...sbItems, ...ps]
+      .map((i) => ({ i, s: Math.max(score(i, q), i.alt ? score({ ...i, title: i.alt }, q) : 0) }))
       .filter((r) => r.s > 0)
       .sort((a, b) => b.s - a.s)
-      .slice(0, 12)
+      .slice(0, 16)
       .map((r) => r.i);
-    if (q.trim().length >= 2) {
-      const nq = norm(q.trim());
-      const ps = players
-        .filter((p) => norm(p.name).includes(nq))
-        .slice(0, 8)
-        .map<Item>((p) => ({ id: `pl-${p.id}`, title: p.name, kind: `Jogador · ${p.pos} · ${p.first}–${p.last}`, to: `/players/${p.id}`, hay: '', team: p.team ?? undefined }));
-      return [...ps.slice(0, 6), ...ranked].slice(0, 16);
-    }
-    return ranked;
-  }, [q, staticItems, players, sbs]);
+  }, [q, staticItems, players, sbs, awarded]);
 
   useEffect(() => setSel(0), [q]);
 

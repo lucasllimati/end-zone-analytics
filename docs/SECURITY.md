@@ -17,6 +17,16 @@
 | Dependências | Poucas e conhecidas; rode `npm audit` periodicamente |
 | Dados externos | Downloads com timeout, retry e escrita atômica; falha de rede mantém o cache anterior |
 
+### Novidades da versão 1.4
+
+| Superfície | Proteção |
+|---|---|
+| `POST /api/report` (erros do navegador) | Validação estrita (`server/services/clientReport.ts`: só campos conhecidos, tamanhos máximos, caracteres de controle removidos contra injeção em log, query string descartada), corpo de até 4 KB e 10 por minuto por IP; no Worker, só `Content-Type: application/json` e `Origin` do próprio site. Sem dados pessoais |
+| `GET /api/news/:abbr` | Lista fechada das 32 siglas (sem proxy para buscas arbitrárias), cache de 15 min na borda, links só para `https://www.espn.com/`, abertos com `rel="noopener noreferrer"` |
+| Service worker | Mesma origem; nunca guarda `/api/*`; caches com limite de tamanho e versão |
+| Analytics | O script de terceiro só entra na CSP quando `CF_ANALYTICS_TOKEN` existe |
+| Fontes externas no pipeline | Wikipedia com User-Agent identificado, pausa entre consultas e respeito ao `Retry-After`; prêmios só são publicados se conferirem com fatos conhecidos |
+
 ## Reportar vulnerabilidades
 
 Não abra issue pública. Envie os detalhes ao mantenedor do projeto por canal privado, com passos para reproduzir. Resposta em até 7 dias.

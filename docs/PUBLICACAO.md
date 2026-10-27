@@ -195,7 +195,9 @@ curl -s -o /dev/null -w "%{http_code} %{content_type}\n" https://end-zone-analyt
 O endereço `*.workers.dev` é grátis e definitivo. Com um domínio próprio, que é um custo à parte:
 1. Adicione o domínio na Cloudflare.
 2. Vá em **Worker → Settings → Domains & Routes → Add → Custom domain**.
-3. Atualize a variável `SITE_URL`.
+3. Atualize a variável `SITE_URL` (GitHub → Settings → Secrets and variables → Actions → **Variables**) para o novo endereço, sem barra no fim. O próximo deploy refaz canonical, OpenGraph e `sitemap.xml`.
+4. Opcional, recomendado antes de anúncios: em **Cloudflare → Web Analytics → Add a site**, copie o token e crie a variável `CF_ANALYTICS_TOKEN`. A medição não usa cookies e já está descrita em `/privacy`.
+5. Envie `https://<domínio>/sitemap.xml` no Google Search Console.
 
 O certificado HTTPS é automático.
 

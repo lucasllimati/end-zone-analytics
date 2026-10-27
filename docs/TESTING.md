@@ -9,7 +9,46 @@ npm run test:e2e    # E2E, UX e acessibilidade (Playwright + axe) — desktop e 
 node scripts/screenshots.mjs   # capturas de tela + detector de rolagem horizontal
 ```
 
-## Última execução (16/10/2026, dados até a semana 6 de 2026)
+## Última execução (27/10/2026, versão 1.4, dados até a semana 7 de 2026)
+
+| Suíte | Resultado |
+|---|---|
+| TypeScript (app + servidor + Worker), modo estrito | ✅ sem erros |
+| Vitest: 14 arquivos (unitários, componentes, conteúdo, novidades, API/admin, segurança, agendador, pipeline, dados publicados) | ✅ 169/169 |
+| Desempates oficiais × história (`tests/data/playoffs.test.ts`) | ✅ 24/24 temporadas (2002–2025): mesmos classificados e mesmas folgas dos playoffs reais |
+| Playwright contra o build publicado (`build:static` + `wrangler dev`, `E2E_STATIC=1`): fluxos, axe WCAG 2.1 AA, layout (`layout.spec.ts`), visual (`visual.spec.ts`), Meu time, simulador, fantasy, prêmios, recortes, SEO por rota, PWA, relato de erro | ✅ 194 passaram · 8 ignorados por design (admin não existe no site estático; atalho de teclado e seletor de temporada no celular) |
+| Teste de usabilidade por agente de QA (34 URLs × desktop/celular, ~22 fluxos, 25 buscas, 79 links, axe em 10 páginas nos dois temas) | ✅ 0 erros de JS/console, 0 links quebrados, 0 rolagem lateral; 12 bugs e 10 pontos de UX encontrados (tabela abaixo) |
+| cspell pt-BR + en: 149 arquivos | ✅ 0 ocorrências |
+| Qualidade de dados (pipeline) | ✅ 25 ok · 0 alertas · 0 falhas |
+| Bundle inicial | ✅ ≈ 97 KB gzip de JS (antes 125 KB) |
+
+### Teste de usabilidade (27/10/2026): achados e correções
+
+| Achado | Gravidade | Correção |
+|---|---|---|
+| Hall of Fame/Draft: Elway (1983) como Ravens e Bruce Matthews como Texans | Alta | `DraftTeamLogo`: franquia correta pelo ano (Baltimore Colts → IND, Houston Oilers → TEN) com o nome histórico na dica |
+| Códigos do PFR (KAN, NOR, LVR…) estourando o logo | Média | Todos os códigos mapeados para a franquia (verificado: 0 sem mapa); monograma com fonte proporcional |
+| Game Center antes do jogo: 2/3 da tela vazios, rótulos em inglês, "1,504", "a_turf", nota de drives | Média | Layout em grade larga sem coluna principal; médias da temporada traduzidas; números em pt-BR; nome do gramado; nota só com drives |
+| Ano escolhido se perdia no F5 e não ia na URL | Média | `?season=` sincronizado com o seletor (sobrevive a links internos, recarregar e compartilhar) |
+| "Trocar time" apagava o favorito | Média | Seletor já no time atual, com Cancelar e "Deixar de seguir" |
+| Fantasy › Confrontos com "Todas" mostrava só WR | Média | Todas as posições, com a coluna Pos. |
+| Aviso de pontuação falhava em silêncio com notificação bloqueada | Média | Mensagem explicando como liberar |
+| Jogo encerrado no ao vivo ainda pendente na classificação e no simulador | Média | Placar final do ao vivo aplicado até o nflverse atualizar (`withLiveFinals`) |
+| "sequência W2" em português | Baixa | V/D/E conforme o idioma dos termos |
+| Esc no menu do cabeçalho mandava o foco para o `<body>` | Baixa | Foco volta ao botão do menu |
+| Verde "bom" no tema claro com contraste 4,39:1 | Baixa | `#1e7a34` (5,4:1 no branco; 4,8:1 no fundo suave) |
+| Tabelas no celular escondiam as colunas importantes | Alta (UX) | Coluna do nome fixa e degradê indicando mais colunas; no simulador, a chance vem logo após o time |
+| Aba ativa fora da tela no celular | Média (UX) | A faixa de abas centraliza a aba ativa |
+| Cabeçalho "pulava" quando o seletor Iniciante/Expert sumia | Média (UX) | Espaço reservado (continua invisível onde não muda nada, como pedido) |
+| Busca: "EPA" abria um jogador; "allen" trazia Josh Allen em 6º; termos em português não achavam | Média (UX) | Jogadores na mesma ordenação (sobrenome, atividade, prêmios); sinônimos em português no glossário |
+| "Divisões e recordes" confundia com divisão da NFL | Média (UX) | "Recortes e recordes", com aviso de que casa/fora incluem playoffs |
+| "E se?" com pouco retorno | Média (UX) | Time escolhido em destaque e variação em pontos percentuais na coluna Playoffs |
+| "Retorno do ano", datas com maiúsculas erradas, "venceu 1 seguido", "0 Super Bowls", dica de teclado no celular | Baixa (UX) | "Volta por cima do ano (Comeback)", "Quinta-feira, 22 de outubro", "venceu o último", selo só com títulos, dica escondida em telas de toque |
+| Alvos de toque menores que 40 px | Baixa (UX) | Área mínima de ~40 px em telas de toque (o ⓘ mantém o desenho e ganha área em volta) |
+
+Ficaram para depois (baixa prioridade): marcar a temporada em andamento como parcial nos gráficos de carreira; CSV no padrão do Excel brasileiro (`;` e vírgula decimal); PF/PA/DIFF e Casa/Fora no seletor PT/EN; nomes completos no seletor de times do comparador de temporadas.
+
+## Execução anterior (16/10/2026, dados até a semana 6 de 2026)
 
 | Suíte | Resultado |
 |---|---|
