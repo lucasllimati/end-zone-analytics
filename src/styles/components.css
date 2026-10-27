@@ -1786,6 +1786,26 @@ table.data th.num .sort-btn {
 table.data.fixed {
   table-layout: fixed;
 }
+/* Cabeçalho que não cabe na coluna (fonte mais larga, como a do Linux) quebra em duas linhas em vez de
+   vazar: continua alinhado à borda dos números e não cria rolagem lateral. Vale para todas as tabelas;
+   nas de largura automática, o navegador só quebra quando a tabela não cabe inteira. */
+table.data thead th {
+  white-space: normal;
+  vertical-align: bottom;
+  line-height: 1.25;
+}
+table.data th .th-inner {
+  max-width: 100%;
+}
+table.data th .sort-btn {
+  min-width: 0;
+  text-align: inherit;
+  white-space: normal;
+}
+/* Colunas de texto que podem quebrar linha (nomes longos), para a tabela caber sem rolagem. */
+table.data td.wrap {
+  white-space: normal;
+}
 table.data.fixed td {
   overflow: clip;
   overflow-clip-margin: 4px; /* mantém visível o anel de foco dos links dentro da célula */

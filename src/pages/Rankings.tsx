@@ -43,8 +43,8 @@ export default function Rankings() {
               pageSize={25}
               exportName="ranking-qbs"
               columns={[
-                { key: 'name', label: 'QB', render: (r) => <Link to={`/players/${r.id}`}><strong>{r.name}</strong></Link>, value: (r) => r.name, sortable: false },
-                { key: 'span', label: 'Anos', render: (r) => `${r.first}–${r.last}`, sortable: false },
+                { key: 'name', label: 'QB', className: 'wrap', render: (r) => <Link to={`/players/${r.id}`}><strong>{r.name}</strong></Link>, value: (r) => r.name, sortable: false },
+                { key: 'span', label: 'Anos', className: 'wrap', render: (r) => `${r.first}–${r.last}`, sortable: false },
                 { key: 'score', label: 'Score', num: true, help: 'Média ponderada dos percentis dos componentes (0–100).', render: (r) => <strong>{num(r.score, 1)}</strong>, value: (r) => r.score },
                 { key: 'sb', label: 'SB', num: true, help: 'Super Bowls vencidos como QB titular (participações entre parênteses).', render: (r) => `${r.sbWins} (${r.sbApps})`, value: (r) => r.sbWins },
                 { key: 'po', label: 'Playoffs', num: true, help: 'Vitórias-derrotas em playoffs como titular.', render: (r) => `${r.playoffW}-${r.playoffL}`, value: (r) => r.playoffW },

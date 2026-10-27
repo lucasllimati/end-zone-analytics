@@ -46,6 +46,8 @@ node scripts/screenshots.mjs   # capturas de tela + detector de rolagem horizont
 | "Retorno do ano", datas com maiúsculas erradas, "venceu 1 seguido", "0 Super Bowls", dica de teclado no celular | Baixa (UX) | "Volta por cima do ano (Comeback)", "Quinta-feira, 22 de outubro", "venceu o último", selo só com títulos, dica escondida em telas de toque |
 | Alvos de toque menores que 40 px | Baixa (UX) | Área mínima de ~40 px em telas de toque (o ⓘ mantém o desenho e ganha área em volta) |
 
+**CI no Linux (28/10/2026):** o teste de layout passava no Windows e falhava no GitHub (Ubuntu), porque lá `system-ui` vira a DejaVu Sans, mais larga: rótulos com ⓘ vazavam das colunas de Estádios, Fantasy e Recortes, e as tabelas de Eficiência e do Ranking de QBs ganhavam rolagem lateral. Correções: Arial antes de `system-ui` na pilha de fontes, cabeçalhos de tabela que quebram linha e colunas de nome com quebra. Reproduzido e verificado localmente forçando Arial (mesmas medidas da Liberation Sans do runner): 31 rotas × desktop/celular sem achados.
+
 Ficaram para depois (baixa prioridade): marcar a temporada em andamento como parcial nos gráficos de carreira; CSV no padrão do Excel brasileiro (`;` e vírgula decimal); PF/PA/DIFF e Casa/Fora no seletor PT/EN; nomes completos no seletor de times do comparador de temporadas.
 
 ## Execução anterior (16/10/2026, dados até a semana 6 de 2026)

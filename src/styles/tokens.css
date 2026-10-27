@@ -10,8 +10,11 @@
   color-scheme: dark;
 
   /* Tipografia */
-  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable Text', 'Segoe UI', system-ui, Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI Variable Display', 'Segoe UI', system-ui, Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* Arial antes de system-ui: no Linux, system-ui costuma ser a DejaVu Sans, bem mais larga que o
+     design previsto; Arial (ou a Liberation Sans, com as mesmas medidas) mantém tabelas e rótulos cabendo.
+     Mac, Windows e Android continuam com a fonte do sistema (vêm antes na lista). */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI Variable Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, system-ui, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace;
 
   /* Superfícies (sistema escuro) */

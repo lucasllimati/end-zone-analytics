@@ -76,12 +76,12 @@ export function PlayoffSimulator({ games, season, standings }: { games: Game[]; 
   const picks = Object.keys(forced).length;
 
   const cols: Column<SimOdds>[] = [
-    { key: 'team', label: 'Time', render: (r) => <TeamChip abbr={r.team} short size={20} />, value: (r) => r.team },
+    { key: 'team', label: 'Time', width: '8rem', render: (r) => <TeamChip abbr={r.team} short size={20} />, value: (r) => r.team },
     {
       key: 'playoffs',
       label: 'Playoffs',
       num: true,
-      width: '8rem',
+      width: '7rem',
       help: 'Chance de terminar entre os classificados da conferência. Com escolhas no “E se?”, mostra também a mudança em pontos percentuais.',
       render: (r) => {
         const delta = picks && baseline?.has(r.team) ? Math.round((r.playoffs - baseline.get(r.team)!) * 100) : 0;
@@ -94,9 +94,9 @@ export function PlayoffSimulator({ games, season, standings }: { games: Game[]; 
       },
       value: (r) => r.playoffs,
     },
-    { key: 'division', label: 'Divisão', num: true, width: '6rem', help: 'Chance de vencer a divisão (seeds 1 a 4).', render: (r) => pct(r.division), value: (r) => r.division },
-    { key: 'bye', label: 'Folga', num: true, width: '5.5rem', help: wildcards === 3 ? 'Chance de ser o seed 1: folga na 1ª rodada e mando de campo até a final da conferência.' : 'Chance de ser seed 1 ou 2 (folga na 1ª rodada).', render: (r) => pct(r.bye), value: (r) => r.bye },
-    { key: 'rec', label: 'Campanha', width: '6.5rem', render: (r) => (rec(r.team) ? fmtRecord(rec(r.team)!) : '—'), value: (r) => rec(r.team)?.pct ?? 0 },
+    { key: 'division', label: 'Divisão', num: true, width: '5.5rem', help: 'Chance de vencer a divisão (seeds 1 a 4).', render: (r) => pct(r.division), value: (r) => r.division },
+    { key: 'bye', label: 'Folga', num: true, width: '5rem', help: wildcards === 3 ? 'Chance de ser o seed 1: folga na 1ª rodada e mando de campo até a final da conferência.' : 'Chance de ser seed 1 ou 2 (folga na 1ª rodada).', render: (r) => pct(r.bye), value: (r) => r.bye },
+    { key: 'rec', label: 'Campanha', width: '6rem', render: (r) => (rec(r.team) ? fmtRecord(rec(r.team)!) : '—'), value: (r) => rec(r.team)?.pct ?? 0 },
   ];
 
   return (
