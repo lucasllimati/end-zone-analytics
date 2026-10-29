@@ -62,7 +62,8 @@ export async function teamWiki(teams: Team[], log: (m: string) => void): Promise
       for (const t of teams.filter((x) => x.active)) {
         const j = await getJson(`https://pt.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(t.name.replace(/ /g, '_'))}`);
         if (j.type !== 'standard' || !j.extract) continue;
-        out[t.abbr] = { title: j.title, extract: j.extract, url: j.content_urls?.desktop?.page ?? `https://pt.wikipedia.org/wiki/${encodeURIComponent(j.title)}`, revisedAt: j.timestamp ?? null };
+        // Resumo longo demais é cortado na última frase completa (o texto vem de uma fonte editável).
+        out[t.abbr] = { title: j.title, extract: String(j.extract).length > 1500 ? `${String(j.extract).slice(0, 1500).replace(/[^.!?]*$/, '')}` : j.extract, url: j.content_urls?.desktop?.page ?? `https://pt.wikipedia.org/wiki/${encodeURIComponent(j.title)}`, revisedAt: j.timestamp ?? null };
       }
       if (Object.keys(out).length < 30) throw new Error(`só ${Object.keys(out).length} resumos encontrados`);
       return out;
@@ -99,7 +100,7 @@ export async function awards(lines: PlayerSeasonLine[], log: (m: string) => void
   const ids = new Map<string, string>();
   const short = new Map<string, string | null>();
   const initialLast = (n: string) => {
-    const parts = n.replace(/(Jr|Sr|II|III|IV)\.?/g, '').trim().split(/\s+/);
+    const parts = n.replace(/\b(Jr|Sr|II|III|IV)\b\.?/g, '').trim().split(/\s+/);
     return `${normName(parts[0]).slice(0, 1)}${normName(parts.slice(1).join(''))}`;
   };
   for (const l of lines) {

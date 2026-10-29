@@ -16,6 +16,7 @@ import { headToHead } from '../lib/games';
 import { dateBR, num, surfaceLabel, weekdayPt } from '../lib/format';
 import { BoxScore, MarketCard, RefereeCard, RestRows } from './game/GameSections';
 import { LeadersByTeam, StatsCompare, TeamForm } from './game/GamePreview';
+import { gameMeta } from '../content/pageMeta';
 import { TermText, TermsToggle, useTermsLang } from '../components/TermsToggle';
 import { leaderTerm, scoreTypeTerm, translateGameDetail, translateLeaderValue, translateScoringText } from '../content/espnTerms';
 
@@ -118,7 +119,7 @@ export default function GamePage() {
 
   return (
     <div className="stack">
-      <Seo title={`${g.away} × ${g.home} (${g.season})`} description={`Game Center: ${g.away} × ${g.home}, ${GAME_TYPE_LABEL[g.type]} de ${g.season}. Placar por quarto, drives, jogadas de pontuação e estatísticas.`} />
+      <Seo {...gameMeta(g, nick)} />
       <div className="breadcrumb">
         <Link to={`/season?tab=schedule`}>Calendário</Link> / Game Center
       </div>

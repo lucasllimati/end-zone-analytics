@@ -11,6 +11,7 @@ const PAGES = `eza-pages-${VERSION}`;
 const ASSETS = `eza-assets-${VERSION}`;
 const DATA = `eza-data-${VERSION}`;
 const MAX_DATA = 150;
+const MAX_ASSETS = 120;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -67,7 +68,8 @@ self.addEventListener('fetch', (event) => {
   if (req.mode === 'navigate') {
     event.respondWith(networkFirst(req, PAGES, '/').finally(() => trim(PAGES, 40)));
   } else if (url.pathname.startsWith('/assets/')) {
-    event.respondWith(cacheFirst(req));
+    // Arquivos antigos (de versões anteriores do site) saem pelo limite: o cache não cresce sem fim.
+    event.respondWith(cacheFirst(req).finally(() => trim(ASSETS, MAX_ASSETS)));
   } else if (url.pathname.startsWith('/data/')) {
     event.respondWith(networkFirst(req, DATA).finally(() => trim(DATA, MAX_DATA)));
   }

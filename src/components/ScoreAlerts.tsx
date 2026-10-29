@@ -4,7 +4,7 @@
  */
 import { useEffect, useRef } from 'react';
 import { useFavoriteTeam, useScoreAlerts } from '../data/favorite';
-import { useLiveScores } from '../data/live';
+import { useLiveScores, watchTeamInBackground } from '../data/live';
 import { useTeams } from '../data/hooks';
 
 async function notify(title: string, body: string, tag: string) {
@@ -25,6 +25,12 @@ export function ScoreAlerts() {
   const live = useLiveScores(Boolean(on && team));
   const { map } = useTeams();
   const seen = useRef(new Map<string, number>());
+
+  // Com o aviso ligado, o placar segue atualizando em segundo plano durante o jogo do time favorito.
+  useEffect(() => {
+    watchTeamInBackground(on && team ? team : null);
+    return () => watchTeamInBackground(null);
+  }, [on, team]);
 
   useEffect(() => {
     if (!on || !team) return;

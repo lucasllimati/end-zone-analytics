@@ -65,7 +65,12 @@ export function MyTeam({ games, standings, live, season }: { games: Game[]; stan
   const lastGame = [...mine].reverse().find((g) => g.homeScore !== null);
   const row = standings.find((s) => s.team === fav);
   const divRank = row ? standings.filter((s) => s.division === row.division).findIndex((s) => s.team === fav) + 1 : null;
-  const out = (inj.data ?? []).filter((i) => i.team === fav && i.status === 'Out').length;
+  const report = (inj.data ?? []).filter((i) => i.team === fav);
+  const out = report.filter((i) => i.status === 'Out').length;
+  // O relatório só vale para o próximo jogo se for da mesma semana (em semana de folga, é o da anterior).
+  const reportWeek = report[0]?.week ?? null;
+  const injuryText =
+    reportWeek === null ? 'Ninguém no relatório desta semana' : next && next.week === reportWeek ? (out ? `${out} fora do próximo jogo` : 'Ninguém fora do próximo jogo') : `Relatório da semana ${reportWeek}: ${out} fora`;
 
   return (
     <section className="card my-team" aria-labelledby="h-meu-time" style={{ ['--team-color' as string]: team?.color }}>
@@ -126,7 +131,7 @@ export function MyTeam({ games, standings, live, season }: { games: Game[]; stan
               <>
                 <dt>Lesões</dt>
                 <dd>
-                  <Link to={`/teams/${fav.toLowerCase()}`}>{out ? `${out} fora do próximo jogo` : 'Ninguém fora no relatório'}</Link>
+                  <Link to={`/teams/${fav.toLowerCase()}`}>{injuryText}</Link>
                 </dd>
               </>
             )}

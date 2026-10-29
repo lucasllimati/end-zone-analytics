@@ -9,7 +9,7 @@ import { LineChart } from '../components/charts/LineChart';
 import { RadarChart } from '../components/charts/RadarChart';
 import { primaryStat, statColumns } from '../components/playerColumns';
 import { api } from '../data/client';
-import { useAsync } from '../data/hooks';
+import { useAsync, useSeason } from '../data/hooks';
 import { useApp } from '../context/AppContext';
 import { age, height, num, percent, signed, weight } from '../lib/format';
 import { derived, percentile, positionBucket, sumLines } from '../lib/stats';
@@ -96,6 +96,9 @@ export default function PlayerPage() {
   const st = hasPost ? phase : 'REG';
   const lines = useMemo(() => (c?.lines ?? []).filter((l) => l.st === st).sort((a, b) => a.season - b.season), [c, st]);
   const reg = useMemo(() => (c?.lines ?? []).filter((l) => l.st === 'REG'), [c]);
+  // Temporada em andamento no fim do gráfico: o total é parcial (não é uma queda de rendimento).
+  const { current } = useSeason();
+  const ongoing = reg.at(-1)?.season === current ? reg.at(-1) : null;
   const pos = reg.at(-1)?.pos ?? c?.bio.pos ?? '—';
   const statOpts = primaryStat(pos);
   const [statKey, setStatKey] = useState<string | null>(null);
@@ -252,7 +255,7 @@ export default function PlayerPage() {
         <section className="card">
           <ChartFrame
             title={`${stat.label} por temporada`}
-            subtitle="Temporada regular"
+            subtitle={ongoing ? `Temporada regular · ${ongoing.season} ainda em andamento (${ongoing.games} jogos): total parcial` : 'Temporada regular'}
             info={{ simple: `Evolução de ${stat.label.toLowerCase()} a cada temporada. Picos mostram o auge da carreira.`, expert: metric(stat.key).expert }}
             svgRef={chartRef}
             rows={() => reg.map((l) => ({ temporada: l.season, time: l.team, [stat.key]: l[stat.key] }))}

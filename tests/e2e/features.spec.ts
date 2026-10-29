@@ -106,7 +106,9 @@ test.describe('correções do teste de usabilidade', () => {
     await page.goto('/season');
     await page.getByLabel('Temporada', { exact: true }).selectOption('2019');
     await expect(page).toHaveURL(/season=2019/);
-    await page.goto('/teams?season=2019');
+    // Link interno (sem ?season=): a temporada continua e volta para a URL.
+    await page.locator('footer').getByRole('link', { name: 'Times', exact: true }).click();
+    await expect(page).toHaveURL(/\/teams\?season=2019/);
     await page.reload();
     await expect(page.getByLabel('Temporada', { exact: true })).toHaveValue('2019');
   });

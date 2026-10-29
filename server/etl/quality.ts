@@ -150,8 +150,11 @@ export function runQuality(q: QualityInput): QualityCheck[] {
   if (q.wiki !== undefined) out.push(check('wiki-teams', 'wikipedia', 'Resumo da Wikipedia para as 32 franquias', !q.wiki ? ['fonte indisponível'] : q.teams.filter((t) => t.active && !q.wiki![t.abbr]).map((t) => t.abbr), true));
   if (q.fantasy) {
     const cur = q.fantasy.find((f) => f.season === q.currentSeason);
-    const bad = q.fantasy.flatMap((f) => f.players.filter((p) => p.weeks.length !== f.weeks || p.avg > 60).map((p) => `${f.season} ${p.name}`));
-    out.push(check('fantasy-sane', 'fantasy', 'Fantasy: semanas completas e médias plausíveis (até 60 pontos por jogo)', bad));
+    // O total precisa bater com a soma das semanas (arredondamento de 0,1 por semana) e a média ser plausível.
+    const bad = q.fantasy.flatMap((f) =>
+      f.players.filter((p) => Math.abs(p.weeks.reduce<number>((s, w) => s + (w ?? 0), 0) - p.total) > 0.1 * p.games + 0.05 || p.avg > 60).map((p) => `${f.season} ${p.name}`),
+    );
+    out.push(check('fantasy-sane', 'fantasy', 'Fantasy: total igual à soma das semanas e médias plausíveis (até 60 pontos por jogo)', bad));
     out.push(check('fantasy-defense', 'fantasy', 'Fantasy: ranking de defesas cobre os 32 times por posição', cur && cur.defense.filter((d) => d.pos === 'QB').length !== 32 ? [`${cur.defense.filter((d) => d.pos === 'QB').length} times`] : []));
   }
   if (q.injuries) {

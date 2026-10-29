@@ -453,6 +453,8 @@ const SEASON_PRESETS = [
 ];
 
 function CompareSeasons() {
+  const { map: teamMap } = useTeams();
+  const teamName = (t: string) => teamMap.get(t)?.name ?? t;
   const ts = useAsync(() => api.teamSeasons(), []);
   const [picks, setPicks] = useState(SEASON_PRESETS.slice(0, 4));
   const [team, setTeam] = useState('PHI');
@@ -483,8 +485,11 @@ function CompareSeasons() {
         <label className="field">
           Time
           <select className="select" value={team} onChange={(e) => setTeam(e.target.value)}>
-            {ACTIVE_TEAMS.map((t) => (
-              <option key={t}>{t}</option>
+            {/* Nome completo em ordem alfabética (antes só a sigla, difícil para quem está começando). */}
+            {[...ACTIVE_TEAMS].sort((x, y) => (teamName(x)).localeCompare(teamName(y))).map((t) => (
+              <option key={t} value={t}>
+                {teamName(t)}
+              </option>
             ))}
           </select>
         </label>

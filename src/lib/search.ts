@@ -6,9 +6,10 @@ export const norm = (s: string) =>
     .toLowerCase();
 
 /** Pontuação de relevância: prefixo > início de palavra > contém; todos os termos precisam aparecer. */
-export function score(item: { title: string; hay: string; weight?: number }, q: string): number {
+/** `normTitle`: título já normalizado (listas grandes, como a de jogadores, calculam uma vez só). */
+export function score(item: { title: string; hay: string; weight?: number; normTitle?: string }, q: string): number {
   const terms = norm(q).split(/\s+/).filter(Boolean);
-  const title = norm(item.title);
+  const title = item.normTitle ?? norm(item.title);
   let s = 0;
   for (const t of terms) {
     if (title.startsWith(t)) s += 30;

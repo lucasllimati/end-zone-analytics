@@ -65,7 +65,12 @@ function teams(row: string): string[] {
 }
 
 /** Vencedores de uma tabela "Temporada | Vencedor | …" (tabelas sem coluna de temporada são ignoradas). */
+/** Página e linha acima disso não são lidas: limita o custo das regexes com texto vandalizado. */
+export const MAX_WIKITEXT = 600_000;
+const MAX_ROW = 5_000;
+
 export function parseAwardTable(wikitext: string, caption?: RegExp): { season: number; name: string; team: string | null }[] {
+  if (wikitext.length > MAX_WIKITEXT) return [];
   const tables: string[] = [];
   for (let i = wikitext.indexOf('{|'); i >= 0; i = wikitext.indexOf('{|', i + 2)) {
     const end = wikitext.indexOf('\n|}', i);
@@ -79,6 +84,7 @@ export function parseAwardTable(wikitext: string, caption?: RegExp): { season: n
     if (caption && !caption.test(t.match(/\n\|\+([^\n]*)/)?.[1] ?? '')) continue;
     let lastTeam: string | null = null;
     for (const raw of t.split(/\n\|-[^\n]*/).slice(1)) {
+      if (raw.length > MAX_ROW) continue;
       // Células: começam em nova linha com | ou !, ou em || / !! na mesma linha.
       const cells = clean(raw)
         .split(/\n[|!]|\|\||!!/)

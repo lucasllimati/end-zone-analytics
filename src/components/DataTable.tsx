@@ -104,7 +104,9 @@ export function DataTable<T>({ rows, columns, rowKey, caption, initialSort, expo
 
   const visible = sorted.slice(0, limit);
   // Primeira coluna de texto (nome, time): fica fixa ao rolar a tabela para o lado no celular.
-  const stickyKey = cols.find((c) => !c.num)?.key;
+  // Não nas tabelas com # (a coluna fixa cobriria o ranking) nem com linhas destacadas (o fundo da
+  // célula fixa esconderia o destaque).
+  const stickyKey = rank || rowClass ? undefined : cols.find((c) => !c.num)?.key;
   const scroll = useScrollEdges();
   const fixed = cols.some((c) => c.width);
   // Largura mínima = soma das colunas fixas + 10rem para cada coluna flexível (abaixo disso, rolagem horizontal).

@@ -242,7 +242,9 @@ function useSeasonInUrl() {
     const params = new URLSearchParams(location.search);
     const inUrl = params.get('season');
     // A URL mudou para outra temporada (link compartilhado, voltar/avançar): a URL manda.
-    if (inUrl !== lastUrl.current && inUrl && Number(inUrl) !== season) {
+    // Só aceita um ano válido (ex.: ?season=abc é ignorado e sai da URL).
+    const valid = inUrl && /^\d{4}$/.test(inUrl) && Number(inUrl) >= 1920 && Number(inUrl) <= new Date().getFullYear() + 1;
+    if (inUrl !== lastUrl.current && valid && Number(inUrl) !== season) {
       lastUrl.current = inUrl;
       setSeason(Number(inUrl));
       return;

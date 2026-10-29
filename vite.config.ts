@@ -5,7 +5,7 @@ import path from 'node:path';
 import type { Plugin } from 'vite';
 
 const API_PORT = Number(process.env.API_PORT ?? 8787);
-const DATA_DIR = path.resolve(__dirname, 'data');
+const DATA_DIR = path.resolve(import.meta.dirname, 'data');
 
 /** Em desenvolvimento, serve /data/* direto da pasta data/ (gerada pelo pipeline), sem depender da API. */
 function serveData(): Plugin {

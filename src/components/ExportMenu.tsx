@@ -26,9 +26,10 @@ export function ExportMenu({ name, rows, svg }: Props) {
     };
   }, [open]);
   const file = slugify(name) || 'dados';
-  const act = async (kind: 'csv' | 'json' | 'svg' | 'png') => {
+  const act = async (kind: 'csv' | 'csv-br' | 'json' | 'svg' | 'png') => {
     setOpen(false);
-    if (kind === 'csv' && rows) download(`${file}.csv`, '﻿' + toCsv(rows()), 'text/csv;charset=utf-8');
+    // BOM (﻿) no início: o Excel reconhece o UTF-8 e mostra os acentos certos.
+    if ((kind === 'csv' || kind === 'csv-br') && rows) download(`${file}.csv`, '﻿' + toCsv(rows(), undefined, kind === 'csv-br' ? 'excel-br' : 'padrao'), 'text/csv;charset=utf-8');
     if (kind === 'json' && rows) download(`${file}.json`, JSON.stringify(rows(), null, 2), 'application/json');
     if (kind === 'svg' && svg?.current) download(`${file}.svg`, serializeSvg(svg.current), 'image/svg+xml');
     if (kind === 'png' && svg?.current) download(`${file}.png`, await svgToPng(svg.current));
@@ -42,8 +43,11 @@ export function ExportMenu({ name, rows, svg }: Props) {
         <div className="menu-list" role="menu">
           {rows && (
             <>
+              <button role="menuitem" type="button" onClick={() => act('csv-br')}>
+                CSV (Excel em português)
+              </button>
               <button role="menuitem" type="button" onClick={() => act('csv')}>
-                CSV (planilha)
+                CSV (padrão)
               </button>
               <button role="menuitem" type="button" onClick={() => act('json')}>
                 JSON

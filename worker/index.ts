@@ -99,6 +99,8 @@ async function report(request: Request): Promise<Response> {
   if (origin && origin !== new URL(request.url).origin) return json({ error: 'forbidden' }, 0, 403);
   if (!(request.headers.get('content-type') ?? '').includes('application/json')) return json({ error: 'unsupported_media_type' }, 0, 415);
   if (tooMany(request.headers.get('cf-connecting-ip') ?? 'local')) return json({ error: 'too_many_requests' }, 0, 429);
+  // Corpo grande é recusado pelo cabeçalho, antes de ler (não gasta memória do Worker à toa).
+  if (Number(request.headers.get('content-length') ?? 0) > REPORT_MAX_BYTES) return json({ error: 'payload_too_large' }, 0, 413);
   const text = await request.text();
   if (text.length > REPORT_MAX_BYTES) return json({ error: 'payload_too_large' }, 0, 413);
   let r = null;
@@ -136,7 +138,7 @@ export default {
       if (!ids || !ids.has(game[1])) return json({ error: 'not_found', message: 'Jogo não encontrado.' }, 0, 404);
       return cached(request, ctx, async () => {
         try {
-          // Em andamento: cache curto (o Game Center atualiza a cada 20 s). Encerrado: muda pouco, cache maior.
+          // Em andamento: cache curto (o Game Center atualiza a cada 30 s). Encerrado: muda pouco, cache maior.
           const d = await gameDetail(game[1]);
           return json(d, d.state === 'in' ? 15 : d.state === 'post' ? 600 : 60);
         } catch {

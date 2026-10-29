@@ -2,6 +2,8 @@
  * Título e descrição das páginas fixas. Usado pelas páginas (<Seo>) e pelo build, que gera um HTML
  * por rota com esses metadados (buscadores e prévias de links leem o HTML antes do JavaScript).
  */
+import { GAME_TYPE_LABEL } from '../lib/teams';
+
 export interface PageMeta {
   title: string;
   description: string;
@@ -33,3 +35,20 @@ export const PAGE_META: Record<string, PageMeta> = {
   '/about': { title: 'Sobre', description: 'O que é o End Zone Analytics, de onde vêm os dados (nflverse, ESPN, Wikipedia, Wikidata) e como o projeto funciona.' },
   '/privacy': { title: 'Privacidade', description: 'Política de privacidade: sem cadastro e sem cookies de rastreamento. O que fica no navegador, medição de audiência e relatos de erro.' },
 };
+
+/** Título e descrição de um jogo (página do jogo e HTML gerado no build): "Vikings × Lions (2026)". */
+export function gameMeta(
+  g: { away: string; home: string; season: number; type: keyof typeof GAME_TYPE_LABEL; homeScore: number | null; awayScore: number | null },
+  nick: (abbr: string) => string,
+): PageMeta {
+  const a = nick(g.away);
+  const h = nick(g.home);
+  const phase = `${GAME_TYPE_LABEL[g.type]} de ${g.season}`;
+  const played = g.homeScore !== null && g.awayScore !== null;
+  return {
+    title: `${a} × ${h} (${g.season})`,
+    description: played
+      ? `${a} ${g.awayScore} × ${g.homeScore} ${h}, ${phase}: placar por quarto, drives, jogadas de pontuação, box score e estatísticas.`
+      : `Prévia de ${a} × ${h}, ${phase}: momento dos times, médias da temporada, destaques e expectativa do mercado.`,
+  };
+}

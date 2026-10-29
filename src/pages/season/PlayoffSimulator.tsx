@@ -41,7 +41,9 @@ export function PlayoffSimulator({ games, season, standings }: { games: Game[]; 
   const [baseline, setBaseline] = useState<Map<string, number> | null>(null);
   const [progress, setProgress] = useState(0);
   const weeks = [...new Set(pending.map((g) => g.week))].sort((a, b) => a - b);
-  const [week, setWeek] = useState(weeks[0]);
+  const [picked, setWeek] = useState(weeks[0]);
+  // Se a semana escolhida não tiver mais jogos pendentes (resultado chegou ao vivo), vai para a próxima.
+  const week = weeks.includes(picked) ? picked : weeks[0];
   const { map } = useTeams();
 
   // Simula em partes, cedendo a vez ao navegador entre elas: a página não trava e o progresso aparece.

@@ -231,6 +231,11 @@ describe('draftFranchise', () => {
 });
 
 describe('exportação CSV', () => {
+  it('formato do Excel em português: ponto e vírgula e decimal com vírgula', () => {
+    expect(toCsv([{ a: 1.5, b: 'x;y', c: 'Jogador' }], undefined, 'excel-br')).toBe('a;b;c\n1,5;"x;y";Jogador');
+    expect(toCsv([{ a: 1.5 }])).toBe('a\n1.5');
+  });
+
   it('neutraliza fórmulas (CSV injection) sem estragar números negativos', () => {
     const csv = toCsv([{ a: '=HYPERLINK("http://x")', b: '+1+1', c: '@SUM(A1)', d: -5, e: '-3,5', f: 'Josh Allen' }]);
     const row = csv.split('\n')[1];

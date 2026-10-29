@@ -17,7 +17,10 @@ export const fromEspn = (a: string) => ESPN_TO_NFLVERSE[a] ?? a;
  *  - 30 s com jogo em andamento; 5 min fora deles (para perceber o início de um jogo);
  *  - aba oculta não consulta nada; ao voltar, atualiza na hora;
  *  - 30 min sem interação (toque, clique, tecla, rolagem) pausam as atualizações; qualquer
- *    interação, ou o botão "Continuar atualizando", retoma.
+ *    interação, ou o botão "Continuar atualizando", retoma;
+ *  - exceção: com o aviso de pontuação ligado, o placar segue (mesmo com a aba oculta) só enquanto o
+ *    jogo do time favorito estiver em andamento — o custo fica limitado a esse jogo;
+ *  - Game Center aberto antes do jogo confere a cada 5 min e passa a 30 s quando o jogo começa.
  */
 export const LIVE_POLL_MS = 30_000;
 const IDLE_POLL_MS = 300_000;
@@ -50,7 +53,8 @@ if (typeof window !== 'undefined') {
 }
 
 /** Pode consultar agora? Se não, guarda `restart` para quando o visitante voltar. */
-function mayFetch(restart: () => void): boolean {
+function mayFetch(restart: () => void, keepAlive = false): boolean {
+  if (keepAlive) return true;
   if (document.visibilityState === 'hidden') {
     halted.add(restart);
     return false;
@@ -81,12 +85,23 @@ export function useLivePaused(): boolean {
 type Listener = (m: Map<string, LiveOverlay>) => void;
 const listeners = new Set<Listener>();
 let last = new Map<string, LiveOverlay>();
+/** Assinatura do último placar: só avisa quem ouve quando algo mudou de fato (evita recalcular à toa). */
+let lastSig = '';
 let timer: number | undefined;
 let running = false;
+/** Time cujo jogo ao vivo mantém o placar atualizando em segundo plano (aviso de pontuação ligado). */
+let watchedTeam: string | null = null;
+
+const watchedGameLive = () => Boolean(watchedTeam) && [...last.entries()].some(([k, v]) => v.state === 'in' && k.split('@').includes(watchedTeam!));
+
+/** Liga (ou desliga, com null) o acompanhamento em segundo plano do jogo de um time. */
+export function watchTeamInBackground(team: string | null) {
+  watchedTeam = team;
+}
 
 async function poll() {
   window.clearTimeout(timer);
-  if (!listeners.size || !mayFetch(poll)) {
+  if (!listeners.size || !mayFetch(poll, watchedGameLive())) {
     running = false;
     return;
   }
@@ -100,8 +115,12 @@ async function poll() {
       if (!home || !away) continue;
       m.set(`${fromEspn(away.abbr)}@${fromEspn(home.abbr)}`, { state: g.state, detail: g.detail, home: home.score, away: away.score });
     }
-    last = m;
-    for (const l of listeners) l(m);
+    const sig = JSON.stringify([...m.entries()]);
+    if (sig !== lastSig) {
+      lastSig = sig;
+      last = m;
+      for (const l of listeners) l(m);
+    }
   }
   const anyLive = [...last.values()].some((v) => v.state === 'in');
   running = listeners.size > 0;
@@ -129,7 +148,8 @@ export function useLiveScores(enabled = true): Map<string, LiveOverlay> {
 }
 
 /**
- * Detalhes de um jogo (Game Center). Com o jogo em andamento, atualiza a cada 30 s sem piscar a tela:
+ * Detalhes de um jogo (Game Center). Com o jogo em andamento, atualiza a cada 30 s sem piscar a tela
+ * (antes do jogo, a cada 5 min):
  * os dados atuais ficam visíveis até a resposta nova chegar. Segue as mesmas pausas do placar.
  */
 export function useGameDetail<T extends { state: string }>(espnId: string | null | undefined): { data: T | null; loading: boolean; updatedAt: number | null } {
@@ -152,7 +172,9 @@ export function useGameDetail<T extends { state: string }>(espnId: string | null
       if (d) lastState = d.state;
       setState((s) => ({ data: d ?? s.data, loading: false, updatedAt: d ? Date.now() : s.updatedAt }));
       // Uma falha no meio do jogo não interrompe: tenta de novo no próximo ciclo.
+      // Antes do jogo, confere a cada 5 min: quem abriu a prévia vê o jogo começar sem recarregar.
       if (lastState === 'in') timer = window.setTimeout(load, LIVE_POLL_MS);
+      else if (lastState === 'pre') timer = window.setTimeout(load, IDLE_POLL_MS);
     };
     void load(true);
     return () => {

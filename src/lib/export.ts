@@ -1,17 +1,26 @@
 /** Utilitários de exportação (CSV/JSON/SVG/PNG). Puros onde possível para facilitar testes. */
 
-export function toCsv(rows: Record<string, unknown>[], columns?: { key: string; label: string }[]): string {
+/**
+ * Formato do CSV. "excel-br": separador ";" e decimal com vírgula, como o Excel em português espera
+ * (com "," ele abre tudo numa coluna só). "padrao": "," e ponto decimal, para ferramentas de dados.
+ */
+export type CsvFormat = 'padrao' | 'excel-br';
+
+export function toCsv(rows: Record<string, unknown>[], columns?: { key: string; label: string }[], format: CsvFormat = 'padrao'): string {
   if (rows.length === 0) return '';
+  const sep = format === 'excel-br' ? ';' : ',';
   const cols = columns ?? Object.keys(rows[0]).map((k) => ({ key: k, label: k }));
   const esc = (v: unknown) => {
     if (v === null || v === undefined) return '';
     let s = typeof v === 'object' ? JSON.stringify(v) : String(v);
+    if (typeof v === 'number' && format === 'excel-br') s = s.replace('.', ',');
     // Texto que começa com = + - @ (ou tab/CR) vira fórmula no Excel/Sheets: prefixa ' (recomendação OWASP).
     // Números (inclusive negativos) ficam como estão.
     if (typeof v !== 'number' && /^[=+\-@\t\r]/.test(s) && !/^-?\d+([.,]\d+)?$/.test(s)) s = `'${s}`;
-    return /[",\n\r;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    // Aspas quando o texto tem o separador em uso, aspas ou quebra de linha (e ";" sempre, por segurança).
+    return /["\n\r;]/.test(s) || s.includes(sep) ? `"${s.replace(/"/g, '""')}"` : s;
   };
-  return [cols.map((c) => esc(c.label)).join(','), ...rows.map((r) => cols.map((c) => esc(r[c.key])).join(','))].join('\n');
+  return [cols.map((c) => esc(c.label)).join(sep), ...rows.map((r) => cols.map((c) => esc(r[c.key])).join(sep))].join('\n');
 }
 
 export function download(filename: string, content: string | Blob, type = 'text/plain') {

@@ -71,7 +71,7 @@ Auditoria de 14/10/2026, revista no teste de invasão de 16/10/2026. Repita a ca
 | 10 | CSRF | ✅ teste | Cookie `SameSite=Strict` + cabeçalho `X-EZA-Admin` obrigatório nas ações; sem CORS |
 | 11 | Upload sem validação | ✅ n/a | Não há upload |
 | 12 | Revelando informação | ✅ | Erros 500 genéricos; sem stack trace; sem source maps no site público; versão do Node só para admin autenticado |
-| 13 | Dependências vulneráveis | ✅ | `npm audit`: 0 vulnerabilidades (16/10/2026); CI e publicação falham com vulnerabilidade alta; Dependabot mensal e agrupado, alertas de segurança na hora |
+| 13 | Dependências vulneráveis | ⚠️ | 29/10/2026: 1 moderada (`fast-uri`, via Fastify/ajv; sem caminho alcançável: o app valida com zod e não usa formatos `uri` de JSON Schema). A versão corrigida (3.1.9/4.2.3) completa duas semanas em 02/11 e entra pelo Dependabot. CI e publicação falham com vulnerabilidade alta; Dependabot mensal e agrupado, alertas de segurança na hora |
 | 14 | Tokens mal gerenciados | ✅ | Sessão expira em 8 h e some no logout; token nunca vai para log, URL ou `localStorage`; segredos do CI por passo |
 | 15 | Rate limit | ✅ teste | Fastify: 600/min por IP; Worker: cache na borda para `/api/live/*` |
 | 16 | Dados sensíveis expostos | ✅ | `data/` só tem dados públicos; log operacional (`ops/`) fora da pasta servida; admin fora do build público |
@@ -127,6 +127,26 @@ Todos os achados foram corrigidos e reverificados: o servidor em produção pass
 | Limite de taxa global na borda | O plano grátis permite 1 regra de *Rate limiting* na Cloudflare | Opcional: *Security → WAF → Rate limiting rules* → `/api/` com 60 requisições/10 s por IP |
 | `security.txt` (RFC 9116) | Não publicado: exige um contato público para relatos | Ao ter um e-mail ou formulário público de contato, publique `public/.well-known/security.txt` |
 | API da ESPN não oficial | Fora do nosso controle | Já tratada como opcional: falha → mensagem e o resto do site funciona |
+
+## Revisão de segurança da versão 1.4 (29/10/2026)
+
+Revisão de código (agente revisor) e teste de invasão local (agente de segurança) sobre o código da versão 1.4 e as correções em andamento. Provas feitas com `buildApp()` + `app.inject` e com o Worker importado com ambiente simulado; em produção, só duas leituras simples de cabeçalhos. **Risco geral: baixo a médio**; nenhum achado crítico ou alto. O site publicado (Cloudflare) resistiu a todos os testes; os achados estavam no servidor próprio (Fastify) e no build.
+
+| ID | Gravidade | Achado | Correção | Teste |
+|---|---|---|---|---|
+| F1 | Média | `POST /api/report` (anônimo) virava evento `warning` e disparava o alerta do administrador, com `@everyone` e links no Discord/Slack | Relato do navegador entra como `info` (nunca alerta); Discord com `allowed_mentions: { parse: [] }`; Slack com `< > &` escapados | security.test.ts › F1 |
+| F2 | Média | 500 relatos anônimos apagavam a trilha de auditoria (log circular único de 500 eventos) | Relatos do navegador têm cota própria (100) e nunca empurram para fora eventos de login, carga e fontes | F2 |
+| F3 | Baixa–média | 20 Bearer errados em `GET /api/admin/session` (rota pública) travavam o login do administrador por 15 min | A rota pública não avalia Bearer; cada IP conta no máximo 5 erros de Bearer por minuto para a trava global (bloquear exige ataque distribuído) | F3 + teste da trava distribuída |
+| F4 | Baixa | Cookie com codificação inválida derrubava a requisição (500) | Cookie malformado é ignorado | F4 |
+| F5 | Baixa (teórico) | O build gerava arquivos a partir de IDs de jogo vindos dos dados (`../` sairia de `dist/`) | Só IDs no formato do nflverse; rota validada e caminho confinado a `dist/` | — |
+| F6 | Informativo | `$` em texto dos dados virava padrão especial do `replace`; `'` não era escapado no atributo do Analytics | Substituições por função; `'` → `&#39;` | — |
+| F7 | Baixa | Regex do leitor de prêmios ficava quadrática com página da Wikipedia vandalizada | Página acima de 600 KB ou linha acima de 5 KB não é lida (o prêmio fica de fora); resumos dos times com até 1.500 caracteres | — |
+| F8 | Baixa | `fast-uri` moderada (via Fastify) | Aguarda a versão corrigida completar duas semanas (Dependabot) | `npm audit` |
+| F9 | Baixa (teórico) | No CI, um script de instalação malicioso no mesmo job poderia alcançar o passo de deploy, que tem o token da Cloudflare | **Recomendado, não aplicado:** deploy em job separado, só com o artefato `dist/`, `npm ci --ignore-scripts` e wrangler como dependência travada. Exige testar o fluxo de publicação inteiro | — |
+
+Também corrigido na revisão de código: aviso de pontuação que não funcionava com a aba em segundo plano (agora segue só durante o jogo do time favorito), Game Center aberto antes do jogo que nunca virava ao vivo, recálculo do simulador a cada consulta, `/api/report` do Worker recusando corpo grande pelo cabeçalho, cache de `/assets` do service worker com limite e `?season=` validado.
+
+Verificado e seguro: lista fechada de jogos e times no Worker (sem consulta à ESPN para IDs desconhecidos), rotas e codificações estranhas (`..%2f`, `%2e%2e`, `%5c`) sem vazamento, cookies HttpOnly/SameSite=Strict/Secure, CSRF na sincronização, nenhum `dangerouslySetInnerHTML`, todos os `target=_blank` com `rel="noopener noreferrer"`, links de notícias só para `https://www.espn.com/`, service worker só na mesma origem e sem cache de `/api`, cabeçalhos de segurança em produção, sem source maps publicados, actions fixadas por SHA e caches do CI sem caminho de envenenamento entre pull requests e a main.
 
 ### Ainda depende de você
 

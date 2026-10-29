@@ -41,6 +41,7 @@ export function NewsList({ items, max = 6 }: { items: NewsItem[]; max?: number }
         <li key={n.url}>
           <a href={n.url} target="_blank" rel="noopener noreferrer">
             {n.headline}
+            <span className="sr-only"> (abre em nova aba)</span>
           </a>
           <span className="xsmall muted">
             {n.published ? relativeTime(n.published) : ''} · ESPN (em inglês) <span aria-hidden="true">↗</span>

@@ -6,6 +6,7 @@ import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../../server/app';
 import { LoginThrottle } from '../../server/services/auth';
+import { OpsLog, webhookRequest } from '../../server/services/ops';
 
 let dir: string;
 const apps: FastifyInstance[] = [];
@@ -43,9 +44,10 @@ describe('força bruta no login', () => {
 
   it('tokens errados via Authorization: Bearer também acionam a trava (e ela barra até o token certo)', async () => {
     const app = await make(0);
-    const hit = (token: string) => app.inject({ url: '/api/admin/overview', remoteAddress: '203.0.113.50', headers: { authorization: `Bearer ${token}` } });
+    const hit = (token: string, ip = '203.0.113.50') => app.inject({ url: '/api/admin/overview', remoteAddress: ip, headers: { authorization: `Bearer ${token}` } });
     expect((await hit('segredo')).statusCode).toBe(200);
-    for (let i = 0; i < 20; i++) expect((await hit(`chute-${i}`)).statusCode).toBe(401);
+    // Ataque distribuído: 20 erros vindos de 4 IPs (cada IP só conta 5 por minuto para a trava global).
+    for (let i = 0; i < 20; i++) expect((await hit(`chute-${i}`, `203.0.113.${60 + Math.floor(i / 5)}`)).statusCode).toBe(401);
     expect((await hit('segredo')).statusCode).toBe(401);
     // Uma requisição conta uma tentativa só, mesmo com várias checagens de autenticação.
     const app2 = await make(0);
@@ -169,5 +171,52 @@ describe('relato de erro e notícias (servidor)', () => {
     const ok = await app.inject({ method: 'POST', url: '/api/report', payload: { message: 'quebrou', path: '/x?token=1', source: 'react' } });
     expect(ok.statusCode).toBe(204);
     expect((await app.inject('/api/news/XYZ')).statusCode).toBe(404);
+  });
+});
+
+describe('revisão de segurança (29/10/2026)', () => {
+  it('F1: relato anônimo não vira alerta e o webhook não ativa menções nem links do Slack', () => {
+    const e = { id: '1', at: '', severity: 'warning' as const, component: 'client' as const, jobId: null, message: '@everyone <!channel> <https://evil|clique>', detail: null, action: null };
+    const discord = JSON.parse(webhookRequest({ url: 'x', format: 'discord', minSeverity: 'warning' }, e).body);
+    expect(discord.allowed_mentions).toEqual({ parse: [] });
+    const slack = JSON.parse(webhookRequest({ url: 'x', format: 'slack', minSeverity: 'warning' }, e).body);
+    expect(slack.text).not.toContain('<!channel>');
+    expect(slack.text).toContain('&lt;!channel&gt;');
+  });
+
+  it('F2: relatos do navegador não apagam a trilha de auditoria (login, cargas)', async () => {
+    const dir2 = fs.mkdtempSync(path.join(os.tmpdir(), 'eza-ops-'));
+    const ops = new OpsLog(dir2);
+    await ops.event({ severity: 'info', component: 'auth', message: 'Login administrativo' });
+    for (let i = 0; i < 600; i++) void ops.event({ severity: 'info', component: 'client', message: `erro ${i}` });
+    await ops.event({ severity: 'info', component: 'pipeline', message: 'carga' });
+    const list = await ops.events();
+    expect(list.filter((x) => x.component === 'auth')).toHaveLength(1);
+    expect(list.filter((x) => x.component === 'client').length).toBeLessThanOrEqual(100);
+    fs.rmSync(dir2, { recursive: true, force: true });
+  });
+
+  it('F3: Bearer errado em /api/admin/session não gasta a trava global; um IP só erra 5 vezes', async () => {
+    const app = await make(0);
+    for (let i = 0; i < 25; i++) await app.inject({ url: '/api/admin/session', headers: { authorization: `Bearer chute${i}` }, remoteAddress: '203.0.113.50' });
+    for (let i = 0; i < 25; i++) await app.inject({ url: '/api/admin/check', headers: { authorization: `Bearer chute${i}` }, remoteAddress: '203.0.113.51' });
+    const ok = await app.inject({ url: '/api/admin/check', headers: { authorization: 'Bearer segredo' }, remoteAddress: '203.0.113.52' });
+    expect(ok.statusCode).not.toBe(401);
+    expect(ok.statusCode).not.toBe(429);
+  });
+
+  it('F4: cookie malformado não derruba a requisição', async () => {
+    const app = await make(0);
+    const r = await app.inject({ url: '/api/admin/session', remoteAddress: '203.0.113.70', headers: { cookie: 'eza_admin=%E0%A4%A' } });
+    expect(r.statusCode).toBe(200);
+    expect(r.json().authenticated).toBe(false);
+  });
+
+  it('/api/report no servidor: só JSON do próprio site, e entra como "info"', async () => {
+    const app = await make(0);
+    const body = { message: 'quebrou', path: '/', source: 'window' };
+    expect((await app.inject({ method: 'POST', url: '/api/report', payload: body, headers: { origin: 'https://evil.example' } })).statusCode).toBe(403);
+    expect((await app.inject({ method: 'POST', url: '/api/report', payload: 'x', headers: { 'content-type': 'text/plain' } })).statusCode).toBe(415);
+    expect((await app.inject({ method: 'POST', url: '/api/report', payload: body })).statusCode).toBe(204);
   });
 });

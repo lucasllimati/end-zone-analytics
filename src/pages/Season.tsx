@@ -110,6 +110,7 @@ function Last5({ seq, lang }: { seq: string; lang: TermsLang }) {
   );
 }
 
+/** Colunas da classificação. Em português, os rótulos também (Pró/Contra/Saldo); o ⓘ mostra o nome original. */
 export function standingColumns(expert: boolean, lang: TermsLang = 'pt'): Column<StandingRow>[] {
   const pt = lang === 'pt';
   return [
@@ -118,15 +119,15 @@ export function standingColumns(expert: boolean, lang: TermsLang = 'pt'): Column
     { key: 'l', label: pt ? 'D' : 'L', metric: 'l', num: true, width: '3.5rem' },
     { key: 't', label: pt ? 'E' : 'T', metric: 't', num: true, width: '3.5rem' },
     { key: 'pct', label: 'PCT', metric: 'pct', num: true, width: '5.25rem', render: (r) => pct3(r.pct), value: (r) => r.pct },
-    { key: 'pf', label: 'PF', metric: 'pf', num: true, width: '4.25rem' },
-    { key: 'pa', label: 'PA', metric: 'pa', num: true, width: '4.25rem' },
-    { key: 'diff', label: 'DIFF', metric: 'diff', num: true, width: '4.75rem', render: (r) => <span className={r.diff > 0 ? 'good' : r.diff < 0 ? 'bad' : ''}>{signed(r.diff)}</span>, value: (r) => r.diff },
-    { key: 'home', label: 'Casa', metric: 'home', num: true, width: '4.75rem', render: (r) => wlt(r.home), value: (r) => r.home[0] - r.home[1] },
-    { key: 'away', label: 'Fora', metric: 'away', num: true, width: '4.75rem', render: (r) => wlt(r.away), value: (r) => r.away[0] - r.away[1] },
+    { key: 'pf', label: pt ? 'Pró' : 'PF', metric: 'pf', num: true, width: '4.25rem' },
+    { key: 'pa', label: pt ? 'Contra' : 'PA', metric: 'pa', num: true, width: '4.25rem' },
+    { key: 'diff', label: pt ? 'Saldo' : 'DIFF', metric: 'diff', num: true, width: '4.75rem', render: (r) => <span className={r.diff > 0 ? 'good' : r.diff < 0 ? 'bad' : ''}>{signed(r.diff)}</span>, value: (r) => r.diff },
+    { key: 'home', label: pt ? 'Casa' : 'Home', metric: 'home', num: true, width: '4.75rem', render: (r) => wlt(r.home), value: (r) => r.home[0] - r.home[1] },
+    { key: 'away', label: pt ? 'Fora' : 'Away', metric: 'away', num: true, width: '4.75rem', render: (r) => wlt(r.away), value: (r) => r.away[0] - r.away[1] },
     { key: 'div', label: 'Div', metric: 'div', num: true, width: '4.75rem', render: (r) => wlt(r.div), value: (r) => r.div[0] - r.div[1] },
     { key: 'conf', label: 'Conf', metric: 'conf', num: true, width: '4.75rem', render: (r) => wlt(r.confRec), value: (r) => r.confRec[0] - r.confRec[1] },
-    { key: 'streak', label: 'Seq.', metric: 'streak', width: '4.5rem', render: (r) => letters(r.streak, lang), value: (r) => r.streak },
-    { key: 'last5', label: 'Últ. 5', metric: 'last5', expertOnly: !expert, width: '8.25rem', render: (r) => <Last5 seq={r.last5} lang={lang} />, value: (r) => r.last5 },
+    { key: 'streak', label: pt ? 'Seq.' : 'Strk', metric: 'streak', width: '4.5rem', render: (r) => letters(r.streak, lang), value: (r) => r.streak },
+    { key: 'last5', label: pt ? 'Últ. 5' : 'Last 5', metric: 'last5', expertOnly: !expert, width: '8.25rem', render: (r) => <Last5 seq={r.last5} lang={lang} />, value: (r) => r.last5 },
   ];
 }
 

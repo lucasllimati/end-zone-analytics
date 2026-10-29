@@ -24,6 +24,8 @@ interface Item {
   weight?: number;
   /** Título alternativo também pontuado (jogadores: sobrenome primeiro, para "allen" achar Josh Allen). */
   alt?: string;
+  normTitle?: string;
+  normAlt?: string;
 }
 
 /** Como um brasileiro procuraria o termo (a busca também acha pelo nome em inglês). */
@@ -81,6 +83,27 @@ export function SearchPalette() {
     return out;
   }, [teams]);
 
+  // Jogadores com nome já normalizado (nas duas ordens) e peso calculados uma vez por carga do índice,
+  // não a cada tecla: o índice tem milhares de nomes.
+  const playerItems = useMemo<Item[]>(() => {
+    const newest = players.reduce((m, p) => Math.max(m, p.last ?? 0), 0);
+    return players.map((p) => {
+      const alt = p.name.split(' ').reverse().join(' ');
+      return {
+        id: `pl-${p.id}`,
+        title: p.name,
+        normTitle: norm(p.name),
+        kind: `Jogador · ${p.pos} · ${p.first}–${p.last}`,
+        to: `/players/${p.id}`,
+        hay: '',
+        team: p.team ?? undefined,
+        alt,
+        normAlt: norm(alt),
+        weight: ((p.last ?? 0) >= newest - 1 ? 6 : 0) + Math.min(8, (p.last ?? 0) - (p.first ?? 0)) + (awarded.has(p.id) ? 10 : 0),
+      };
+    });
+  }, [players, awarded]);
+
   const results = useMemo(() => {
     if (!q.trim()) return staticItems.filter((i) => i.kind === 'Página').slice(0, 12);
     const sbItems: Item[] = sbs.map((s) => ({
@@ -93,27 +116,14 @@ export function SearchPalette() {
     }));
     // Jogadores entram na mesma ordenação (antes ficavam sempre no topo: "EPA" abria um jogador).
     // Peso: em atividade e carreira longa sobem — "allen" traz Josh Allen antes de nomes menos conhecidos.
-    const newest = players.reduce((m, p) => Math.max(m, p.last ?? 0), 0);
-    const ps: Item[] =
-      q.trim().length >= 2
-        ? players.map((p) => ({
-            id: `pl-${p.id}`,
-            title: p.name,
-            kind: `Jogador · ${p.pos} · ${p.first}–${p.last}`,
-            to: `/players/${p.id}`,
-            hay: '',
-            team: p.team ?? undefined,
-            alt: p.name.split(' ').reverse().join(' '),
-            weight: ((p.last ?? 0) >= newest - 1 ? 6 : 0) + Math.min(8, (p.last ?? 0) - (p.first ?? 0)) + (awarded.has(p.id) ? 10 : 0),
-          }))
-        : [];
+    const ps = q.trim().length >= 2 ? playerItems : [];
     return [...staticItems, ...sbItems, ...ps]
-      .map((i) => ({ i, s: Math.max(score(i, q), i.alt ? score({ ...i, title: i.alt }, q) : 0) }))
+      .map((i) => ({ i, s: Math.max(score(i, q), i.alt ? score({ ...i, title: i.alt, normTitle: i.normAlt }, q) : 0) }))
       .filter((r) => r.s > 0)
       .sort((a, b) => b.s - a.s)
       .slice(0, 16)
       .map((r) => r.i);
-  }, [q, staticItems, players, sbs, awarded]);
+  }, [q, staticItems, playerItems, sbs]);
 
   useEffect(() => setSel(0), [q]);
 

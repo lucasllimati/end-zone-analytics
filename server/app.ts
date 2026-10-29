@@ -253,10 +253,14 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
   /* --------------------------- Erros do navegador --------------------------- */
   // Visível em /admin (componente "Navegador"). Limite de tamanho e de frequência: não vira canal de spam.
   app.post('/api/report', { bodyLimit: REPORT_MAX_BYTES, config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (req, reply) => {
+    // Mesmas regras do Worker: só JSON e só do próprio site (o log aparece no /admin).
+    const origin = req.headers.origin;
+    if (origin && origin !== `${req.protocol}://${req.headers.host}`) return reply.code(403).send({ error: 'forbidden' });
+    if (!(req.headers['content-type'] ?? '').includes('application/json')) return reply.code(415).send({ error: 'unsupported_media_type' });
     const r = parseClientReport(req.body);
     if (!r) return reply.code(400).send({ error: 'bad_request' });
-    void ops.event({ severity: 'warning', component: 'client', message: `Erro no navegador: ${r.message}`, detail: `${r.path} (${r.source})${r.stack ? `
-${r.stack}` : ''}` }).catch(() => {});
+    // Severidade "info": relato anônimo nunca vira alerta no celular/Discord/Slack do administrador.
+    void ops.event({ severity: 'info', component: 'client', message: `Erro no navegador: ${r.message}`, detail: `${r.path} (${r.source})${r.stack ? `\n${r.stack}` : ''}` }).catch(() => {});
     return reply.code(204).send();
   });
 
@@ -290,9 +294,10 @@ ${r.stack}` : ''}` }).catch(() => {});
     if (!auth.method(req)) return reply.code(401).send({ error: 'unauthorized', message: 'Acesso restrito à administração.' });
   };
 
+  // Rota pública: não avalia Bearer (senão serviria para gastar a trava global de login sem custo).
   app.get('/api/admin/session', async (req) => ({
-    authenticated: Boolean(auth.method(req)),
-    method: auth.method(req),
+    authenticated: Boolean(auth.sessionMethod(req)),
+    method: auth.sessionMethod(req),
     tokenConfigured: auth.tokenConfigured,
   }));
 
@@ -448,7 +453,7 @@ ${r.stack}` : ''}` }).catch(() => {});
         if (req.raw.url?.startsWith('/api/') || req.raw.url?.startsWith('/data/')) return reply.code(404).send({ error: 'not_found' });
         // Rotas com HTML próprio (gerado por scripts/prerender-meta.ts: título e descrição da página).
         const route = (req.raw.url ?? '/').split('?')[0].replace(/\/$/, '');
-        if (/^(\/[a-z0-9-]+)+$/.test(route) && fs.existsSync(path.join(DIST_DIR, `${route}.html`))) return reply.type('text/html').sendFile(`${route.slice(1)}.html`, DIST_DIR);
+        if (/^(\/[A-Za-z0-9_-]+)+$/.test(route) && fs.existsSync(path.join(DIST_DIR, `${route}.html`))) return reply.type('text/html').sendFile(`${route.slice(1)}.html`, DIST_DIR);
         return reply.type('text/html').sendFile('index.html', DIST_DIR);
       });
     }

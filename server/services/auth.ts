@@ -26,7 +26,13 @@ export function parseCookies(header: string | undefined): Record<string, string>
   const out: Record<string, string> = {};
   for (const part of (header ?? '').split(';')) {
     const i = part.indexOf('=');
-    if (i > 0) out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
+    if (i <= 0) continue;
+    // Cookie com codificação inválida é ignorado (antes, derrubava a requisição com erro 500).
+    try {
+      out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
+    } catch {
+      /* valor malformado: ignorado */
+    }
   }
   return out;
 }
@@ -107,12 +113,37 @@ export class AdminAuth {
     return m;
   }
 
+  /**
+   * Erros de Bearer por IP: depois de 5 em 1 minuto, as tentativas desse IP são recusadas sem contar
+   * para a trava global. Assim, um único IP não consegue bloquear o login do administrador com 20
+   * requisições; para isso seria preciso espalhar o ataque por vários IPs.
+   */
+  private bearerFails = new Map<string, number[]>();
+  private bearerLimited(ip: string): boolean {
+    const now = Date.now();
+    const recent = (this.bearerFails.get(ip) ?? []).filter((t) => now - t < 60_000);
+    this.bearerFails.set(ip, recent);
+    if (this.bearerFails.size > 10_000) this.bearerFails.clear();
+    return recent.length >= 5;
+  }
+
+  /** Sessão (cookie) ou acesso local, sem avaliar Bearer: para rotas públicas como /api/admin/session. */
+  sessionMethod(req: FastifyRequest): AuthMethod | null {
+    if (this.sessionValid(parseCookies(req.headers.cookie)[SESSION_COOKIE])) return 'session';
+    if (this.allowLocal && this.isLocal(req)) return 'local';
+    return null;
+  }
+
   private resolve(req: FastifyRequest): AuthMethod | null {
     const bearer = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
     if (bearer && this.token) {
       if (this.throttle.blockedFor() > 0) return null;
       if (safeEqual(bearer, this.token)) return 'token';
-      if (this.throttle.fail()) this.onBearerFailure();
+      if (!this.bearerLimited(req.ip)) {
+        this.bearerFails.get(req.ip)!.push(Date.now());
+        if (this.throttle.fail()) this.onBearerFailure();
+      }
+      return null;
     }
     if (this.sessionValid(parseCookies(req.headers.cookie)[SESSION_COOKIE])) return 'session';
     if (this.allowLocal && this.isLocal(req)) return 'local';
