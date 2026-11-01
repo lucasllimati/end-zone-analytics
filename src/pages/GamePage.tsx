@@ -174,6 +174,8 @@ export default function GamePage() {
         <div className="gc-preview">
           <div className="stack">
             {fichaCard}
+            {/* Os jogos da temporada chegam por outra consulta: reserva o espaço enquanto carregam. */}
+            {all.loading && !all.data && <Loading height={120} label="Carregando momento dos times…" />}
             {all.data && <TeamForm g={g} all={all.data} nick={nick} lang={lang} />}
             <MarketCard g={g} nick={nick} />
             <RefereeCard name={referee} />

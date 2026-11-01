@@ -152,7 +152,9 @@ test.describe('Game Center antes do jogo (prévia)', () => {
     const preview = page.locator('.gc-preview');
     test.skip((await preview.count()) === 0, 'o próximo jogo já começou (layout ao vivo)');
     await expect(page.getByText('★ Meu time')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Momento dos times' })).toBeVisible();
+    // "Momento dos times" depende de outra consulta (todos os jogos da temporada), que pode chegar
+    // depois da prévia num runner lento: o mesmo prazo da escolha de layout, não os 5 s padrão.
+    await expect(page.getByRole('heading', { name: 'Momento dos times' })).toBeVisible({ timeout: 15_000 });
     // As duas colunas começam na mesma altura (antes, a margem da pilha deslocava os cartões).
     const tops = await preview.locator(':scope > .stack').evaluateAll((cols) => cols.map((c) => Math.round(c.firstElementChild!.getBoundingClientRect().top)));
     if (tops.length === 2 && (await page.viewportSize())!.width >= 1000) expect(Math.abs(tops[0] - tops[1])).toBeLessThanOrEqual(1);
